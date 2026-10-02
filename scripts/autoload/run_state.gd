@@ -21,6 +21,8 @@ var running: bool = false
 var outcome: int = Outcome.NONE
 var seen_ring_tutorial: bool = false
 var debug_immortal: bool = false
+## Боты и скриншоты выключают сюжетные сцены, не трогая настройку игрока. new_run() не сбрасывает.
+var skip_cutscenes: bool = false
 
 
 func _ready() -> void:

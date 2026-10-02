@@ -175,7 +175,7 @@ static func describe(index: int) -> String:
 	lines.append("")
 	var next := RunState.stage + 1
 	if RunState.is_boss_stage(next):
-		lines.append("[b][color=#%s]Дальше:[/color][/b] босс «Отвергнутый»" % red)
+		lines.append("[b][color=#%s]Дальше:[/color][/b] %s у ворот дворца" % [red, Story.TYRANT_NAME])
 	else:
 		var th := RunState.threat_for(next)
 		lines.append("[b][color=#%s]Угроза этапа %d:[/color][/b] %s — %s" % [red, next, th.display_name, th.description])

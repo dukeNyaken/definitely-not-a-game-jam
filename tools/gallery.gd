@@ -72,6 +72,19 @@ func _ready() -> void:
 	bm.setup(boss, ActorModel.Kind.BOSS)
 	bm.scale = Vector3.ONE * 1.7
 	boss.facing = Vector3(-0.3, 0, 1).normalized()
+	# Люди сюжетных сцен (второй ряд) — и Сигвард юный, из флешбэка.
+	var npcs := [
+		[ActorModel.Kind.FRIEND, &""], [ActorModel.Kind.BELOVED, &""], [ActorModel.Kind.FAITHFUL, &""],
+		[ActorModel.Kind.REFUGEE, &""], [ActorModel.Kind.CAPTAIN, &""], [ActorModel.Kind.WIDOW, &""],
+		[ActorModel.Kind.SMITH, &""], [ActorModel.Kind.NOVICE, &""], [ActorModel.Kind.TYRANT, &""],
+		[ActorModel.Kind.TYRANT, &"young"], [ActorModel.Kind.FATHER, &""],
+	]
+	for i in npcs.size():
+		var p := Puppet.make(npcs[i][0], npcs[i][1])
+		add_child(p)
+		p.global_position = Vector3(-2.0 + i * 1.2, 0, 3.4)
+		p.look_toward(p.global_position + Vector3(0.4, 0, 1))
+		p.set_physics_process(false)
 	var rig := CameraRig.new()
 	rig.size = 10.5
 	var focus := Vector3(4.0, 0, 0.5)

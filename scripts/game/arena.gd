@@ -13,6 +13,8 @@ var _moon: DirectionalLight3D
 var _rim: DirectionalLight3D
 ## Высокие предметы по краю: { "mats": [ShaderMaterial], "base": Vector3, "top": Vector3, "alpha": float }
 var _occluders: Array[Dictionary] = []
+## Реквизит по краю: { "node": Node3D, "angle": float }.
+var _edge_props: Array[Dictionary] = []
 var _lights: Array[OmniLight3D] = []
 var _t: float = 0.0
 var _rng := RandomNumberGenerator.new()
@@ -234,6 +236,7 @@ func _build_edge() -> void:
 		add_child(holder)
 		holder.position = pos
 		holder.rotation.y = -a + PI / 2
+		_edge_props.append({"node": holder, "angle": a})
 		match EDGE_PROPS[k]:
 			&"wall": _wall(holder)
 			&"brazier": _brazier(holder)
@@ -259,6 +262,13 @@ func _build_edge() -> void:
 		var rock := LowPoly.sphere(s, 5, 3, Color(0.75, 0.7, 0.68), Vector3(cos(a) * r, s * 0.3, sin(a) * r), 0.95, 0.0, 0.0, &"stone")
 		rock.rotation = Vector3(_rng.randf(), _rng.randf() * TAU, _rng.randf())
 		add_child(rock)
+
+
+## Убирает реквизит края в секторе angle ± span (радианы): освобождает место под ворота дворца.
+func clear_edge_around(angle: float, span: float) -> void:
+	for e in _edge_props:
+		if absf(angle_difference(angle, float(e["angle"]))) <= span:
+			(e["node"] as Node3D).visible = false
 
 
 ## Высокий предмет: его материалы затухают, когда он заслоняет героя.

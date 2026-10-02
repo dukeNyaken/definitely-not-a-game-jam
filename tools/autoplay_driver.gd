@@ -19,6 +19,7 @@ var _block_t := 0.0
 var _shots: Array = []
 var _shot_prefix := ""
 var _start_stage := 1
+var _cutscenes := false
 
 
 func _ready() -> void:
@@ -41,9 +42,13 @@ func _start() -> void:
 			"shots": _shots = Array(kv[1].split(",")).map(func(x): return float(x))
 			"prefix": _shot_prefix = kv[1]
 			"stage": _start_stage = int(kv[1])
+			"cutscenes": _cutscenes = kv[1] == "1"
 	var rs = get_tree().root.get_node("RunState")
 	rs.new_run(_seed)
 	rs.debug_immortal = _immortal
+	# Сюжетные сцены по умолчанию выключены (время прогона как раньше); cutscenes=1 проходит их тоже —
+	# реплики уходят сами, ввода сцены не ждут.
+	rs.skip_cutscenes = not _cutscenes
 	for i in _start_stage - 1:
 		rs.sacrifice(_pick % rs.ring.size())
 	rs.stage = _start_stage
@@ -65,7 +70,7 @@ func _tick(delta: float) -> bool:
 		for l in _log:
 			print(l)
 		return true
-	if _t > 60.0 * 14.0:
+	if _t > 60.0 * (20.0 if _cutscenes else 14.0):
 		print("TIMEOUT")
 		for l in _log:
 			print(l)
@@ -111,6 +116,9 @@ func _tick(delta: float) -> bool:
 func _drive(hero) -> void:
 	var g = _game
 	var state: int = g.state
+	# Сюжетную сцену бот не трогает: героя ведёт сцена.
+	if g.cutscene != null and g.cutscene.active:
+		return
 	# Экраны: алтарь — жертвуем, святилище — отказываемся.
 	if g.hud.has_screen():
 		var ui = g.hud._screen

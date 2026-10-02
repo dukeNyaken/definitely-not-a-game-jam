@@ -22,6 +22,11 @@ var _hint: PanelContainer
 var _fade: ColorRect
 var _screen: Control
 var _screen_kind: StringName = &""
+## Части интерфейса, которые прячутся в сюжетных сценах.
+var _status_box: Control
+var _ring_panel: Control
+var _action_bar: Control
+var _cinematic_tween: Tween
 
 
 func setup(p_game: Game) -> void:
@@ -60,6 +65,7 @@ func _build_status() -> void:
 	box.position = Vector2(24, 20)
 	box.add_theme_constant_override(&"separation", 6)
 	root.add_child(box)
+	_status_box = box
 	_stage_label = UiKit.outlined(UiKit.label("", 24, UiKit.GOLD))
 	box.add_child(_stage_label)
 	_hp_bar = Control.new()
@@ -98,6 +104,7 @@ func _build_ring() -> void:
 	panel.offset_top = 14
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(panel)
+	_ring_panel = panel
 	var v := VBoxContainer.new()
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(v)
@@ -118,6 +125,7 @@ func _build_actions() -> void:
 	bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bar)
+	_action_bar = bar
 	for id in SLOT_ORDER:
 		var def := Db.item(id)
 		if id == &"armor":
@@ -182,7 +190,7 @@ func _draw_boss_bar() -> void:
 	var b := bd.boss
 	var w := _boss_bar.size.x
 	var font := UiKit.title_font()
-	var title := "Отвергнутый — фаза %d" % (bd.phase + 1)
+	var title := "%s — фаза %d" % [Story.TYRANT_NAME, bd.phase + 1]
 	_boss_bar.draw_string_outline(font, Vector2(0, 20), title, HORIZONTAL_ALIGNMENT_CENTER, w, 28, 6, Color(0, 0, 0, 0.9))
 	_boss_bar.draw_string(font, Vector2(0, 20), title, HORIZONTAL_ALIGNMENT_CENTER, w, 28, UiKit.GOLD)
 	_boss_bar.draw_rect(Rect2(0, 28, w, 20), Color(0, 0, 0, 0.8))
@@ -249,6 +257,19 @@ func show_banner(title: String, subtitle: String) -> void:
 func fade(to_black: bool, duration: float) -> void:
 	var tw := create_tween()
 	tw.tween_property(_fade, "color:a", 1.0 if to_black else 0.0, duration)
+
+
+## Сюжетная сцена: статус, кольцо, панель действий, подсказка, полоса босса и цифры над врагами уходят.
+func set_cinematic(on: bool, duration: float = 0.4) -> void:
+	if _cinematic_tween != null and _cinematic_tween.is_valid():
+		_cinematic_tween.kill()
+	_cinematic_tween = create_tween().set_parallel(true)
+	var parts: Array[Control] = [_status_box, _ring_panel, _action_bar, _boss_bar, overlay]
+	if _hint != null:
+		parts.append(_hint)
+	for c in parts:
+		if c != null and is_instance_valid(c):
+			_cinematic_tween.tween_property(c, "modulate:a", 0.0 if on else 1.0, duration)
 
 
 func show_controls_hint() -> void:
@@ -345,7 +366,9 @@ func toggle_pause() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if game.state == Game.State.OVER:
+	if game.state == Game.State.OVER or game.state == Game.State.CUTSCENE:
+		return
+	if game.cutscene != null and game.cutscene.active:
 		return
 	if event.is_action_pressed(&"pause"):
 		toggle_pause()

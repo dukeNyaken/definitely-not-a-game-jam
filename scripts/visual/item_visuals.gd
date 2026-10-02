@@ -191,6 +191,12 @@ static func _parts(id: StringName) -> Array:
 				for k in 3:
 					_py(g, Vector2(0.035, 0.035), 0.09, Color(1.1, 1.1, 1.15), Vector3(-0.045 + k * 0.045, -0.06, -0.1), &"iron", Vector3(deg_to_rad(-90), 0, 0), 0.7)
 				var sx := -1.0 if side == &"l_hand" else 1.0
+				if side == &"r_hand":
+					# Перстень отца на правой перчатке — его Солдат в финале отдаст брату.
+					var ring := NpcLooks.father_ring()
+					ring.scale = Vector3.ONE * 0.55
+					ring.position = Vector3(0.045, -0.06, -0.1)
+					g.add_child(ring)
 				out.append({"socket": side, "node": g, "anchors": [
 					_anchor(Vector3(sx * 0.1, 0.05, 0), Vector3(sx, 0, 0)),
 					_anchor(Vector3(0, 0.05, 0.1), Vector3.BACK),

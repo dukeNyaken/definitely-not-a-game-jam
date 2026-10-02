@@ -84,6 +84,14 @@ func _ready() -> void:
 	_render_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(_render_button)
 	_update_render_button()
+	var story_btn := UiKit.button(Render.cutscenes_text(), func(): pass)
+	story_btn.pressed.connect(func():
+		Render.set_cutscenes(not Render.cutscenes)
+		story_btn.text = Render.cutscenes_text()
+	)
+	story_btn.custom_minimum_size = Vector2(360, 50)
+	story_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(story_btn)
 	var how := UiKit.button("Как играть", _toggle_rules)
 	how.custom_minimum_size = Vector2(360, 50)
 	how.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -143,7 +151,7 @@ func _toggle_rules() -> void:
 		"Герой начинает забег с семью вещами: меч, щит, доспех, шлем, перчатки, сапоги, амулет. Они стоят по кольцу в случайном порядке.\n\n" +
 		"[b]7 этапов.[/b] На этапах 1–6 — три волны врагов и элитная волна, затем алтарь жертвы. На 7-м — босс.\n\n" +
 		"[b]Жертва.[/b] На алтаре вы навсегда отдаёте одну вещь. Её сила уходит соседу по стрелке и становится свойством: «событие соседа → сила жертвы». Например, щит в сапогах — «Неуязвимый рывок».\n\n" +
-		"[b]Финал.[/b] Остаётся одна вещь — дерево всех ваших решений. А босс «Отвергнутый» наденет всё, что вы выкинули.\n\n" +
+		"[b]Финал.[/b] Остаётся одна вещь — дерево всех ваших решений. А Тиран, старший брат героя, наденет всё, что вы отдали.\n\n" +
 		"[b]Управление:[/b] WASD, мышь, ЛКМ / ПКМ / Пробел / Q / E — действия вещей, Tab — дерево свойств, Esc — пауза.", 20))
 	var ok := UiKit.button("Закрыть", _toggle_rules)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
