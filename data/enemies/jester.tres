@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"jester"
+display_name = "Шут"
+behavior = 6
+hp = 26.0
+damage = 7.0
+speed = 5.8
+body_radius = 0.34
+attack_range = 3.2
+attack_arc_degrees = 100.0
+windup = 0.35
+recovery = 0.5
+attack_cooldown = 2.2
+lunge_distance = 2.6
+combo_hits = 2
+combo_gap = 0.16
+retreat_distance = 2.6
+dodge_chance = 0.45
+dodge_distance = 2.5
+dodge_cooldown = 2.0
+orbit_distance = 3.4
+color = Color(0.75, 0.15, 0.12, 1)
+scale = 0.78

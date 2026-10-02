@@ -6,9 +6,9 @@
 script = ExtResource("1")
 id = &"armor"
 display_name = "Броня"
-description = "громилы"
-waves = Array[Dictionary]([{"brute": 1, "infantry": 3}, {"brute": 2, "infantry": 3}, {"brute": 3, "infantry": 4}])
-elite_escort = {"brute": 1, "infantry": 3}
-elite_bases = Array[StringName]([&"brute", &"infantry"])
+description = "громилы и слизни"
+waves = Array[Dictionary]([{"brute": 1, "infantry": 2, "slime": 1}, {"brute": 2, "infantry": 2, "slime": 2}, {"brute": 2, "infantry": 3, "slime": 3}])
+elite_escort = {"brute": 1, "slime": 2}
+elite_bases = Array[StringName]([&"brute", &"slime", &"infantry"])
 elite_count = 1
 floor_tint = Color(0.36, 0.28, 0.24, 1)

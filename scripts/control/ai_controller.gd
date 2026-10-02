@@ -16,6 +16,7 @@ var _since: Dictionary = {}
 var _shield_raise_at: float = -1.0
 var _shield_release_at: float = -1.0
 var _shield_ready_at: float = 0.0
+var _dodge_ready_at: float = 0.0
 var _watched_target: Actor
 ## Пауза между действиями вещей (темп элит и фаз босса).
 var action_gap: float = 1.0
@@ -61,9 +62,20 @@ func _move(target: Actor, to: Vector3, dist: float, delta: float) -> void:
 	var behavior := edef.behavior if edef != null else EnemyDef.Behavior.MELEE
 	var reach := attack.reach() if attack != null else 2.0
 	match behavior:
-		EnemyDef.Behavior.MELEE, EnemyDef.Behavior.BRUTE:
+		EnemyDef.Behavior.MELEE, EnemyDef.Behavior.BRUTE, EnemyDef.Behavior.SLIME:
 			if dist > reach * 0.8 + target.body_radius:
 				dir = toward
+		EnemyDef.Behavior.JESTER:
+			# Кружит вокруг цели на дистанции выпада, меняя направление.
+			_strafe_timer -= delta
+			if _strafe_timer <= 0.0:
+				_strafe_timer = randf_range(1.2, 2.4)
+				_strafe = -_strafe
+			orbit_angle += delta * 1.5 * _strafe
+			var spot := target.global_position + Vector3(cos(orbit_angle), 0, sin(orbit_angle)) * edef.orbit_distance
+			var to_spot := Combat.flat(spot - actor.global_position)
+			if to_spot.length() > 0.25:
+				dir = to_spot.normalized()
 		EnemyDef.Behavior.SWARM:
 			var spot := target.global_position + Vector3(cos(orbit_angle), 0, sin(orbit_angle)) * 1.1
 			var to_spot := Combat.flat(spot - actor.global_position)
@@ -136,11 +148,20 @@ func _exit_tree() -> void:
 		_watched_target.attack_started.disconnect(_on_target_attack)
 
 
-## Щит: на замах цели рядом — с шансом 50%, после реакции.
+## Щит: на замах цели рядом — с шансом 50%, после реакции. Шут — уворачивается прыжком.
 func _on_target_attack() -> void:
-	if actor == null or actor.dead or not actor.has_item(&"shield"):
+	if actor == null or actor.dead:
 		return
 	var dist := Combat.flat(_watched_target.global_position - actor.global_position).length()
+	if edef != null and edef.dodge_chance > 0.0 and dist <= 3.5 and actor.clock() >= _dodge_ready_at and _busy() == false:
+		if randf() < edef.dodge_chance:
+			_dodge_ready_at = actor.clock() + edef.dodge_cooldown
+			var away := Combat.flat_dir(actor.global_position - _watched_target.global_position)
+			var side := Vector3(-away.z, 0, away.x) * (1.0 if randf() < 0.5 else -1.0)
+			actor.start_dash((side + away * 0.4).normalized(), edef.dodge_distance, 0.2)
+			Audio.play(&"jester_giggle", -8.0, 0.2)
+	if not actor.has_item(&"shield"):
+		return
 	if dist <= Db.balance.ai_shield_trigger_range:
 		_maybe_raise_shield()
 

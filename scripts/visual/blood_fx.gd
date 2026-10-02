@@ -4,6 +4,7 @@ extends RefCounted
 
 const BLOOD := Color(0.42, 0.03, 0.03)
 const BONE := Color(0.85, 0.82, 0.74)
+const SLIME := Color(0.35, 0.8, 0.2)
 const MAX_DECALS := 40
 
 static var _decals: Array[Node3D] = []
@@ -76,4 +77,6 @@ static func color_for(a: Actor) -> Color:
 	var def = a.get_meta(&"enemy_def") if a.has_meta(&"enemy_def") else null
 	if def != null and (def as EnemyDef).behavior == EnemyDef.Behavior.RANGED:
 		return BONE
+	if def != null and (def as EnemyDef).behavior == EnemyDef.Behavior.SLIME:
+		return SLIME
 	return BLOOD

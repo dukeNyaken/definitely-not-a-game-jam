@@ -6,9 +6,9 @@
 script = ExtResource("1")
 id = &"arrows"
 display_name = "Стрелы"
-description = "лучники"
-waves = Array[Dictionary]([{"archer": 3, "infantry": 2}, {"archer": 4, "infantry": 3}, {"archer": 6, "infantry": 3}])
-elite_escort = {"archer": 4}
-elite_bases = Array[StringName]([&"archer", &"infantry"])
+description = "лучники и шуты"
+waves = Array[Dictionary]([{"archer": 3, "jester": 1}, {"archer": 4, "infantry": 2, "jester": 2}, {"archer": 5, "infantry": 2, "jester": 3}])
+elite_escort = {"archer": 3, "jester": 2}
+elite_bases = Array[StringName]([&"archer", &"jester"])
 elite_count = 1
 floor_tint = Color(0.3, 0.33, 0.26, 1)

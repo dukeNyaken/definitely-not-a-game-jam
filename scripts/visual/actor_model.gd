@@ -3,8 +3,10 @@ extends Node3D
 ## Лоу-поли гуманоид с сокетами под вещи и процедурной анимацией.
 ## Читает состояние своего Actor каждый кадр; разовые анимации — по сигналам.
 
-## После SWARM — люди сюжетных сцен (наряды в NpcLooks).
-enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM, FRIEND, BELOVED, FAITHFUL, REFUGEE, CAPTAIN, WIDOW, SMITH, NOVICE, TYRANT, FATHER }
+## SLIME, JESTER — враги; после них — люди сюжетных сцен (наряды в NpcLooks).
+enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM, SLIME, JESTER, FRIEND, BELOVED, FAITHFUL, REFUGEE, CAPTAIN, WIDOW, SMITH, NOVICE, TYRANT, FATHER }
+
+const SLIME_EDGE := 0.95
 
 const SKIN := Color(0.86, 0.66, 0.52)
 
@@ -41,6 +43,14 @@ var variant: StringName = &""
 ## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer". Пустая — обычная анимация; rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
+var _slime_cube: Node3D
+var _roll_basis: Basis = Basis()
+var _roll_phase: float = 0.0
+var _last_pos: Vector3 = Vector3.INF
+var _hop: float = 0.0
+var _flip_t: float = -1.0
+var _was_dashing: bool = false
+var _stab_left: bool = false
 
 
 func setup(p_actor: Actor, p_kind: int, p_body: Color = SKIN, p_accent: Color = Color(0.92, 0.9, 0.84)) -> void:
@@ -61,6 +71,9 @@ func _build_body() -> void:
 	_add_shadow()
 	if kind == Kind.SWARM:
 		_build_swarm()
+		return
+	if kind == Kind.SLIME:
+		_build_slime()
 		return
 	var p := _proportions()
 	hips = LowPoly.pivot("Hips", Vector3(0, p["hip_y"], 0))
@@ -95,6 +108,7 @@ func _build_body() -> void:
 		Kind.BRUTE: _dress_brute(p)
 		Kind.CASTER: _dress_caster(p)
 		Kind.BOSS: _dress_boss(p)
+		Kind.JESTER: _dress_jester(p)
 		_: NpcLooks.dress(self, p)
 	_collect_meshes()
 
@@ -114,6 +128,8 @@ func _proportions() -> Dictionary:
 			return {"hip_y": 0.92, "hip_w": 0.12, "leg": 0.86, "chest": Vector3(0.44, 0.6, 0.28), "shoulder": 0.3, "arm": 0.66, "limb": 0.14}
 		Kind.BOSS:
 			return {"hip_y": 0.96, "hip_w": 0.14, "leg": 0.9, "chest": Vector3(0.62, 0.7, 0.34), "shoulder": 0.4, "arm": 0.74, "limb": 0.17}
+		Kind.JESTER:
+			return {"hip_y": 0.46, "hip_w": 0.12, "leg": 0.42, "chest": Vector3(0.5, 0.42, 0.34), "shoulder": 0.3, "arm": 0.4, "limb": 0.12}
 		Kind.INFANTRY:
 			return {"hip_y": 0.9, "hip_w": 0.13, "leg": 0.84, "chest": Vector3(0.52, 0.6, 0.3), "shoulder": 0.34, "arm": 0.66, "limb": 0.16}
 		Kind.BELOVED, Kind.FAITHFUL, Kind.WIDOW:
@@ -441,6 +457,153 @@ func _dress_boss(p: Dictionary) -> void:
 	head.add_child(_crown)
 
 
+# --- Шут: карлик в маске с ухмылкой, колпаке с бубенцами и с двумя ножами ----
+
+func _dress_jester(p: Dictionary) -> void:
+	# Ткань тёмная, поэтому оттенки ярче единицы.
+	var red := Color(2.4, 0.62, 0.45)
+	var black := Color(0.95, 0.85, 1.1)
+	var gold := Color(0.95, 0.78, 0.35)
+	var pale := Color(0.95, 0.92, 0.86)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
+	var legs := [leg_l, leg_r]
+	for i in 2:
+		var leg: Node3D = legs[i]
+		var c: Color = red if i == 0 else black
+		_limb(leg, 0.085, 0.06, leg_len, c, &"cloth")
+		_f(leg, Vector2(0.13, 0.26), Vector2(0.1, 0.12), 0.09, black, Vector3(0, -leg_len + 0.02, -0.04), &"leather", Vector2(0, 0.05))
+		_pyr(leg, Vector2(0.08, 0.08), 0.22, c, Vector3(0, -leg_len + 0.06, -0.22), &"cloth", Vector3(deg_to_rad(-60), 0, 0))
+		_gm(leg, 0.03, 0.03, 0.03, 5, gold, Vector3(0, -leg_len + 0.15, -0.32), &"gold", Vector3.ZERO, 0.5)
+	_oval(hips, 0.2, 0.17, 0.2, 0.8, black, Vector3(0, -0.02, 0), &"cloth")
+	var chest: Vector3 = p["chest"]
+	# Пухлый камзол: половина красная, половина чёрная, ромбы на груди.
+	_oval(torso, 0.27, 0.27, chest.y, 0.78, red, Vector3(0, chest.y * 0.5, 0), &"cloth")
+	var half := _oval(torso, 0.275, 0.275, chest.y * 1.01, 0.8, black, Vector3(0.13, chest.y * 0.5, 0), &"cloth")
+	half.scale.x = 0.52
+	_ball(torso, 0.2, red, Vector3(0, 0.08, -0.06), &"cloth", Vector3(1.2, 0.9, 1.0))
+	for k in 3:
+		_gm(torso, 0.035, 0.05, 0.05, 4, gold if k % 2 == 0 else black, Vector3(-0.1, chest.y * (0.3 + k * 0.22), -0.2), &"gold", Vector3(PI / 2, 0, 0), 0.4)
+	_oval(torso, 0.24, 0.24, 0.05, 0.75, Color(0.45, 0.32, 0.24), Vector3(0, 0.04, 0), &"leather")
+	# Брыжи — кольцо пирамидок вокруг шеи.
+	for k in 8:
+		var a := TAU * k / 8.0
+		_pyr(torso, Vector2(0.07, 0.07), 0.12, pale if k % 2 == 0 else red, Vector3(cos(a) * 0.14, chest.y + 0.02, sin(a) * 0.14), &"cloth", Vector3(sin(a) * 1.2, 0, -cos(a) * 1.2))
+	# Большая голова: белая маска, ромбы глаз, кривая ухмылка, длинный нос.
+	_ball(head, 0.2, pale, Vector3(0, 0.21, 0), &"bone", Vector3(1.0, 1.05, 1.0))
+	for side in [-1.0, 1.0]:
+		_gm(head, 0.035, 0.04, 0.04, 4, Color(0.03, 0.02, 0.03), Vector3(side * 0.065, 0.24, -0.155), &"", Vector3(PI / 2, 0, 0))
+		_bx(head, Vector3(0.02, 0.02, 0.02), Color(1.0, 0.3, 0.15), Vector3(side * 0.065, 0.24, -0.17), &"", Vector3.ZERO, 0.0, 3.0)
+	_bx(head, Vector3(0.16, 0.035, 0.02), Color(0.55, 0.05, 0.05), Vector3(0, 0.12, -0.155), &"", Vector3(0, 0, 0.12))
+	for k in 4:
+		_bx(head, Vector3(0.02, 0.025, 0.02), pale, Vector3(-0.045 + k * 0.03, 0.125 + (k - 1.5) * 0.004, -0.165))
+	_pyr(head, Vector2(0.05, 0.05), 0.16, pale, Vector3(0, 0.19, -0.2), &"bone", Vector3(deg_to_rad(-80), 0, 0))
+	# Колпак: обод и три рога, свисающих с бубенцами.
+	head.add_child(LowPoly.cyl(0.17, 0.18, 0.08, 8, black, Vector3(0, 0.34, 0), 0.9, 0.0, 0.0, &"cloth"))
+	var horn_colors := [red, black, red]
+	for k in 3:
+		var a := -0.9 + k * 0.9
+		var horn := LowPoly.pivot("Horn", Vector3(sin(a) * 0.1, 0.38, cos(a) * 0.02))
+		horn.rotation = Vector3(0, 0, -a * 0.9)
+		head.add_child(horn)
+		_put(horn, LowPoly.cyl(0.03, 0.08, 0.26, 6, horn_colors[k], Vector3(0, 0.13, 0), 0.9, 0.0, 0.0, &"cloth"), Vector3.ZERO)
+		var tip := LowPoly.pivot("Tip", Vector3(0, 0.26, 0))
+		tip.rotation = Vector3(0, 0, -signf(a + 0.001) * 1.6 if absf(a) > 0.1 else 0.0)
+		horn.add_child(tip)
+		_put(tip, LowPoly.cyl(0.01, 0.03, 0.2, 5, horn_colors[k], Vector3(0, 0.1, 0), 0.9, 0.0, 0.0, &"cloth"), Vector3.ZERO)
+		_ball(tip, 0.04, gold, Vector3(0, 0.21, 0), &"gold", Vector3.ONE, 6, 3)
+	var arms := [arm_l, arm_r]
+	for i in 2:
+		var arm: Node3D = arms[i]
+		var c: Color = black if i == 0 else red
+		_ball(arm, 0.08, c, Vector3(0, -0.03, 0), &"cloth")
+		_limb(arm, 0.07, 0.05, arm_len, c, &"cloth")
+		_hand(arm, arm_len, pale, &"leather")
+		# Нож в каждой руке.
+		var knife := LowPoly.pivot("Knife")
+		knife.add_child(LowPoly.cyl(0.02, 0.022, 0.12, 5, Color(1, 1, 1), Vector3(0, -0.02, 0), 0.9, 0.0, 0.0, &"leather"))
+		_bx(knife, Vector3(0.09, 0.02, 0.03), Color(0.6, 0.6, 0.65), Vector3(0, 0.05, 0), &"iron", Vector3.ZERO, 0.5)
+		_f(knife, Vector2(0.055, 0.015), Vector2(0.005, 0.01), 0.3, Color(1.2, 1.2, 1.25), Vector3(0.01, 0.21, 0), &"iron", Vector2(0.02, 0), Vector3.ZERO, 0.7)
+		_bx(knife, Vector3(0.03, 0.08, 0.017), Color(0.4, 0.03, 0.03), Vector3(0.012, 0.25, 0))
+		knife.rotation.x = deg_to_rad(-95)
+		(sockets[&"l_hand"] if i == 0 else sockets[&"r_hand"]).add_child(knife)
+
+
+## Слизень: полупрозрачный ядовитый куб; внутри кувыркаются череп и кости.
+func _build_slime() -> void:
+	hips = LowPoly.pivot("Hips", Vector3(0, 0.9, 0))
+	add_child(hips)
+	torso = LowPoly.pivot("Torso")
+	hips.add_child(torso)
+	head = LowPoly.pivot("Head")
+	torso.add_child(head)
+	arm_l = LowPoly.pivot("ArmL")
+	arm_r = LowPoly.pivot("ArmR")
+	leg_l = LowPoly.pivot("LegL")
+	leg_r = LowPoly.pivot("LegR")
+	for n in [arm_l, arm_r, leg_l, leg_r]:
+		torso.add_child(n)
+	_slime_cube = LowPoly.pivot("Cube", Vector3(0, SLIME_EDGE * 0.5, 0))
+	add_child(_slime_cube)
+	var bone := Color(0.9, 0.86, 0.75)
+	var skull := LowPoly.pivot("Skull", Vector3(0.02, 0.0, -0.02))
+	skull.rotation = Vector3(0.3, 0.6, 0.2)
+	_slime_cube.add_child(skull)
+	_ball(skull, 0.13, bone, Vector3.ZERO, &"bone", Vector3(0.95, 1.0, 1.1))
+	_put(skull, LowPoly.wedge(Vector3(0.14, 0.07, 0.08), bone, Vector3(0, -0.12, -0.05), &"bone"), Vector3(PI, 0, 0))
+	for side in [-1.0, 1.0]:
+		skull.add_child(LowPoly.box(Vector3(0.05, 0.045, 0.02), Color(0.5, 1.0, 0.3), Vector3(side * 0.05, 0.01, -0.13), 0.5, 0.0, 3.0))
+	for k in 3:
+		var b := LowPoly.box(Vector3(0.05, 0.05, 0.36), bone, Vector3((k - 1) * 0.2, -0.22 + k * 0.08, 0.15 - k * 0.1), 0.9, 0.0, 0.0, &"bone")
+		b.rotation = Vector3(k * 0.7, k * 1.3, 0.4)
+		_slime_cube.add_child(b)
+	_slime_cube.add_child(LowPoly.gem(0.09, 0.1, 0.1, 5, Color(0.5, 1.0, 0.25), Vector3(-0.15, 0.15, 0.12), &"", 0.0, 2.5))
+	var jelly := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE * SLIME_EDGE
+	jelly.mesh = LowPoly.flat(box)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.32, 0.85, 0.22, 0.5)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.roughness = 0.15
+	m.metallic_specular = 0.8
+	m.emission_enabled = true
+	m.emission = Color(0.1, 0.35, 0.05)
+	m.emission_energy_multiplier = 0.8
+	jelly.material_override = m
+	jelly.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_slime_cube.add_child(jelly)
+	sockets[&"chest"] = _socket(_slime_cube, Vector3(0, SLIME_EDGE * 0.5, 0))
+	for key in [&"head", &"neck", &"l_hand", &"r_hand", &"l_foot", &"r_foot"]:
+		sockets[key] = sockets[&"chest"]
+	_collect_meshes()
+
+
+## Перекат куба через ребро: поворот по пройденному пути, центр приподнимается к 45°.
+func _animate_slime(delta: float) -> void:
+	rotation.y = 0.0
+	var pos := actor.global_position
+	if _last_pos == Vector3.INF:
+		_last_pos = pos
+	var d := Combat.flat(pos - _last_pos)
+	_last_pos = pos
+	var dist := d.length() / maxf(scale.x, 0.01)
+	if dist > 0.0001 and dist < 2.0:
+		var axis := Vector3.UP.cross(d.normalized())
+		var ang := dist / SLIME_EDGE * (PI / 2.0)
+		_roll_basis = (Basis(axis, ang) * _roll_basis).orthonormalized()
+		var before := int(_roll_phase / (PI / 2.0))
+		_roll_phase += ang
+		if int(_roll_phase / (PI / 2.0)) != before:
+			Audio.play(&"slime_roll", -14.0, 0.15)
+	var phase := fmod(_roll_phase, PI / 2.0)
+	var squash := 1.0 - 0.32 * _windup
+	var widen := 1.0 + 0.2 * _windup
+	_hop = maxf(_hop - delta, 0.0)
+	_slime_cube.basis = Basis.from_scale(Vector3(widen, squash, widen)) * _roll_basis
+	_slime_cube.position.y = SLIME_EDGE * 0.5 * sqrt(2.0) * sin(PI / 4.0 + phase) * squash + sin(_hop / 0.25 * PI) * 0.35
+
+
 ## Рой: мертвенно-зелёный бес на четырёх лапах, с рогами, пастью и шипами по хребту.
 func _build_swarm() -> void:
 	hips = LowPoly.pivot("Hips", Vector3(0, 0.9, 0))
@@ -570,6 +733,8 @@ func _connect_actions() -> void:
 		var comp := c as ActionComponent
 		if not comp.used.is_connected(_on_action_used):
 			comp.used.connect(_on_action_used.bind(comp))
+		if comp is EnemyAttack and not (comp as EnemyAttack).stabbed.is_connected(_on_stab):
+			(comp as EnemyAttack).stabbed.connect(_on_stab)
 
 
 func _on_action_used(_ctx: ActionContext, comp: ActionComponent) -> void:
@@ -588,8 +753,10 @@ func _on_action_used(_ctx: ActionContext, comp: ActionComponent) -> void:
 				play_swing(&"cast", 0.3)
 			EnemyDef.Behavior.RANGED:
 				play_swing(&"punch", 0.2)
-			EnemyDef.Behavior.SWARM:
+			EnemyDef.Behavior.SWARM, EnemyDef.Behavior.JESTER:
 				pass
+			EnemyDef.Behavior.SLIME:
+				_hop = 0.25
 			_:
 				play_swing(&"chop", 0.22)
 
@@ -598,7 +765,7 @@ func _on_action_used(_ctx: ActionContext, comp: ActionComponent) -> void:
 func _hide_kind_weapons() -> void:
 	var r_hand: Node3D = sockets[&"r_hand"]
 	for ch in r_hand.get_children():
-		if ch.name in ["EnemySword", "Cleaver", "Staff"]:
+		if ch.name in ["EnemySword", "Cleaver", "Staff", "Knife"]:
 			(ch as Node3D).visible = not actor.has_item(&"sword")
 
 
@@ -643,6 +810,11 @@ func socket_position(id: StringName) -> Vector3:
 	return s.global_position if s != null else global_position + Vector3(0, 1, 0)
 
 
+func _on_stab() -> void:
+	play_swing(&"stab_l" if _stab_left else &"stab_r", 0.14)
+	_stab_left = not _stab_left
+
+
 func play_swing(kind_name: StringName, duration: float = 0.2) -> void:
 	_swing_kind = kind_name
 	_swing_dur = duration
@@ -659,6 +831,16 @@ func _on_hit(_amount: float, _crit: bool, _ctx: ActionContext) -> void:
 
 func _on_died(_a: Actor) -> void:
 	_dying = true
+	for m in _meshes:
+		if is_instance_valid(m):
+			m.material_overlay = null
+	if kind == Kind.SLIME and _slime_cube != null:
+		# Растекается лужей: сначала выпрямляем куб, потом сплющиваем.
+		_slime_cube.basis = Basis()
+		var t := create_tween().set_parallel(true)
+		t.tween_property(_slime_cube, "scale", Vector3(1.7, 0.08, 1.7), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(_slime_cube, "position:y", 0.04, 0.35)
+		return
 	var tw := create_tween()
 	tw.tween_property(self, "rotation:x", deg_to_rad(80), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_property(self, "position:y", -0.6, 0.8).set_delay(0.3)
@@ -671,7 +853,10 @@ func _process(delta: float) -> void:
 		_windup = (actor.innate as EnemyAttack).windup_progress()
 	if _crown != null:
 		_crown.rotation.y += delta * 0.9
-	_animate(delta)
+	if kind == Kind.SLIME:
+		_animate_slime(delta)
+	else:
+		_animate(delta)
 	_update_overlay(delta)
 
 
@@ -698,6 +883,9 @@ func _animate(delta: float) -> void:
 	if (actor.has_item(&"sword") or kind != Kind.HERO) and not is_npc():
 		arm_r_basis = Basis(Vector3.RIGHT, 0.35 + swing * 0.3)
 	match kind:
+		Kind.JESTER:
+			arm_l_basis = Basis(Vector3.UP, 0.35) * Basis(Vector3.RIGHT, 0.75 - swing * 0.3)
+			arm_r_basis = Basis(Vector3.UP, -0.35) * Basis(Vector3.RIGHT, 0.75 + swing * 0.3)
 		Kind.ARCHER:
 			arm_l_basis = Basis(Vector3.UP, -0.35) * Basis(Vector3.RIGHT, 1.2)
 			arm_r_basis = Basis(Vector3.UP, 0.4) * Basis(Vector3.RIGHT, 1.1)
@@ -737,6 +925,12 @@ func _animate(delta: float) -> void:
 			&"grab":
 				arm_r_basis = Basis(Vector3.RIGHT, lerpf(1.55, 1.2, e))
 				arm_l_basis = Basis(Vector3.RIGHT, lerpf(1.55, 1.2, e))
+			&"stab_r":
+				arm_r_basis = Basis(Vector3.RIGHT, lerpf(0.7, 1.7, sin(k * PI)))
+				torso.rotation.y = -0.4 * sin(k * PI)
+			&"stab_l":
+				arm_l_basis = Basis(Vector3.RIGHT, lerpf(0.7, 1.7, sin(k * PI)))
+				torso.rotation.y = 0.4 * sin(k * PI)
 	head.rotation.x = 0.0
 	var p := pose if pose != &"" else rest_pose
 	if p != &"" and not (_swing_t < _swing_dur):
@@ -745,6 +939,20 @@ func _animate(delta: float) -> void:
 		arm_r_basis = arms[1]
 	arm_l.basis = arm_l_basis
 	arm_r.basis = arm_r_basis
+	# Шут крутит сальто на каждом рывке (выпад, отскок, уворот).
+	if kind == Kind.JESTER:
+		var dashing := actor.is_dashing()
+		if dashing and not _was_dashing:
+			_flip_t = 0.0
+		_was_dashing = dashing
+		if _flip_t >= 0.0:
+			_flip_t += delta
+			var k2 := clampf(_flip_t / 0.3, 0.0, 1.0)
+			hips.rotation.x = -TAU * (1.0 - pow(1.0 - k2, 2.0))
+			hips.position.y += sin(k2 * PI) * 0.35
+			if k2 >= 1.0:
+				_flip_t = -1.0
+				hips.rotation.x = 0.0
 
 
 ## Позы сюжетных сцен поверх ходьбы. Ноги без коленей: на коленях бёдра опущены, ноги лежат назад.

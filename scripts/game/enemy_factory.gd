@@ -11,6 +11,8 @@ const KIND_BY_BEHAVIOR := {
 	EnemyDef.Behavior.SWARM: ActorModel.Kind.SWARM,
 	EnemyDef.Behavior.BRUTE: ActorModel.Kind.BRUTE,
 	EnemyDef.Behavior.CASTER: ActorModel.Kind.CASTER,
+	EnemyDef.Behavior.SLIME: ActorModel.Kind.SLIME,
+	EnemyDef.Behavior.JESTER: ActorModel.Kind.JESTER,
 }
 
 
@@ -50,6 +52,11 @@ static func create(def: EnemyDef, stage: int, elite_items: Array[ItemState] = []
 	model.scale = Vector3.ONE * def.scale * (1.2 if elite else 1.0)
 	if elite:
 		model.add_child(_elite_aura())
+	if def.trail_damage > 0.0:
+		var trail := TrailDropper.new()
+		trail.name = "Trail"
+		a.add_child(trail)
+		trail.setup(a, def, def.trail_damage * scale)
 	var ai := AIController.new()
 	ai.name = "AI"
 	a.add_child(ai)
@@ -63,6 +70,8 @@ static func elite_item_pool(def: EnemyDef) -> Array[StringName]:
 	match def.behavior:
 		EnemyDef.Behavior.RANGED, EnemyDef.Behavior.CASTER:
 			return [&"shield", &"armor", &"helmet", &"boots", &"amulet", &"gloves"]
+		EnemyDef.Behavior.SLIME:
+			return [&"armor", &"helmet", &"boots", &"amulet", &"gloves"]
 		_:
 			return Db.ITEM_IDS.duplicate()
 

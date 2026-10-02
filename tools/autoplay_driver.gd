@@ -20,6 +20,7 @@ var _shots: Array = []
 var _shot_prefix := ""
 var _start_stage := 1
 var _cutscenes := false
+var _threat := ""
 
 
 func _ready() -> void:
@@ -43,6 +44,7 @@ func _start() -> void:
 			"prefix": _shot_prefix = kv[1]
 			"stage": _start_stage = int(kv[1])
 			"cutscenes": _cutscenes = kv[1] == "1"
+			"threat": _threat = kv[1]
 	var rs = get_tree().root.get_node("RunState")
 	rs.new_run(_seed)
 	rs.debug_immortal = _immortal
@@ -52,6 +54,8 @@ func _start() -> void:
 	for i in _start_stage - 1:
 		rs.sacrifice(_pick % rs.ring.size())
 	rs.stage = _start_stage
+	if _threat != "" and _start_stage >= 2:
+		rs.threat_order[_start_stage - 2] = StringName(_threat)
 	get_tree().change_scene_to_file.call_deferred("res://scenes/game.tscn")
 
 

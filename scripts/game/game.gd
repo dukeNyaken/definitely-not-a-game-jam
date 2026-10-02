@@ -333,6 +333,28 @@ func _on_enemy_died(enemy: Actor) -> void:
 	BloodFx.spurt(world, enemy.global_position + Vector3(0, 0.8, 0), Vector3.UP, 18, col)
 	if col == BloodFx.BLOOD:
 		BloodFx.decal(world, enemy.global_position, 1.2 + enemy.body_radius * 1.6)
+	_split(enemy)
+
+
+## Слизень распадается на слизнёнышей.
+func _split(enemy: Actor) -> void:
+	if not enemy.has_meta(&"enemy_def"):
+		return
+	var def: EnemyDef = enemy.get_meta(&"enemy_def")
+	if def.split_into == &"" or def.split_count <= 0:
+		return
+	Audio.play(&"slime_squish", 0.0)
+	var child_def := Db.enemy(def.split_into)
+	for i in def.split_count:
+		var a := TAU * i / def.split_count + rng.randf() * 0.6
+		var off := Vector3(cos(a), 0, sin(a)) * 0.7
+		var child := EnemyFactory.create(child_def, RunState.stage)
+		world.add_child(child)
+		child.global_position = enemy.global_position + off
+		child.facing = Combat.flat_dir(hero.global_position - child.global_position)
+		child.force_move(off * 1.5, 0.2)
+		child.died.connect(_on_enemy_died)
+		child.hit_received.connect(_on_enemy_hit.bind(child))
 	get_tree().create_timer(1.2).timeout.connect(_free_corpse.bind(enemy))
 
 

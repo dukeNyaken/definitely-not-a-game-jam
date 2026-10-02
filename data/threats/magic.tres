@@ -6,9 +6,9 @@
 script = ExtResource("1")
 id = &"magic"
 display_name = "Магия"
-description = "заклинатели"
-waves = Array[Dictionary]([{"caster": 2, "infantry": 3}, {"caster": 3, "swarm": 5}, {"caster": 4, "infantry": 3, "swarm": 4}])
-elite_escort = {"caster": 3, "swarm": 4}
+description = "заклинатели и слизни"
+waves = Array[Dictionary]([{"caster": 2, "infantry": 2, "slime": 1}, {"caster": 3, "swarm": 4, "slime": 1}, {"caster": 4, "infantry": 2, "slime": 2}])
+elite_escort = {"caster": 3, "slime": 1}
 elite_bases = Array[StringName]([&"caster", &"infantry"])
 elite_count = 1
 floor_tint = Color(0.25, 0.28, 0.38, 1)

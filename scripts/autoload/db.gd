@@ -2,7 +2,7 @@ extends Node
 ## Все определения игры из .tres.
 
 const ITEM_IDS: Array[StringName] = [&"sword", &"shield", &"armor", &"helmet", &"gloves", &"boots", &"amulet"]
-const ENEMY_IDS: Array[StringName] = [&"infantry", &"archer", &"swarm", &"brute", &"caster"]
+const ENEMY_IDS: Array[StringName] = [&"infantry", &"archer", &"swarm", &"brute", &"caster", &"slime", &"slime_small", &"jester"]
 const THREAT_IDS: Array[StringName] = [&"arrows", &"swarm", &"armor", &"magic", &"onslaught"]
 const TUTORIAL_THREAT: StringName = &"tutorial"
 
@@ -75,3 +75,5 @@ func _exit_tree() -> void:
 	BloodFx._decals.clear()
 	BloodFx._cube = null
 	Surfaces._cache.clear()
+	PoisonPuddle._alive.clear()
+	PoisonPuddle._next_hit.clear()

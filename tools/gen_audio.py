@@ -402,6 +402,21 @@ def sfx():
     crackle = env_exp([x if rng.random() < 0.08 else 0.0 for x in noise(0.3)], 8)
     write("essence_energy", mix((lowpass(zap, 3500), 0, 0.7), (crackle, 0, 0.6), (thud(140, 0.2), 0, 0.5)))
 
+    # Новые враги: шут и слизень.
+    giggle = []
+    for k, f in enumerate([880, 1040, 920, 1180]):
+        g = fm(f, 2.0, 2.5, 0.09, 14.0, freq_end=f * 0.85)
+        env_adsr(g, 0.005, 0.03, 0.5, 0.04)
+        g = [x * (0.7 + 0.3 * math.sin(TAU * 38 * i / SR)) for i, x in enumerate(g)]
+        giggle.append((lowpass(g, 3200), k * 0.11, 0.6 if k % 2 == 0 else 0.45))
+    write("jester_giggle", reverb(mix(*giggle), 0.2), 0.6)
+    write("knife_slash", mix((whoosh(0.13, 1500, 4000, 3000, 8000), 0, 0.7), (env_exp(osc(2600, 0.12, "sine", freq_end=3400), 30), 0.02, 0.25)), 0.7)
+    squish = lowpass(noise(0.35), 900, 250)
+    squish = [x * (0.6 + 0.4 * math.sin(TAU * 22 * i / SR)) for i, x in enumerate(squish)]
+    env_adsr(squish, 0.01, 0.1, 0.5, 0.15)
+    write("slime_squish", mix((squish, 0, 0.9), (env_exp(osc(180, 0.3, "sine", freq_end=70), 9), 0, 0.6)), 0.7)
+    write("slime_roll", mix((env_exp(lowpass(noise(0.12), 500), 25), 0, 0.8), (thud(95, 0.14, 55), 0, 0.6)), 0.5)
+
 
 # ---------------------------------------------------------------- музыка
 

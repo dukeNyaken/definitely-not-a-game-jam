@@ -6,9 +6,9 @@
 script = ExtResource("1")
 id = &"swarm"
 display_name = "Рой"
-description = "стаи мелких тварей"
-waves = Array[Dictionary]([{"swarm": 8, "infantry": 1}, {"swarm": 12, "infantry": 2}, {"swarm": 16, "infantry": 2}])
-elite_escort = {"swarm": 10}
-elite_bases = Array[StringName]([&"infantry", &"swarm"])
+description = "стаи тварей и шуты"
+waves = Array[Dictionary]([{"swarm": 8, "jester": 1}, {"swarm": 10, "jester": 2, "infantry": 1}, {"swarm": 12, "jester": 3, "infantry": 1}])
+elite_escort = {"swarm": 8, "jester": 2}
+elite_bases = Array[StringName]([&"jester", &"infantry"])
 elite_count = 2
 floor_tint = Color(0.33, 0.27, 0.33, 1)

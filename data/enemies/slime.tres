@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"slime"
+display_name = "Слизень"
+behavior = 5
+hp = 50.0
+damage = 10.0
+speed = 2.4
+body_radius = 0.5
+attack_range = 1.5
+windup = 0.6
+recovery = 0.6
+attack_cooldown = 2.0
+aoe_radius = 1.5
+trail_damage = 4.0
+trail_tick = 0.5
+trail_radius = 0.6
+trail_lifetime = 4.0
+trail_spacing = 0.85
+split_into = &"slime_small"
+split_count = 2
+color = Color(0.35, 0.85, 0.25, 1)
+scale = 1.0
