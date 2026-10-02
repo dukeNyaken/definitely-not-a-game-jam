@@ -1,0 +1,440 @@
+class_name Game
+extends Node3D
+## Режиссёр забега: этапы 1–6 (3 волны + элитная волна → алтарь), этап 7 — босс.
+
+signal state_changed(state: int)
+signal wave_started(index: int, total: int)
+signal banner(title: String, subtitle: String)
+
+enum State { INTRO, WAVES, WAVE_PAUSE, SHRINE, CLEARED, ALTAR, SACRIFICE, TRANSITION, BOSS_INTRO, BOSS, OVER }
+
+const ELITE_WAVE := 3
+
+var state: int = State.INTRO
+var world: Node3D
+var arena: Arena
+var rig: CameraRig
+var hero: Actor
+var hero_model: ActorModel
+var controller: PlayerController
+var hud: Hud
+var altar: Altar
+var shrine: Shrine
+var boss_director: BossDirector
+var wave: int = -1
+var rng := RandomNumberGenerator.new()
+var _spawn_queue: Array[Dictionary] = []
+var _spawn_timer: float = 0.0
+var _pending_portals: int = 0
+var _state_timer: float = 0.0
+var _wave_time: float = 0.0
+var _shrine_timer: float = 0.0
+var _ui_lock: int = 0
+
+
+func _ready() -> void:
+	add_to_group(&"game")
+	rng.seed = RunState.seed_value + RunState.stage * 101
+	world = Node3D.new()
+	world.name = "World"
+	add_child(world)
+	arena = Arena.new()
+	arena.name = "Arena"
+	world.add_child(arena)
+	arena.build(Db.balance.arena_radius)
+	Combat.arena_radius = Db.balance.arena_radius
+	rig = CameraRig.new()
+	rig.name = "CameraRig"
+	add_child(rig)
+	_spawn_hero()
+	rig.target = hero
+	rig.snap()
+	hud = Hud.new()
+	hud.name = "HUD"
+	add_child(hud)
+	hud.setup(self)
+	RunState.running = true
+	start_stage(RunState.stage)
+
+
+func _spawn_hero() -> void:
+	var b := Db.balance
+	hero = Actor.new()
+	hero.name = "Hero"
+	hero.faction = Actor.Faction.HERO
+	hero.display_name = "Герой"
+	hero.max_hp = b.hero_hp
+	hero.hp = b.hero_hp
+	hero.base_speed = b.hero_speed
+	hero.speed_mult = RunState.speed_multiplier()
+	hero.body_radius = 0.4
+	hero.collision_layer = EnemyFactory.LAYER_HERO
+	hero.collision_mask = EnemyFactory.LAYER_ENEMY
+	hero.immortal = RunState.debug_immortal
+	var shape := CollisionShape3D.new()
+	var cap := CapsuleShape3D.new()
+	cap.radius = 0.4
+	cap.height = 1.8
+	shape.shape = cap
+	shape.position.y = 0.9
+	hero.add_child(shape)
+	world.add_child(hero)
+	hero.set_items(RunState.ring.items.duplicate())
+	hero.set_innate(FistAction.new())
+	hero_model = ActorModel.new()
+	hero_model.name = "Model"
+	hero.add_child(hero_model)
+	hero_model.setup(hero, ActorModel.Kind.HERO)
+	controller = PlayerController.new()
+	controller.name = "PlayerController"
+	hero.add_child(controller)
+	controller.setup(hero, rig)
+	hero.died.connect(_on_hero_died)
+	hero.hit_received.connect(_on_hero_hit)
+	Combat.hero = hero
+
+
+func _on_hero_hit(amount: float, _crit: bool, _ctx: ActionContext) -> void:
+	if amount > 0.0:
+		rig.shake(0.25)
+		Audio.play(&"hero_hurt")
+
+
+func set_state(s: int) -> void:
+	state = s
+	_state_timer = 0.0
+	state_changed.emit(s)
+
+
+## Ввод в героя блокируется, пока открыт хоть один экран (алтарь, пауза, дерево...).
+func lock_input(on: bool) -> void:
+	_ui_lock = maxi(_ui_lock + (1 if on else -1), 0)
+	controller.enabled = _ui_lock == 0 and state != State.OVER
+
+
+# --- Этапы ------------------------------------------------------------------
+
+func start_stage(s: int) -> void:
+	RunState.stage = s
+	_clear_world()
+	hero.global_position = Vector3(0, 0, 3)
+	hero.heal_full()
+	hero.speed_mult = RunState.speed_multiplier()
+	hero.bus.reset_cooldowns()
+	rig.snap()
+	wave = -1
+	if RunState.is_boss_stage(s):
+		arena.set_tint(Color(0.24, 0.2, 0.28))
+		_start_boss()
+		return
+	var threat := RunState.threat_for(s)
+	arena.set_tint(threat.floor_tint)
+	set_state(State.INTRO)
+	banner.emit("Этап %d" % s, "%s — %s" % [threat.display_name, threat.description])
+	Audio.play_music(&"music_battle")
+	if s == 1:
+		hud.show_controls_hint()
+
+
+func _clear_world() -> void:
+	for ch in world.get_children():
+		if ch == arena or ch == hero:
+			continue
+		ch.queue_free()
+	_spawn_queue.clear()
+	_pending_portals = 0
+	altar = null
+	shrine = null
+	boss_director = null
+
+
+func current_wave_total() -> int:
+	return ELITE_WAVE + 1
+
+
+func _count_scale() -> float:
+	return 1.0 + Db.balance.wave_count_growth * maxi(RunState.stage - 2, 0)
+
+
+func start_wave(index: int) -> void:
+	wave = index
+	_wave_time = 0.0
+	var threat := RunState.current_threat()
+	var comp: Dictionary = threat.waves[index] if index < threat.waves.size() else threat.elite_escort
+	var list: Array[Dictionary] = []
+	if index == ELITE_WAVE:
+		comp = threat.elite_escort
+		for i in threat.elite_count:
+			var base: StringName = threat.elite_bases[rng.randi_range(0, threat.elite_bases.size() - 1)]
+			var def := Db.enemy(base)
+			var pool := EnemyFactory.elite_item_pool(def)
+			var items: Array[StringName] = []
+			var n := rng.randi_range(1, Db.balance.elite_item_count_max)
+			for k in n:
+				var id: StringName = pool[rng.randi_range(0, pool.size() - 1)]
+				pool.erase(id)
+				items.append(id)
+			list.append({"def": def, "items": items})
+	for id in comp.keys():
+		var count := int(round(int(comp[id]) * _count_scale()))
+		for k in count:
+			list.append({"def": Db.enemy(StringName(id)), "items": [] as Array[StringName]})
+	# Перемешиваем, но элиты идут первыми.
+	var elites := list.filter(func(e): return not (e["items"] as Array).is_empty())
+	var rest := list.filter(func(e): return (e["items"] as Array).is_empty())
+	for i in range(rest.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var t: Dictionary = rest[i]
+		rest[i] = rest[j]
+		rest[j] = t
+	_spawn_queue.append_array(elites)
+	_spawn_queue.append_array(rest)
+	_spawn_timer = 0.3
+	set_state(State.WAVES)
+	wave_started.emit(index, current_wave_total())
+	if index == ELITE_WAVE:
+		banner.emit("Элитная волна", "враги с вещами героя")
+		Audio.play(&"elite_horn")
+
+
+func alive_enemies() -> int:
+	var n := 0
+	for a in Combat.living_actors(get_tree()):
+		if a.faction == Actor.Faction.ENEMY:
+			n += 1
+	return n
+
+
+func _physics_process(delta: float) -> void:
+	_state_timer += delta
+	match state:
+		State.INTRO:
+			if _state_timer > 2.2:
+				start_wave(0)
+		State.WAVES:
+			_wave_time += delta
+			_process_spawns(delta)
+			var done_spawning := _spawn_queue.is_empty() and _pending_portals == 0
+			if done_spawning and alive_enemies() == 0:
+				_wave_cleared()
+			elif done_spawning and wave < ELITE_WAVE and _wave_time > Db.balance.wave_timeout and alive_enemies() <= 2:
+				_wave_cleared()
+		State.WAVE_PAUSE:
+			if _state_timer > Db.balance.wave_pause:
+				start_wave(wave + 1)
+		State.SHRINE:
+			_shrine_timer -= delta
+			if _shrine_timer <= 0.0 and _ui_lock == 0:
+				start_wave(wave + 1)
+
+
+func _process_spawns(delta: float) -> void:
+	if _spawn_queue.is_empty():
+		return
+	_spawn_timer -= delta
+	if _spawn_timer > 0.0 or alive_enemies() + _pending_portals >= Db.balance.max_alive_enemies:
+		return
+	_spawn_timer = 0.28 if RunState.stage > 1 else 0.45
+	var entry: Dictionary = _spawn_queue.pop_front()
+	var portal := SpawnPortal.new()
+	portal.payload = entry
+	world.add_child(portal)
+	portal.global_position = _spawn_point()
+	portal.opened.connect(_on_portal_opened)
+	_pending_portals += 1
+
+
+func _spawn_point() -> Vector3:
+	var r := Combat.arena_radius - 2.0
+	for attempt in 12:
+		var a := rng.randf() * TAU
+		var d := rng.randf_range(r * 0.55, r)
+		var p := Vector3(cos(a) * d, 0, sin(a) * d)
+		if Combat.flat(p - hero.global_position).length() > 6.5:
+			return p
+	return -Combat.flat_dir(hero.global_position, Vector3.FORWARD) * r
+
+
+func _on_portal_opened(portal: SpawnPortal) -> void:
+	_pending_portals = maxi(_pending_portals - 1, 0)
+	var entry: Dictionary = portal.payload
+	var items: Array[StringName] = []
+	items.assign(entry["items"])
+	var enemy := EnemyFactory.create(entry["def"], RunState.stage, items)
+	world.add_child(enemy)
+	enemy.global_position = portal.global_position
+	enemy.facing = Combat.flat_dir(hero.global_position - enemy.global_position)
+	enemy.died.connect(_on_enemy_died)
+	var model := enemy.get_node("Model") as Node3D
+	var final_scale := model.scale
+	model.scale = final_scale * 0.1
+	model.create_tween().tween_property(model, "scale", final_scale, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Audio.play(&"enemy_spawn", -12.0)
+
+
+func _on_enemy_died(enemy: Actor) -> void:
+	Audio.play(&"enemy_death", -4.0)
+	Vfx.burst(enemy, enemy.global_position + Vector3(0, 0.8, 0), Color(0.6, 0.2, 0.7), 1.2, 0.3)
+	get_tree().create_timer(1.2).timeout.connect(_free_corpse.bind(enemy))
+
+
+func _free_corpse(enemy: Actor) -> void:
+	if is_instance_valid(enemy):
+		enemy.queue_free()
+
+
+func _wave_cleared() -> void:
+	hero.restore_armor()
+	var s := RunState.stage
+	if wave == 1 and s in Db.balance.shrine_stages and not RunState.shrine_used.get(s, false):
+		_spawn_shrine()
+		return
+	if wave < ELITE_WAVE:
+		set_state(State.WAVE_PAUSE)
+		return
+	_stage_cleared()
+
+
+func _spawn_shrine() -> void:
+	shrine = Shrine.new()
+	world.add_child(shrine)
+	var a := rng.randf() * TAU
+	shrine.global_position = Vector3(cos(a), 0, sin(a)) * 6.0
+	shrine.stepped_on.connect(_on_shrine_stepped)
+	_shrine_timer = Db.balance.shrine_wait
+	set_state(State.SHRINE)
+	banner.emit("Святилище", "один раз поменяет местами двух соседей в кольце")
+	Audio.play(&"shrine_appear")
+
+
+func _on_shrine_stepped() -> void:
+	if RunState.shrine_used.get(RunState.stage, false):
+		return
+	hud.open_shrine()
+
+
+func shrine_done(swapped: bool) -> void:
+	if swapped and shrine != null:
+		shrine.vanish()
+		shrine = null
+		hero.set_items(RunState.ring.items.duplicate())
+		Audio.play(&"shrine_swap")
+	if state == State.SHRINE and swapped:
+		_shrine_timer = minf(_shrine_timer, 1.0)
+
+
+func _stage_cleared() -> void:
+	set_state(State.CLEARED)
+	if shrine != null:
+		shrine.vanish()
+		shrine = null
+	banner.emit("Этап пройден", "встаньте на алтарь")
+	Audio.play(&"stage_clear")
+	Audio.play_music(&"music_calm")
+	altar = Altar.new()
+	world.add_child(altar)
+	altar.global_position = Vector3.ZERO
+	altar.stepped_on.connect(_on_altar_stepped)
+
+
+func _on_altar_stepped() -> void:
+	if state != State.CLEARED:
+		return
+	set_state(State.ALTAR)
+	hud.open_altar()
+
+
+func altar_closed() -> void:
+	if state == State.ALTAR:
+		set_state(State.CLEARED)
+
+
+## Подтверждённая жертва ring[index].
+func do_sacrifice(index: int) -> void:
+	var victim_id := RunState.ring.items[index].def_id
+	var victim_socket := hero_model.socket_position(victim_id)
+	var res := RunState.sacrifice(index)
+	var recipient: ItemState = res["recipient"]
+	set_state(State.SACRIFICE)
+	var victim_def := Db.item(victim_id)
+	SacrificeFx.play(world, hero_model, victim_socket, recipient.def_id, victim_def.essence.color)
+	Audio.play(&"sacrifice")
+	Audio.play(StringName("essence_%s" % victim_def.essence.id), -4.0)
+	hero.set_items(RunState.ring.items.duplicate())
+	hero.speed_mult = RunState.speed_multiplier()
+	if altar != null:
+		altar.vanish()
+		altar = null
+	var t := get_tree().create_timer(2.4)
+	t.timeout.connect(_next_stage)
+
+
+func _next_stage() -> void:
+	set_state(State.TRANSITION)
+	hud.fade(true, 0.5)
+	await get_tree().create_timer(0.55).timeout
+	start_stage(RunState.stage + 1)
+	hud.fade(false, 0.6)
+
+
+## Отладка: пропустить этап (сразу к алтарю или к следующему этапу).
+func debug_skip_stage() -> void:
+	if state == State.OVER:
+		return
+	for a in Combat.living_actors(get_tree()):
+		if a.faction == Actor.Faction.ENEMY:
+			a.die()
+	_spawn_queue.clear()
+	if RunState.is_boss_stage():
+		return
+	if state in [State.CLEARED, State.ALTAR, State.SACRIFICE]:
+		_next_stage()
+	else:
+		_stage_cleared()
+
+
+func debug_refresh_hero() -> void:
+	hero.set_items(RunState.ring.items.duplicate())
+	hero.speed_mult = RunState.speed_multiplier()
+	hero.immortal = RunState.debug_immortal
+
+
+# --- Босс -------------------------------------------------------------------
+
+func _start_boss() -> void:
+	set_state(State.BOSS_INTRO)
+	Audio.play_music(&"music_boss")
+	banner.emit("Отвергнутый", "всё, что вы выкинули")
+	boss_director = BossDirector.new()
+	boss_director.name = "BossDirector"
+	world.add_child(boss_director)
+	boss_director.setup(self)
+	boss_director.intro_finished.connect(func(): set_state(State.BOSS))
+	boss_director.boss_defeated.connect(_on_boss_defeated)
+
+
+func _on_boss_defeated() -> void:
+	if state == State.OVER:
+		return
+	RunState.outcome = RunState.Outcome.VICTORY
+	_finish(3.0)
+
+
+func _on_hero_died(_a: Actor) -> void:
+	if state == State.OVER:
+		return
+	RunState.outcome = RunState.Outcome.DEATH
+	Audio.play(&"defeat")
+	_finish(2.2)
+
+
+func _finish(delay: float) -> void:
+	set_state(State.OVER)
+	RunState.running = false
+	controller.enabled = false
+	Engine.time_scale = 0.4
+	await get_tree().create_timer(delay * 0.4).timeout
+	Engine.time_scale = 1.0
+	hud.fade(true, 0.6)
+	await get_tree().create_timer(0.65).timeout
+	get_tree().change_scene_to_file("res://scenes/final_card.tscn")

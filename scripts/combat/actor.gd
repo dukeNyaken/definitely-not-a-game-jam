@@ -28,6 +28,8 @@ var speed_mult: float = 1.0
 var body_radius: float = 0.45
 var knockback_immune: bool = false
 var immortal: bool = false
+## Множитель урона действий и свойств вещей (у элит и босса меньше 1).
+var item_damage_mult: float = 1.0
 
 ## Управление.
 var move_input: Vector3 = Vector3.ZERO
@@ -341,9 +343,10 @@ func _tick_status(delta: float) -> void:
 	forced_time = maxf(forced_time - delta, 0.0)
 
 
+## Все персонажи стоят на полу арены (y = 0) и не выходят за её край.
 func _clamp_to_arena() -> void:
 	var p := Combat.flat(global_position)
 	var limit := Combat.arena_radius - body_radius
 	if p.length() > limit:
 		p = p.normalized() * limit
-		global_position = Vector3(p.x, global_position.y, p.z)
+	global_position = Vector3(p.x, 0.0, p.z)

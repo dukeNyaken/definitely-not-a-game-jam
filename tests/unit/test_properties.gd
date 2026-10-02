@@ -91,8 +91,8 @@ func test_property(params = use_parameters(pairs())) -> void:
 func _assert_effect(essence: StringName, hero: Actor, near: Actor, mid: Actor, far: Actor) -> void:
 	match essence:
 		&"blade":
-			assert_almost_eq(near.hp, 1000.0 - 15.0, 0.01, "Лезвие: 15 урона в дуге 2,5 м")
-			assert_almost_eq(mid.hp, 1000.0 - 15.0, 0.01, "Лезвие задевает всех в дуге")
+			assert_almost_eq(near.hp, 1000.0 - 15.0 * 1.1, 0.01, "Лезвие: 15 урона в дуге 2,5 м (+10% за свойство на вещи)")
+			assert_almost_eq(mid.hp, 1000.0 - 15.0 * 1.1, 0.01, "Лезвие задевает всех в дуге")
 			assert_eq(far.hp, 1000.0, "сзади не задевает")
 		&"bulwark":
 			assert_almost_eq(hero.invuln_time, 0.6, 0.001, "Оплот: 0,6 с неуязвимости")
@@ -100,7 +100,7 @@ func _assert_effect(essence: StringName, hero: Actor, near: Actor, mid: Actor, f
 			var ctx := ActionContext.make(near, null)
 			assert_eq(hero.receive_hit(50.0, ctx), Actor.HitResult.IMMUNE)
 		&"mass":
-			assert_almost_eq(near.hp, 1000.0 - 5.0, 0.01, "Масса: 5 урона")
+			assert_almost_eq(near.hp, 1000.0 - 5.0 * 1.1, 0.01, "Масса: 5 урона (+10% за свойство на вещи)")
 			assert_almost_eq(near.stun_time, 0.5, 0.001, "Масса: оглушение 0,5 с")
 			assert_gt(near.forced_time, 0.0, "Масса: толчок")
 			assert_gt(near.forced_velocity.dot(Vector3(0, 0, -1)), 0.0, "толкает от героя")
@@ -122,6 +122,7 @@ func _assert_effect(essence: StringName, hero: Actor, near: Actor, mid: Actor, f
 			if projectiles.size() == 1:
 				var pr := projectiles[0] as Projectile
 				assert_true(pr.pierce, "проходит насквозь")
+				assert_almost_eq(pr.damage, 15.0 * 1.1, 0.01, "Энергия: 15 урона (+10% за свойство на вещи)")
 				assert_eq(pr.faction, hero.faction)
 				assert_gt(pr.velocity.normalized().dot(Vector3(0, 0, -1)), 0.99, "летит к курсору")
 		_:

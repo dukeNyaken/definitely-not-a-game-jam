@@ -31,13 +31,20 @@ static func make(p_actor: Actor, p_item: ItemState) -> ActionContext:
 	return ctx
 
 
+## +10% урона за каждое свойство на вещи — и её действию, и эффектам её свойств.
+static func item_mult(state: ItemState) -> float:
+	if state == null:
+		return 1.0
+	return 1.0 + Db.balance.property_damage_bonus * state.properties.size()
+
+
 ## Контекст для эффекта свойства, сработавшего внутри цепочки.
 func derive(p: Property) -> ActionContext:
 	var ctx := ActionContext.make(actor, item)
 	ctx.from_property = true
 	ctx.property = p
 	ctx.depth = depth + 1
-	ctx.damage_mult = 1.0
+	ctx.damage_mult = ActionContext.item_mult(item)
 	if not is_instance_valid(actor):
 		ctx.origin = origin
 		ctx.direction = direction

@@ -38,11 +38,16 @@ extends Resource
 @export var boss_phase_thresholds: PackedFloat32Array = PackedFloat32Array([0.6, 0.25])
 @export var boss_phase_speeds: PackedFloat32Array = PackedFloat32Array([2.6, 4.0, 5.6])
 @export var boss_phase_item_counts: PackedInt32Array = PackedInt32Array([6, 3, 1])
-@export var boss_slam_damage: float = 14.0
-@export var boss_slam_range: float = 2.6
-@export var boss_slam_windup: float = 0.7
-@export var boss_slam_cooldown: float = 1.8
 @export var boss_armor_restore_on_phase: bool = true
 @export var ai_reaction: float = 0.5
 @export var ai_shield_chance: float = 0.5
-@export var ai_shield_hold: float = 1.2
+@export var ai_shield_hold: float = 0.9
+## После опускания щита ИИ какое-то время не поднимает его снова.
+@export var ai_shield_cooldown: float = 2.2
+## Урон вещей героя в руках элит и босса (вещи рассчитаны на врагов с 30 HP).
+@export var enemy_item_damage_mult: float = 0.5
+## Пауза ИИ между действиями вещей: элиты и фазы босса 1–3.
+@export var elite_action_gap: float = 1.1
+@export var boss_action_gaps: PackedFloat32Array = PackedFloat32Array([0.9, 0.6, 0.35])
+## Пауза после завершающего удара комбо меча.
+@export var ai_sword_combo_pause: float = 1.3

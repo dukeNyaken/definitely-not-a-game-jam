@@ -64,10 +64,10 @@ func play_music(track: StringName, fade: float = 1.2) -> void:
 	var s := _stream(track)
 	var old := _music_a if _music_a.playing else _music_b
 	var new := _music_b if old == _music_a else _music_a
-	var tw := create_tween().set_parallel(true)
 	if old.playing:
+		var tw := create_tween()
 		tw.tween_property(old, "volume_db", -60.0, fade)
-		tw.chain().tween_callback(old.stop)
+		tw.tween_callback(old.stop)
 	if s == null:
 		return
 	if s is AudioStreamWAV:
@@ -89,3 +89,11 @@ func stop_music(fade: float = 1.0) -> void:
 			var tw := create_tween()
 			tw.tween_property(pl, "volume_db", -60.0, fade)
 			tw.tween_callback(pl.stop)
+
+
+func set_music_volume(db: float) -> void:
+	music_volume_db = db
+	for p in [_music_a, _music_b]:
+		var pl: AudioStreamPlayer = p
+		if pl.playing:
+			pl.volume_db = db

@@ -79,9 +79,7 @@ func cooldown_ratio() -> float:
 
 ## Каждое свойство на вещи даёт +10% к урону её действия.
 func damage_mult() -> float:
-	if item == null:
-		return 1.0
-	return 1.0 + Db.balance.property_damage_bonus * item.properties.size()
+	return ActionContext.item_mult(item)
 
 
 func new_context() -> ActionContext:

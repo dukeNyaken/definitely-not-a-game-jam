@@ -9,7 +9,7 @@ func apply(essence: EssenceDef, ctx: ActionContext) -> void:
 		return
 	var radius: float = essence.stat("radius", 2.5)
 	var arc: float = essence.stat("arc", 180.0)
-	var dmg: float = essence.stat("damage", 15.0)
+	var dmg: float = essence.stat("damage", 15.0) * ctx.damage_mult
 	for t in Combat.targets_in_arc(actor, ctx.origin, ctx.direction, radius, arc):
 		Combat.deal(ctx, t, dmg, {"knockback": essence.stat("knockback", 0.6)})
 	Vfx.slash(actor, ctx.origin, ctx.direction, radius, arc, essence.color, 0.26)

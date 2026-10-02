@@ -81,6 +81,8 @@ static func deal(ctx: ActionContext, target: Actor, amount: float, opts: Diction
 	var attacker: Actor = ctx.actor if is_instance_valid(ctx.actor) else null
 	var crit := is_crit(attacker, target)
 	var dmg := amount
+	if ctx.item != null and attacker != null:
+		dmg *= attacker.item_damage_mult
 	if crit:
 		dmg *= attacker.crit_multiplier() if attacker != null else Db.balance.crit_multiplier
 	var o := opts.duplicate()
