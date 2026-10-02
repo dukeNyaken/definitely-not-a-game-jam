@@ -693,6 +693,8 @@ func _apply_rim() -> void:
 
 func _collect(n: Node) -> void:
 	for ch in n.get_children():
+		if ch is FlipbookFx:
+			continue
 		if ch is MeshInstance3D:
 			_meshes.append(ch)
 		_collect(ch)
@@ -860,8 +862,18 @@ func set_windup(progress: float) -> void:
 	_windup = progress
 
 
-func _on_hit(_amount: float, _crit: bool, _ctx: ActionContext) -> void:
+func _on_hit(amount: float, crit: bool, ctx: ActionContext) -> void:
 	_flash = 0.09
+	if amount <= 0.0:
+		return
+	var src := ctx.origin if ctx != null else actor.global_position
+	var h := (0.45 if kind == Kind.SLIME or kind == Kind.SWARM else 0.95) * scale.y
+	if crit:
+		FlipbookFx.impact(actor, src, h, Color(0.8, 0.45, 1.0), 1.7)
+	elif actor.faction == Actor.Faction.HERO:
+		FlipbookFx.impact(actor, src, h, Color(1.0, 0.4, 0.3), 1.0)
+	else:
+		FlipbookFx.impact(actor, src, h, Color(1.0, 0.88, 0.7), 1.1)
 
 
 func _on_died(_a: Actor) -> void:

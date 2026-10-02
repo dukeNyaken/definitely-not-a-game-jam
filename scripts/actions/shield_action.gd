@@ -47,4 +47,4 @@ func _on_blocked(ctx: ActionContext) -> void:
 	Audio.play(&"block")
 	var src := ctx.origin if ctx != null else actor.global_position + actor.facing
 	var p := actor.global_position + Combat.flat_dir(src - actor.global_position, actor.facing) * 0.8 + Vector3(0, 0.9, 0)
-	Vfx.burst(actor, p, def.essence.color, 0.6)
+	FlipbookFx.spawn(actor, &"impact", p, def.essence.color, 1.3, {"energy": 2.4, "pull": 1.2})

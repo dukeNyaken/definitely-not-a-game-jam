@@ -51,7 +51,9 @@ static func create(def: EnemyDef, stage: int, elite_items: Array[ItemState] = []
 	model.setup(a, KIND_BY_BEHAVIOR[def.behavior], def.color)
 	model.scale = Vector3.ONE * def.scale * (1.2 if elite else 1.0)
 	if elite:
-		model.add_child(_elite_aura())
+		var aura := _elite_aura()
+		model.add_child(aura)
+		a.died.connect(func(_dead: Actor) -> void: aura.fade_out(0.3))
 	if def.trail_damage > 0.0:
 		var trail := TrailDropper.new()
 		trail.name = "Trail"
@@ -76,10 +78,8 @@ static func elite_item_pool(def: EnemyDef) -> Array[StringName]:
 			return Db.ITEM_IDS.duplicate()
 
 
-static func _elite_aura() -> Node3D:
-	var ring := MeshInstance3D.new()
-	ring.mesh = Vfx.ring_mesh(0.75, 0.12, 24)
-	ring.material_override = Vfx.material(Color(1.0, 0.8, 0.3, 0.8), 1.8, true)
-	ring.position.y = 0.05
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return ring
+static func _elite_aura() -> FlipbookFx:
+	var aura := FlipbookFx.make(&"elite_aura", Color(1.0, 0.76, 0.3), 1.9, {"billboard": false, "loop": true, "energy": 1.8, "pull": 0.05})
+	aura.name = "EliteAura"
+	aura.position.y = 0.04
+	return aura

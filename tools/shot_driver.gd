@@ -60,6 +60,8 @@ func _ready() -> void:
 			RunState.stage = 4
 		"gallery":
 			scene = "res://tools/gallery.tscn"
+		"vfx":
+			scene = "res://tools/vfx_test.tscn"
 	get_tree().change_scene_to_file.call_deferred(scene)
 
 
