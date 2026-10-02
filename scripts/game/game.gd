@@ -105,19 +105,19 @@ func _on_hero_hit(amount: float, _crit: bool, _ctx: ActionContext) -> void:
 		hitstop(0.06)
 
 
-## Короткая остановка кадра на сильных ударах.
+## Короткая остановка кадра на сильных ударах. Таймер в реальном времени и идёт даже на паузе.
 func hitstop(sec: float) -> void:
-	if state == State.OVER or get_tree().paused:
+	if state == State.OVER or get_tree().paused or _hitstop_end > 0:
 		return
 	Engine.time_scale = 0.05
-	_hitstop_end = Time.get_ticks_msec() + int(sec * 1000.0)
+	_hitstop_end = 1
+	get_tree().create_timer(sec, true, false, true).timeout.connect(_end_hitstop)
 
 
-func _process(_delta: float) -> void:
-	if _hitstop_end > 0 and Time.get_ticks_msec() >= _hitstop_end:
-		_hitstop_end = 0
-		if state != State.OVER:
-			Engine.time_scale = 1.0
+func _end_hitstop() -> void:
+	_hitstop_end = 0
+	if state != State.OVER:
+		Engine.time_scale = 1.0
 
 
 func set_state(s: int) -> void:
@@ -387,14 +387,13 @@ func do_sacrifice(index: int) -> void:
 	if altar != null:
 		altar.vanish()
 		altar = null
-	var t := get_tree().create_timer(2.4)
-	t.timeout.connect(_next_stage)
+	get_tree().create_timer(2.4, false).timeout.connect(_next_stage)
 
 
 func _next_stage() -> void:
 	set_state(State.TRANSITION)
 	hud.fade(true, 0.5)
-	await get_tree().create_timer(0.55).timeout
+	await get_tree().create_timer(0.55, false).timeout
 	start_stage(RunState.stage + 1)
 	hud.fade(false, 0.6)
 

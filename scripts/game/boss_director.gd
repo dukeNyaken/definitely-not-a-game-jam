@@ -60,7 +60,7 @@ func _process(delta: float) -> void:
 
 
 func _intro() -> void:
-	await get_tree().create_timer(1.6).timeout
+	await get_tree().create_timer(1.6, false).timeout
 	var center := BOSS_POS + Vector3(0, 1.6, 0)
 	for i in _displays.size():
 		var d := _displays[i]
@@ -69,8 +69,8 @@ func _intro() -> void:
 		tw.tween_method(_bezier.bind(d, d.global_position, mid, center), 0.0, 1.0, 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_property(d, "scale", Vector3.ONE * 0.8, 0.7)
 		Audio.play(&"item_fly", -4.0)
-		await get_tree().create_timer(0.32).timeout
-	await get_tree().create_timer(0.6).timeout
+		await get_tree().create_timer(0.32, false).timeout
+	await get_tree().create_timer(0.6, false).timeout
 	for d in _displays:
 		if is_instance_valid(d):
 			d.queue_free()
@@ -80,7 +80,7 @@ func _intro() -> void:
 	Vfx.burst(self, BOSS_POS + Vector3(0, 1.5, 0), Color(0.7, 0.4, 1.0), 3.0, 0.4)
 	Audio.play(&"boss_roar")
 	game.rig.shake(0.8)
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(1.0, false).timeout
 	game.lock_input(false)
 	boss.get_node("AI").set_physics_process(true)
 	intro_finished.emit()
