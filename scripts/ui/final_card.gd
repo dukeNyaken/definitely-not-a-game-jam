@@ -46,8 +46,13 @@ func _ready() -> void:
 	if holder != null:
 		showcase.show_single(holder)
 	left.add_child(UiKit.outlined(UiKit.label("«%s»" % RunState.artifact_name(), 34, UiKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER), 6))
-	var result := "Отвергнутый повержен" if victory else "Погиб на этапе %d" % RunState.stage
+	var result := "%s повержен" % Story.TYRANT_NAME if victory else "Погиб на этапе %d" % RunState.stage
 	left.add_child(UiKit.label(result, 20, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	if victory:
+		var epilogue := UiKit.label(Story.FINALE["epilogue"], 16, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+		epilogue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		epilogue.custom_minimum_size = Vector2(420, 0)
+		left.add_child(epilogue)
 	left.add_child(UiKit.label("Сид %d · Время %s" % [RunState.seed_value, RunState.time_text()], 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER

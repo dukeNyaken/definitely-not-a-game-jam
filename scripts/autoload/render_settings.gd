@@ -11,6 +11,8 @@ const SETTINGS_PATH := "user://settings.cfg"
 const TARGET_LINES := {Mode.PS1: 270.0, Mode.PS2: 450.0}
 
 var mode: int = Mode.PS1
+## Сюжетные сцены (пролог, дары, ворота, финал). Хранится вместе с рендером и громкостью.
+var cutscenes: bool = true
 var shader_ps1: Shader = preload("res://shaders/retro_ps1.gdshader")
 var shader_ps2: Shader = preload("res://shaders/retro_ps2.gdshader")
 var _post: ColorRect
@@ -127,6 +129,7 @@ func _load() -> void:
 		mode = clampi(int(cfg.get_value("render", "mode", Mode.PS1)), 0, MODE_NAMES.size() - 1)
 		Audio.sfx_volume_db = float(cfg.get_value("audio", "sfx", Audio.sfx_volume_db))
 		Audio.music_volume_db = float(cfg.get_value("audio", "music", Audio.music_volume_db))
+		cutscenes = bool(cfg.get_value("story", "cutscenes", cutscenes))
 
 
 func _save() -> void:
@@ -134,7 +137,17 @@ func _save() -> void:
 	cfg.set_value("render", "mode", mode)
 	cfg.set_value("audio", "sfx", Audio.sfx_volume_db)
 	cfg.set_value("audio", "music", Audio.music_volume_db)
+	cfg.set_value("story", "cutscenes", cutscenes)
 	cfg.save(SETTINGS_PATH)
+
+
+func set_cutscenes(on: bool) -> void:
+	cutscenes = on
+	_save()
+
+
+func cutscenes_text() -> String:
+	return "Сюжетные сцены: %s" % ("вкл" if cutscenes else "выкл")
 
 
 func save_settings() -> void:

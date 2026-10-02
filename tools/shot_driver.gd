@@ -21,8 +21,20 @@ func _ready() -> void:
 			"out": _out = kv[1]
 			"delay": _delay = float(kv[1])
 	RunState.new_run(424242)
+	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
+	var story := _preset in ["prologue", "gift", "gates", "finale"]
+	RunState.skip_cutscenes = not story
+	if story:
+		Render.cutscenes = true
 	var scene := "res://scenes/game.tscn"
 	match _preset:
+		"gift":
+			RunState.sacrifice(0)
+			RunState.stage = 2
+		"gates", "finale":
+			for i in 6:
+				RunState.sacrifice(0)
+			RunState.stage = 7
 		"menu":
 			scene = "res://scenes/main_menu.tscn"
 		"final", "final_death":
@@ -60,6 +72,11 @@ func _setup() -> void:
 			g.hud.toggle_tree()
 		"shrine":
 			g.hud.open_shrine()
+		"gift":
+			g.debug_skip_stage()
+		"finale":
+			# Ворота пропускаем, Тирана — сразу на колени.
+			g.cutscene.skip()
 
 
 func _process(delta: float) -> void:
@@ -68,6 +85,16 @@ func _process(delta: float) -> void:
 		_setup_done = true
 		_setup()
 	var g := _game()
+	if _preset == "gift" and g != null:
+		if g.state == Game.State.CLEARED and g.altar != null and g.altar.active:
+			g.hero.global_position = Vector3(0, 0, 0)
+			g._on_altar_stepped()
+		if g.hud.has_screen() and g.hud._screen is AltarUi:
+			g.hud._on_altar_confirmed(0)
+	if _preset == "finale" and g != null and _t > 2.0 and g.state == Game.State.BOSS:
+		var b := g.boss_director.boss
+		if b != null and not b.dead:
+			b.die()
 	if _preset == "altar" and g != null:
 		if g.state == Game.State.CLEARED and g.altar != null and g.altar.active:
 			g.hero.global_position = Vector3(0, 0, 3)

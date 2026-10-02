@@ -33,6 +33,12 @@ func _ready() -> void:
 	add_child(_chevron)
 
 
+## Сюжетная сцена: кольцо и шеврон прячутся, тёплый свет остаётся.
+func set_cinematic(on: bool) -> void:
+	_ring.visible = not on
+	_chevron.visible = not on
+
+
 func _process(_delta: float) -> void:
 	var actor := get_parent() as Actor
 	if actor == null:

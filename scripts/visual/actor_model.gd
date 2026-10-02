@@ -3,7 +3,8 @@ extends Node3D
 ## Лоу-поли гуманоид с сокетами под вещи и процедурной анимацией.
 ## Читает состояние своего Actor каждый кадр; разовые анимации — по сигналам.
 
-enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM }
+## После SWARM — люди сюжетных сцен (наряды в NpcLooks).
+enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM, FRIEND, BELOVED, FAITHFUL, REFUGEE, CAPTAIN, WIDOW, SMITH, NOVICE, TYRANT, FATHER }
 
 const SKIN := Color(0.86, 0.66, 0.52)
 
@@ -34,6 +35,12 @@ var _yaw: float = 0.0
 var _dying: bool = false
 var _base_y: float = 0.0
 var _crown: Node3D
+## Вариант наряда (например, &"young" — Тиран во флешбэке). Задаётся до setup().
+var variant: StringName = &""
+## Поза сюжетной сцены: &"kneel", &"slump", &"sit", &"hold", &"offer", &"arms_up", &"hands_back",
+## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer". Пустая — обычная анимация; rest_pose — поза по умолчанию у NPC.
+var pose: StringName = &""
+var rest_pose: StringName = &""
 
 
 func setup(p_actor: Actor, p_kind: int, p_body: Color = SKIN, p_accent: Color = Color(0.92, 0.9, 0.84)) -> void:
@@ -88,7 +95,12 @@ func _build_body() -> void:
 		Kind.BRUTE: _dress_brute(p)
 		Kind.CASTER: _dress_caster(p)
 		Kind.BOSS: _dress_boss(p)
+		_: NpcLooks.dress(self, p)
 	_collect_meshes()
+
+
+func is_npc() -> bool:
+	return kind >= Kind.FRIEND
 
 
 ## Пропорции тела по типу: ширина плеч, длина рук и ног, размер торса.
@@ -104,6 +116,12 @@ func _proportions() -> Dictionary:
 			return {"hip_y": 0.96, "hip_w": 0.14, "leg": 0.9, "chest": Vector3(0.62, 0.7, 0.34), "shoulder": 0.4, "arm": 0.74, "limb": 0.17}
 		Kind.INFANTRY:
 			return {"hip_y": 0.9, "hip_w": 0.13, "leg": 0.84, "chest": Vector3(0.52, 0.6, 0.3), "shoulder": 0.34, "arm": 0.66, "limb": 0.16}
+		Kind.BELOVED, Kind.FAITHFUL, Kind.WIDOW:
+			return {"hip_y": 0.9, "hip_w": 0.11, "leg": 0.84, "chest": Vector3(0.44, 0.56, 0.28), "shoulder": 0.29, "arm": 0.64, "limb": 0.13}
+		Kind.SMITH:
+			return {"hip_y": 0.88, "hip_w": 0.15, "leg": 0.8, "chest": Vector3(0.72, 0.62, 0.42), "shoulder": 0.44, "arm": 0.7, "limb": 0.22}
+		Kind.TYRANT:
+			return {"hip_y": 0.95, "hip_w": 0.13, "leg": 0.89, "chest": Vector3(0.6, 0.64, 0.34), "shoulder": 0.39, "arm": 0.72, "limb": 0.18}
 		_:
 			return {"hip_y": 0.92, "hip_w": 0.13, "leg": 0.86, "chest": Vector3(0.6, 0.62, 0.34), "shoulder": 0.39, "arm": 0.7, "limb": 0.19}
 
@@ -388,7 +406,7 @@ func _dress_caster(p: Dictionary) -> void:
 	sockets[&"r_hand"].add_child(staff)
 
 
-# --- Босс «Отвергнутый»: пустой рыцарь с бледными швами и короной осколков ----
+# --- Босс — Тиран в отданных вещах: пустой рыцарь с бледными швами и короной осколков ----
 
 func _dress_boss(p: Dictionary) -> void:
 	var body := Color(0.24, 0.22, 0.26)
@@ -481,7 +499,13 @@ func _collect_meshes() -> void:
 func _apply_rim() -> void:
 	var rim := Color(0.55, 0.7, 1.0)
 	var strength := 0.55
-	if actor != null and actor.faction == Actor.Faction.HERO:
+	if kind == Kind.TYRANT:
+		rim = Color(0.78, 0.62, 1.0)
+		strength = 0.6
+	elif is_npc():
+		rim = Color(1.0, 0.86, 0.68)
+		strength = 0.45
+	elif actor != null and actor.faction == Actor.Faction.HERO:
 		rim = Color(1.0, 0.8, 0.5)
 		strength = 0.6
 	elif kind == Kind.BOSS:
@@ -671,7 +695,7 @@ func _animate(delta: float) -> void:
 	# Руки: базовая поза плюс ходьба.
 	var arm_l_basis := Basis(Vector3.RIGHT, -swing * 0.6)
 	var arm_r_basis := Basis(Vector3.RIGHT, swing * 0.6)
-	if actor.has_item(&"sword") or kind != Kind.HERO:
+	if (actor.has_item(&"sword") or kind != Kind.HERO) and not is_npc():
 		arm_r_basis = Basis(Vector3.RIGHT, 0.35 + swing * 0.3)
 	match kind:
 		Kind.ARCHER:
@@ -713,8 +737,60 @@ func _animate(delta: float) -> void:
 			&"grab":
 				arm_r_basis = Basis(Vector3.RIGHT, lerpf(1.55, 1.2, e))
 				arm_l_basis = Basis(Vector3.RIGHT, lerpf(1.55, 1.2, e))
+	head.rotation.x = 0.0
+	var p := pose if pose != &"" else rest_pose
+	if p != &"" and not (_swing_t < _swing_dur):
+		var arms := _apply_pose(p, moving, arm_l_basis, arm_r_basis)
+		arm_l_basis = arms[0]
+		arm_r_basis = arms[1]
 	arm_l.basis = arm_l_basis
 	arm_r.basis = arm_r_basis
+
+
+## Позы сюжетных сцен поверх ходьбы. Ноги без коленей: на коленях бёдра опущены, ноги лежат назад.
+func _apply_pose(p: StringName, moving: float, arm_l_basis: Basis, arm_r_basis: Basis) -> Array[Basis]:
+	match p:
+		&"kneel", &"slump":
+			hips.position.y = 0.44
+			leg_l.rotation.x = -1.3
+			leg_r.rotation.x = -1.2
+			torso.rotation.x = -0.4 if p == &"kneel" else -0.75
+			head.rotation.x = 0.25 if p == &"kneel" else 0.5
+			arm_l_basis = Basis(Vector3.RIGHT, 0.25 if p == &"kneel" else 0.6)
+			arm_r_basis = Basis(Vector3.RIGHT, 0.25 if p == &"kneel" else 0.6)
+		&"sit":
+			hips.position.y = 0.32
+			leg_l.rotation.x = 1.4
+			leg_r.rotation.x = 1.5
+			torso.rotation.x = 0.3
+			arm_l_basis = Basis(Vector3.RIGHT, -0.5)
+			arm_r_basis = Basis(Vector3.RIGHT, -0.5)
+		&"hold":
+			arm_l_basis = Basis(Vector3.UP, -0.35) * Basis(Vector3.RIGHT, 1.05)
+			arm_r_basis = Basis(Vector3.UP, 0.35) * Basis(Vector3.RIGHT, 1.05)
+		&"offer":
+			arm_r_basis = Basis(Vector3.UP, 0.15) * Basis(Vector3.RIGHT, 1.25)
+		&"arms_up":
+			arm_l_basis = Basis(Vector3.RIGHT, 2.3)
+			arm_r_basis = Basis(Vector3.RIGHT, 2.3)
+		&"hands_back":
+			if moving < 0.2:
+				arm_l_basis = Basis(Vector3.UP, 0.4) * Basis(Vector3.RIGHT, -0.45)
+				arm_r_basis = Basis(Vector3.UP, -0.4) * Basis(Vector3.RIGHT, -0.45)
+		&"shield_up":
+			arm_l_basis = Basis(Vector3.UP, -0.9) * Basis(Vector3.RIGHT, 1.25)
+		&"lantern":
+			arm_l_basis = Basis(Vector3.RIGHT, 0.45)
+		&"sling":
+			arm_l_basis = Basis(Vector3.UP, -0.9) * Basis(Vector3.RIGHT, 1.0)
+		&"frail", &"frail_offer":
+			# Старик сгорбился и опирается на посох левой рукой; frail_offer — протягивает правую.
+			torso.rotation.x = -0.32
+			head.rotation.x = 0.2
+			arm_l_basis = Basis(Vector3.UP, -0.25) * Basis(Vector3.RIGHT, 0.55)
+			if p == &"frail_offer":
+				arm_r_basis = Basis(Vector3.UP, 0.2) * Basis(Vector3.RIGHT, 1.35)
+	return [arm_l_basis, arm_r_basis]
 
 
 func _update_overlay(delta: float) -> void:

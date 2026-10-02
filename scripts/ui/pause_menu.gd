@@ -18,8 +18,8 @@ func _ready() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.offset_left = -220
 	panel.offset_right = 220
-	panel.offset_top = -270
-	panel.offset_bottom = 270
+	panel.offset_top = -300
+	panel.offset_bottom = 300
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override(&"separation", 14)
@@ -35,6 +35,12 @@ func _ready() -> void:
 		render_btn.text = "Рендер: %s" % Render.mode_name()
 	)
 	v.add_child(render_btn)
+	var story_btn := UiKit.button(Render.cutscenes_text(), func(): pass)
+	story_btn.pressed.connect(func():
+		Render.set_cutscenes(not Render.cutscenes)
+		story_btn.text = Render.cutscenes_text()
+	)
+	v.add_child(story_btn)
 	v.add_child(_volume_row("Звуки", Audio.sfx_volume_db, func(val):
 		Audio.sfx_volume_db = val
 		Render.save_settings()

@@ -1,6 +1,6 @@
 class_name BossDirector
 extends Node3D
-## Босс «Отвергнутый»: носит снимки шести пожертвованных вещей.
+## Босс — Тиран (Сигвард, старший брат героя): носит снимки шести пожертвованных вещей.
 ## Вступление: вещи слетаются с постаментов по кругу арены и собирают рыцаря.
 ## Фазы: 100–60% — все шесть вещей; 60–25% — три первые жертвы; 25–0% — только первая.
 
@@ -17,15 +17,19 @@ var boss_model: ActorModel
 var phase: int = 0
 var _pedestals: Array[Node3D] = []
 var _displays: Array[Node3D] = []
+var _assembly_aborted: bool = false
+var _fight_started: bool = false
 
 
-func setup(p_game: Game) -> void:
+## cinematic — вступление ведёт сюжетная сцена (GatesScene) через assemble_items / reveal_boss / start_fight.
+func setup(p_game: Game, cinematic: bool = false) -> void:
 	game = p_game
 	game.hero.global_position = Vector3(0, 0, 7)
 	game.rig.snap()
 	game.lock_input(true)
 	_build_pedestals()
-	_intro()
+	if not cinematic:
+		_intro()
 
 
 func _build_pedestals() -> void:
@@ -67,26 +71,71 @@ func _process(delta: float) -> void:
 
 func _intro() -> void:
 	await get_tree().create_timer(1.6, false).timeout
+	await assemble_items()
+	reveal_boss()
+	await get_tree().create_timer(1.0, false).timeout
+	start_fight()
+
+
+## Вещи по одной слетаются с постаментов в точку босса. on_item(i) — после вылета i-й вещи.
+func assemble_items(on_item: Callable = Callable()) -> void:
 	var center := BOSS_POS + Vector3(0, 1.6, 0)
 	for i in _displays.size():
+		if _assembly_aborted:
+			break
 		var d := _displays[i]
 		var tw := d.create_tween().set_parallel(true)
 		var mid := (d.global_position + center) * 0.5 + Vector3(0, 3.0, 0)
 		tw.tween_method(_bezier.bind(d, d.global_position, mid, center), 0.0, 1.0, 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_property(d, "scale", Vector3.ONE * 0.8, 0.7)
 		Audio.play(&"item_fly", -4.0)
+		if on_item.is_valid():
+			on_item.call(i)
 		await get_tree().create_timer(0.32, false).timeout
-	await get_tree().create_timer(0.6, false).timeout
+	if not _assembly_aborted:
+		await get_tree().create_timer(0.6, false).timeout
+	_clear_displays()
+
+
+## Пропуск сцены посреди сборки: вещи исчезают сразу.
+func skip_assembly() -> void:
+	_assembly_aborted = true
+	_clear_displays()
+
+
+func _clear_displays() -> void:
 	for d in _displays:
 		if is_instance_valid(d):
 			d.queue_free()
 	_displays.clear()
+
+
+## Босс появляется в точке сборки: кольцо, вспышка, рёв. Повторный вызов ничего не делает.
+func reveal_boss() -> void:
+	if boss != null:
+		return
 	_spawn_boss()
 	Vfx.ring(self, BOSS_POS, 6.0, Color(0.9, 0.15, 0.08), 0.6, 0.5)
 	Vfx.burst(self, BOSS_POS + Vector3(0, 1.5, 0), Color(0.9, 0.15, 0.08), 3.0, 0.4)
 	Audio.play(&"boss_roar")
 	game.rig.shake(0.8)
-	await get_tree().create_timer(1.0, false).timeout
+
+
+## Сюжетная сцена идёт после появления босса: он стоит и ждёт, пока не начнётся бой.
+## (ИИ включается сам, когда босс входит в дерево, поэтому выключаем его уже после.)
+func freeze_boss() -> void:
+	if boss == null or _fight_started:
+		return
+	boss.get_node("AI").set_physics_process(false)
+	boss.move_input = Vector3.ZERO
+	boss.global_position = BOSS_POS
+	boss.facing = Vector3.BACK
+
+
+func start_fight() -> void:
+	if _fight_started:
+		return
+	_fight_started = true
 	game.lock_input(false)
 	boss.get_node("AI").set_physics_process(true)
 	intro_finished.emit()
@@ -103,7 +152,7 @@ func _spawn_boss() -> void:
 	boss = Actor.new()
 	boss.name = "Boss"
 	boss.faction = Actor.Faction.ENEMY
-	boss.display_name = "Отвергнутый"
+	boss.display_name = Story.TYRANT_NAME
 	boss.max_hp = b.boss_hp
 	boss.hp = b.boss_hp
 	boss.base_speed = b.boss_phase_speeds[0]
@@ -186,7 +235,7 @@ func _enter_phase(p: int) -> void:
 	Audio.play(&"boss_phase")
 	game.rig.shake(0.7)
 	phase_changed.emit(p)
-	game.banner.emit("Фаза %d" % (p + 1), "Отвергнутый сбрасывает вещи и ускоряется")
+	game.banner.emit("Фаза %d" % (p + 1), "%s сбрасывает вещи и ускоряется" % Story.TYRANT_NAME)
 
 
 func _fling(state: ItemState) -> void:

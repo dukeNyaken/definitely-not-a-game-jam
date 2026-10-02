@@ -6,7 +6,7 @@ signal state_changed(state: int)
 signal wave_started(index: int, total: int)
 signal banner(title: String, subtitle: String)
 
-enum State { INTRO, WAVES, WAVE_PAUSE, SHRINE, CLEARED, ALTAR, SACRIFICE, TRANSITION, BOSS_INTRO, BOSS, OVER }
+enum State { INTRO, WAVES, WAVE_PAUSE, SHRINE, CLEARED, ALTAR, SACRIFICE, TRANSITION, BOSS_INTRO, BOSS, OVER, CUTSCENE }
 
 const ELITE_WAVE := 3
 
@@ -21,6 +21,8 @@ var hud: Hud
 var altar: Altar
 var shrine: Shrine
 var boss_director: BossDirector
+## Сюжетные сцены: пролог, дары, голос из дворца, ворота, реплики в бою, финал.
+var cutscene: Cutscene
 var wave: int = -1
 var rng := RandomNumberGenerator.new()
 var _spawn_queue: Array[Dictionary] = []
@@ -54,6 +56,9 @@ func _ready() -> void:
 	hud.name = "HUD"
 	add_child(hud)
 	hud.setup(self)
+	cutscene = Cutscene.new()
+	add_child(cutscene)
+	cutscene.setup(self)
 	RunState.running = true
 	start_stage(RunState.stage)
 
@@ -156,6 +161,9 @@ func start_stage(s: int) -> void:
 		return
 	var threat := RunState.threat_for(s)
 	arena.set_tint(threat.floor_tint)
+	if s == 1 and RunState.sacrifices_count() == 0 and Cutscene.enabled():
+		set_state(State.CUTSCENE)
+		await PrologueScene.play(cutscene, self)
 	set_state(State.INTRO)
 	banner.emit("Этап %d" % s, "%s — %s" % [threat.display_name, threat.description])
 	Audio.play_music(&"music_battle")
@@ -410,6 +418,22 @@ func do_sacrifice(index: int) -> void:
 	var res := RunState.sacrifice(index)
 	var recipient: ItemState = res["recipient"]
 	set_state(State.SACRIFICE)
+	if Cutscene.enabled():
+		hero.speed_mult = RunState.speed_multiplier()
+		if altar != null:
+			altar.vanish()
+			altar = null
+		# Вещь уходит из рук героя внутри сцены — в тот момент, когда её передают получателю.
+		await GiftScene.play(cutscene, self, {
+			"victim": victim_id,
+			"snapshot": res["victim_snapshot"],
+			"recipient": recipient.def_id,
+			"old_count": old_count,
+			"property": res["property"],
+			"ordinal": RunState.sacrifices_count(),
+		})
+		_next_stage(true)
+		return
 	var victim_def := Db.item(victim_id)
 	hero.set_items(RunState.ring.items.duplicate())
 	var hidden := hero_model.hide_addons(recipient.def_id, old_count)
@@ -423,10 +447,14 @@ func do_sacrifice(index: int) -> void:
 	get_tree().create_timer(2.4, false).timeout.connect(_next_stage)
 
 
-func _next_stage() -> void:
+## after_gift — после сцены дара: в затемнении звучит голос Сигварда из дворца.
+func _next_stage(after_gift: bool = false) -> void:
 	set_state(State.TRANSITION)
 	hud.fade(true, 0.5)
 	await get_tree().create_timer(0.55, false).timeout
+	var n := RunState.sacrifices_count()
+	if after_gift and Cutscene.enabled() and n >= 1 and n <= Story.BROTHER_LINES.size():
+		await cutscene.interlude(Story.BROTHER_LINES[n - 1])
 	start_stage(RunState.stage + 1)
 	hud.fade(false, 0.6)
 
@@ -457,20 +485,35 @@ func debug_refresh_hero() -> void:
 
 func _start_boss() -> void:
 	set_state(State.BOSS_INTRO)
-	Audio.play_music(&"music_boss")
-	banner.emit("Отвергнутый", "всё, что вы выкинули")
+	var cinematic := Cutscene.enabled()
+	if not cinematic:
+		Audio.play_music(&"music_boss")
+		banner.emit(Story.TYRANT_NAME, "всё, что вы отдали")
 	boss_director = BossDirector.new()
 	boss_director.name = "BossDirector"
 	world.add_child(boss_director)
-	boss_director.setup(self)
+	boss_director.setup(self, cinematic)
 	boss_director.intro_finished.connect(func(): set_state(State.BOSS))
 	boss_director.boss_defeated.connect(_on_boss_defeated)
+	boss_director.phase_changed.connect(_on_boss_phase)
+	if cinematic:
+		GatesScene.play(cutscene, self, boss_director)
+
+
+func _on_boss_phase(p: int) -> void:
+	if Cutscene.enabled():
+		BossBarks.play(cutscene, p)
 
 
 func _on_boss_defeated() -> void:
-	if state == State.OVER:
+	if state == State.OVER or state == State.CUTSCENE:
 		return
 	RunState.outcome = RunState.Outcome.VICTORY
+	if Cutscene.enabled():
+		set_state(State.CUTSCENE)
+		await FinaleScene.play(cutscene, self)
+		_finish(0.3)
+		return
 	_finish(3.0)
 
 

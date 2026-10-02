@@ -12,8 +12,11 @@ extends Node3D
 
 var target: Node3D
 var camera: Camera3D
+## Кинорежим сюжетных сцен: камера не следит за героем и курсором, ею управляют cine_*.
+var cinematic: bool = false
 var _shake: float = 0.0
 var _focus: Vector3
+var _cine_tween: Tween
 
 
 func _ready() -> void:
@@ -42,7 +45,48 @@ func shake(amount: float) -> void:
 	_shake = maxf(_shake, amount)
 
 
+## Плавный наезд на точку: фокус и размер кадра (меньше — крупнее). dur 0 — мгновенно.
+func cine_to(pos: Vector3, zoom: float, dur: float) -> void:
+	cinematic = true
+	_kill_cine()
+	if dur <= 0.0:
+		_focus = pos
+		camera.size = zoom
+		return
+	_cine_tween = _new_cine_tween()
+	_cine_tween.tween_property(self, "_focus", pos, dur)
+	_cine_tween.tween_property(camera, "size", zoom, dur)
+
+
+## Облёт камеры вокруг фокуса: поворот по горизонтали от обычного угла.
+func cine_yaw(offset_degrees: float, dur: float) -> void:
+	var tw := create_tween().set_ignore_time_scale(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(self, "rotation_degrees:y", yaw_degrees + offset_degrees, maxf(dur, 0.01))
+
+
+## Конец сцены: размер и поворот возвращаются, камера снова следует за целью.
+func cine_release(dur: float = 0.8) -> void:
+	_kill_cine()
+	cinematic = false
+	_cine_tween = _new_cine_tween()
+	_cine_tween.tween_property(camera, "size", size, maxf(dur, 0.01))
+	_cine_tween.tween_property(self, "rotation_degrees:y", yaw_degrees, maxf(dur, 0.01))
+
+
+func _new_cine_tween() -> Tween:
+	return create_tween().set_parallel(true).set_ignore_time_scale(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _kill_cine() -> void:
+	if _cine_tween != null and _cine_tween.is_valid():
+		_cine_tween.kill()
+	_cine_tween = null
+
+
 func _process(delta: float) -> void:
+	if cinematic:
+		global_position = _focus + _shake_offset(delta)
+		return
 	if target == null or not is_instance_valid(target):
 		return
 	var desired := target.global_position
@@ -51,11 +95,14 @@ func _process(delta: float) -> void:
 		var lead: Vector3 = (mouse - desired) * cursor_lead
 		desired += lead.limit_length(max_lead)
 	_focus = _focus.lerp(desired, minf(1.0, delta * follow_speed))
-	var offset := Vector3.ZERO
-	if _shake > 0.0:
-		_shake = maxf(_shake - delta * 2.5, 0.0)
-		offset = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * _shake * 0.4
-	global_position = _focus + offset
+	global_position = _focus + _shake_offset(delta)
+
+
+func _shake_offset(delta: float) -> Vector3:
+	if _shake <= 0.0:
+		return Vector3.ZERO
+	_shake = maxf(_shake - delta * 2.5, 0.0)
+	return Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)) * _shake * 0.4
 
 
 ## Точка на полу под курсором.
