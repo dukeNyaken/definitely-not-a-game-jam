@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ThreatDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/threat_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"swarm"
+display_name = "Рой"
+description = "стаи мелких тварей"
+waves = Array[Dictionary]([{"swarm": 8, "infantry": 1}, {"swarm": 12, "infantry": 2}, {"swarm": 16, "infantry": 2}])
+elite_escort = {"swarm": 10}
+elite_bases = Array[StringName]([&"infantry", &"swarm"])
+elite_count = 2
+floor_tint = Color(0.33, 0.27, 0.33, 1)

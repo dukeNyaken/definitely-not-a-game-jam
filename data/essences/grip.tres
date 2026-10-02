@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EssenceDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/essence_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/grip_effect.gd" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"grip"
+display_name = "Хватка"
+adjective = "Цепкий"
+adjective_plural = "Цепкие"
+addon_name = "цепь"
+color = Color(0.3, 0.88, 0.36, 1)
+effect_text = "притягивает врагов в конусе"
+effect_script = ExtResource("2")
+stats = {
+"range": 6.0,
+"arc": 60.0,
+"pull_to": 1.4,
+"pull_time": 0.22
+}

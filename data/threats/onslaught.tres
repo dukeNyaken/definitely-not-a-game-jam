@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ThreatDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/threat_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"onslaught"
+display_name = "Натиск"
+description = "все типы сразу"
+waves = Array[Dictionary]([{"infantry": 3, "archer": 2, "swarm": 4}, {"infantry": 3, "archer": 2, "brute": 1, "caster": 1, "swarm": 4}, {"infantry": 4, "archer": 3, "brute": 1, "caster": 2, "swarm": 6}])
+elite_escort = {"archer": 2, "caster": 1, "swarm": 5}
+elite_bases = Array[StringName]([&"infantry", &"brute", &"archer", &"caster"])
+elite_count = 2
+floor_tint = Color(0.38, 0.24, 0.22, 1)

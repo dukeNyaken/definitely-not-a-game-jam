@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"archer"
+display_name = "Лучник"
+behavior = 1
+hp = 20.0
+damage = 8.0
+speed = 3.2
+body_radius = 0.4
+attack_range = 14.0
+windup = 0.8
+recovery = 0.4
+attack_cooldown = 2.2
+preferred_distance = 8.0
+projectile_speed = 14.0
+scale = 0.95
+color = Color(0.35, 0.5, 0.32, 1)

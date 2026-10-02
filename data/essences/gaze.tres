@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EssenceDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/essence_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/gaze_effect.gd" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"gaze"
+display_name = "Взор"
+adjective = "Зоркий"
+adjective_plural = "Зоркие"
+addon_name = "глаз"
+color = Color(0.68, 0.32, 0.98, 1)
+effect_text = "враги в радиусе 6 м 1,5 с открыты для крита"
+effect_script = ExtResource("2")
+stats = {
+"radius": 6.0,
+"duration": 1.5
+}

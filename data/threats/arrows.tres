@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ThreatDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/threat_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"arrows"
+display_name = "Стрелы"
+description = "лучники"
+waves = Array[Dictionary]([{"archer": 3, "infantry": 2}, {"archer": 4, "infantry": 3}, {"archer": 6, "infantry": 3}])
+elite_escort = {"archer": 4}
+elite_bases = Array[StringName]([&"archer", &"infantry"])
+elite_count = 1
+floor_tint = Color(0.3, 0.33, 0.26, 1)

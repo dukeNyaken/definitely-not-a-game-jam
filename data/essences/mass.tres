@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EssenceDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/essence_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/mass_effect.gd" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"mass"
+display_name = "Масса"
+adjective = "Таранный"
+adjective_plural = "Таранные"
+addon_name = "пластины"
+color = Color(0.92, 0.22, 0.18, 1)
+effect_text = "толчок 3 м, оглушение 0,5 с, 5 урона"
+effect_script = ExtResource("2")
+stats = {
+"radius": 3.0,
+"push": 3.0,
+"push_time": 0.2,
+"stun": 0.5,
+"damage": 5.0
+}

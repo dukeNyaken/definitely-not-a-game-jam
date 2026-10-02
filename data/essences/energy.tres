@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EssenceDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/essence_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/energy_effect.gd" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"energy"
+display_name = "Энергия"
+adjective = "Сияющий"
+adjective_plural = "Сияющие"
+addon_name = "руны"
+color = Color(1.0, 0.56, 0.12, 1)
+effect_text = "волна-снаряд, проходит насквозь"
+effect_script = ExtResource("2")
+stats = {
+"damage": 15.0,
+"speed": 18.0,
+"range": 12.0,
+"width": 0.8
+}

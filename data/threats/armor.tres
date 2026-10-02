@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ThreatDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/threat_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"armor"
+display_name = "Броня"
+description = "громилы"
+waves = Array[Dictionary]([{"brute": 1, "infantry": 3}, {"brute": 2, "infantry": 3}, {"brute": 3, "infantry": 4}])
+elite_escort = {"brute": 1, "infantry": 3}
+elite_bases = Array[StringName]([&"brute", &"infantry"])
+elite_count = 1
+floor_tint = Color(0.36, 0.28, 0.24, 1)

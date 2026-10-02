@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="BalanceDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/balance_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+hero_hp = 100.0
+hero_speed = 6.0
+fist_damage = 5.0
+fist_range = 1.7
+fist_arc_degrees = 100.0
+fist_cooldown = 0.35
+item_count = 7
+sacrifice_speed_bonus = 0.06
+property_damage_bonus = 0.1
+property_cooldown = 0.4
+max_chain_depth = 12
+crit_multiplier = 2.0
+stage_count = 7
+waves_per_stage = 3
+wave_pause = 2.0
+wave_timeout = 45.0
+enemy_scale_per_stage = 0.12
+wave_count_growth = 0.12
+elite_hp_multiplier = 2.5
+elite_item_count_max = 2
+shrine_stages = PackedInt32Array(3, 5)
+shrine_wait = 15.0
+arena_radius = 15.0
+max_alive_enemies = 26
+boss_hp = 1500.0
+boss_phase_thresholds = PackedFloat32Array(0.6, 0.25)
+boss_phase_speeds = PackedFloat32Array(2.6, 4.0, 5.6)
+boss_phase_item_counts = PackedInt32Array(6, 3, 1)
+boss_slam_damage = 14.0
+boss_slam_range = 2.6
+boss_slam_windup = 0.7
+boss_slam_cooldown = 1.8
+boss_armor_restore_on_phase = true
+ai_reaction = 0.5
+ai_shield_chance = 0.5
+ai_shield_hold = 1.2

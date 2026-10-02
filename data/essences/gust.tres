@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EssenceDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/essence_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/gust_effect.gd" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"gust"
+display_name = "Порыв"
+adjective = "Стремительный"
+adjective_plural = "Стремительные"
+addon_name = "крылышки"
+color = Color(0.45, 0.82, 1.0, 1)
+effect_text = "рывок 4 м к курсору"
+effect_script = ExtResource("2")
+stats = {
+"distance": 4.0,
+"duration": 0.16
+}

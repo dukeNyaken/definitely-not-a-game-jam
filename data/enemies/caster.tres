@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"caster"
+display_name = "Заклинатель"
+behavior = 4
+hp = 40.0
+damage = 14.0
+speed = 2.8
+body_radius = 0.42
+attack_range = 12.0
+windup = 0.5
+recovery = 0.6
+attack_cooldown = 3.0
+preferred_distance = 7.0
+aoe_radius = 2.0
+zone_delay = 1.0
+scale = 1.0
+color = Color(0.3, 0.36, 0.62, 1)

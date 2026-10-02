@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EssenceDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/defs/essence_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/bulwark_effect.gd" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"bulwark"
+display_name = "Оплот"
+adjective = "Неуязвимый"
+adjective_plural = "Неуязвимые"
+addon_name = "кромка"
+color = Color(1.0, 0.78, 0.22, 1)
+effect_text = "0,6 с неуязвимости, отражение снарядов"
+effect_script = ExtResource("2")
+stats = {
+"duration": 0.6
+}
