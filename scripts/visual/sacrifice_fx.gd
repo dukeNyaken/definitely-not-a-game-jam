@@ -6,12 +6,14 @@ var model: ActorModel
 var start: Vector3
 var recipient_id: StringName
 var color: Color
+var hidden_addons: Array[Node3D] = []
 var _orbs: Array[Dictionary] = []
 var _done: bool = false
 
 
-static func play(parent: Node, p_model: ActorModel, p_start: Vector3, p_recipient: StringName, p_color: Color) -> SacrificeFx:
+static func play(parent: Node, p_model: ActorModel, p_start: Vector3, p_recipient: StringName, p_color: Color, p_hidden: Array[Node3D] = []) -> SacrificeFx:
 	var fx := SacrificeFx.new()
+	fx.hidden_addons = p_hidden
 	fx.model = p_model
 	fx.start = p_start
 	fx.recipient_id = p_recipient
@@ -81,4 +83,6 @@ func _process(delta: float) -> void:
 		Vfx.burst(self, target, color, 1.0, 0.35)
 		Vfx.ring(self, Vector3(target.x, 0.0, target.z), 2.2, color, 0.5, 0.25)
 		Audio.play(&"absorb")
+		if model != null and is_instance_valid(model):
+			model.reveal_addons(hidden_addons)
 		queue_free()

@@ -98,3 +98,13 @@ func set_music_volume(db: float) -> void:
 		var pl: AudioStreamPlayer = p
 		if pl.playing:
 			pl.volume_db = db
+
+
+func _exit_tree() -> void:
+	for p in [_music_a, _music_b]:
+		(p as AudioStreamPlayer).stop()
+		(p as AudioStreamPlayer).stream = null
+	for p in _pool:
+		p.stop()
+		p.stream = null
+	_streams.clear()

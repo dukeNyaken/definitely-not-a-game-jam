@@ -9,8 +9,19 @@ func _ready() -> void:
 	theme = UiKit.theme()
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	var bg := ColorRect.new()
-	bg.color = Color(0.04, 0.035, 0.05)
+	var bg := TextureRect.new()
+	var grad := Gradient.new()
+	grad.set_color(0, Color(0.16, 0.11, 0.12))
+	grad.set_color(1, Color(0.02, 0.018, 0.025))
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.68, 0.5)
+	tex.fill_to = Vector2(1.25, 1.1)
+	tex.width = 256
+	tex.height = 256
+	bg.texture = tex
+	bg.stretch_mode = TextureRect.STRETCH_SCALE
 	UiKit.full_rect(bg)
 	add_child(bg)
 	var showcase := ItemShowcase.new()

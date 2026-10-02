@@ -63,3 +63,11 @@ func threat(id: StringName) -> ThreatDef:
 
 func event_word(event_id: StringName) -> String:
 	return item_by_event(event_id).event_word
+
+
+## Статические кэши мешей, материалов и темы держат ресурсы до выгрузки скриптов — чистим при выходе.
+func _exit_tree() -> void:
+	LowPoly._materials.clear()
+	LowPoly._meshes.clear()
+	Vfx._mat_cache.clear()
+	UiKit._theme = null

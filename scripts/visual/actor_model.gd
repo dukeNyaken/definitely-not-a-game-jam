@@ -260,6 +260,33 @@ func _hide_kind_weapons() -> void:
 			(ch as Node3D).visible = not actor.has_item(&"sword")
 
 
+## Прячет добавки свойств с индекса start (новые после жертвы) — они вырастут, когда долетит поток.
+func hide_addons(item_id: StringName, start: int) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	for n in _item_nodes.get(item_id, []):
+		_find_addons(n, start, out)
+	for a in out:
+		a.set_meta(&"full_scale", a.scale)
+		a.scale = Vector3.ONE * 0.001
+	return out
+
+
+func _find_addons(n: Node, start: int, out: Array[Node3D]) -> void:
+	for ch in n.get_children():
+		if ch.has_meta(&"prop_index") and int(ch.get_meta(&"prop_index")) >= start:
+			out.append(ch)
+		_find_addons(ch, start, out)
+
+
+func reveal_addons(addons: Array[Node3D]) -> void:
+	for a in addons:
+		if is_instance_valid(a):
+			var tw := a.create_tween()
+			tw.tween_property(a, "scale", a.get_meta(&"full_scale", Vector3.ONE) * 1.4, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(a, "scale", a.get_meta(&"full_scale", Vector3.ONE), 0.15)
+	_flash = 0.12
+
+
 ## Позиция сокета в мире: откуда летят потоки при жертве.
 func socket_position(id: StringName) -> Vector3:
 	var socket_name: StringName = &"chest"

@@ -66,6 +66,24 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	ring.mesh = Vfx.ring_mesh(radius, 0.06, 64)
 	ring.material_override = Vfx.material(Color(1.0, 0.78, 0.35, 0.8), 1.6, true)
 	pivot.add_child(ring)
+	# В центре — герой в исподнем: всё это ему предстоит отдать.
+	var floor_disc := LowPoly.cyl(radius + 0.6, radius + 0.8, 0.3, 24, Color(0.2, 0.17, 0.18), Vector3(0, -0.17, 0))
+	viewport.add_child(floor_disc)
+	var hero := Actor.new()
+	hero.set_physics_process(false)
+	viewport.add_child(hero)
+	hero.remove_from_group(&"actors")
+	hero.facing = Vector3(0.35, 0, 1).normalized()
+	var model := ActorModel.new()
+	hero.add_child(model)
+	model.setup(hero, ActorModel.Kind.HERO)
+	model.scale = Vector3.ONE * 1.05
+	var glow := OmniLight3D.new()
+	glow.position = Vector3(0, 2.6, 1.2)
+	glow.light_color = Color(1.0, 0.8, 0.55)
+	glow.light_energy = 1.6
+	glow.omni_range = 6.0
+	viewport.add_child(glow)
 
 
 ## Одна вещь крупно.

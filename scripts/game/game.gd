@@ -373,14 +373,16 @@ func altar_closed() -> void:
 func do_sacrifice(index: int) -> void:
 	var victim_id := RunState.ring.items[index].def_id
 	var victim_socket := hero_model.socket_position(victim_id)
+	var old_count := RunState.ring.items[RunState.ring.recipient_index(index)].properties.size()
 	var res := RunState.sacrifice(index)
 	var recipient: ItemState = res["recipient"]
 	set_state(State.SACRIFICE)
 	var victim_def := Db.item(victim_id)
-	SacrificeFx.play(world, hero_model, victim_socket, recipient.def_id, victim_def.essence.color)
+	hero.set_items(RunState.ring.items.duplicate())
+	var hidden := hero_model.hide_addons(recipient.def_id, old_count)
+	SacrificeFx.play(world, hero_model, victim_socket, recipient.def_id, victim_def.essence.color, hidden)
 	Audio.play(&"sacrifice")
 	Audio.play(StringName("essence_%s" % victim_def.essence.id), -4.0)
-	hero.set_items(RunState.ring.items.duplicate())
 	hero.speed_mult = RunState.speed_multiplier()
 	if altar != null:
 		altar.vanish()

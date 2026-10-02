@@ -22,6 +22,7 @@ static func build(state: ItemState) -> Array:
 		var t: Transform3D = anchors[(i / anchored.size()) % anchors.size()]
 		var addon := build_addon(essence)
 		addon.transform = t.scaled_local(Vector3.ONE * ADDON_SCALE)
+		addon.set_meta(&"prop_index", i)
 		(part["node"] as Node3D).add_child(addon)
 	return parts
 
