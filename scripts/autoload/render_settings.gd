@@ -57,10 +57,11 @@ func toggle() -> void:
 	set_mode((mode + 1) % MODE_NAMES.size())
 
 
-func set_mode(m: int) -> void:
+func set_mode(m: int, persist: bool = true) -> void:
 	mode = m
 	apply()
-	_save()
+	if persist:
+		_save()
 	mode_changed.emit(mode)
 
 

@@ -7,7 +7,7 @@ var faction: int
 var radius: float = 2.0
 var delay: float = 1.0
 var damage: float = 14.0
-var color: Color = Color(0.45, 0.55, 1.0)
+var color: Color = Color(0.85, 0.12, 0.2)
 var _t: float = 0.0
 var _telegraph: Telegraph
 

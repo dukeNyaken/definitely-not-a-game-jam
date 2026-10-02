@@ -181,11 +181,13 @@ func _draw_boss_bar() -> void:
 		return
 	var b := bd.boss
 	var w := _boss_bar.size.x
-	var font := _boss_bar.get_theme_default_font()
-	_boss_bar.draw_string_outline(font, Vector2(0, 18), "ОТВЕРГНУТЫЙ — фаза %d" % (bd.phase + 1), HORIZONTAL_ALIGNMENT_CENTER, w, 22, 6, Color(0, 0, 0, 0.9))
-	_boss_bar.draw_string(font, Vector2(0, 18), "ОТВЕРГНУТЫЙ — фаза %d" % (bd.phase + 1), HORIZONTAL_ALIGNMENT_CENTER, w, 22, Color(0.85, 0.65, 1.0))
-	_boss_bar.draw_rect(Rect2(0, 28, w, 20), Color(0, 0, 0, 0.75))
-	_boss_bar.draw_rect(Rect2(2, 30, (w - 4) * clampf(b.hp / b.max_hp, 0, 1), 16), Color(0.55, 0.25, 0.8))
+	var font := UiKit.title_font()
+	var title := "Отвергнутый — фаза %d" % (bd.phase + 1)
+	_boss_bar.draw_string_outline(font, Vector2(0, 20), title, HORIZONTAL_ALIGNMENT_CENTER, w, 28, 6, Color(0, 0, 0, 0.9))
+	_boss_bar.draw_string(font, Vector2(0, 20), title, HORIZONTAL_ALIGNMENT_CENTER, w, 28, UiKit.GOLD)
+	_boss_bar.draw_rect(Rect2(0, 28, w, 20), Color(0, 0, 0, 0.8))
+	_boss_bar.draw_rect(Rect2(2, 30, (w - 4) * clampf(b.hp / b.max_hp, 0, 1), 16), Color(0.55, 0.05, 0.04))
+	_boss_bar.draw_rect(Rect2(0, 28, w, 20), UiKit.BORDER, false, 1.0)
 	if b.max_armor > 0.0:
 		_boss_bar.draw_rect(Rect2(2, 50, (w - 4) * clampf(b.armor / b.max_armor, 0, 1), 4), UiKit.ARMOR)
 	for th in Db.balance.boss_phase_thresholds:

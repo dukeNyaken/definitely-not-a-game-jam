@@ -71,3 +71,6 @@ func _exit_tree() -> void:
 	LowPoly._meshes.clear()
 	Vfx._mat_cache.clear()
 	UiKit._theme = null
+	BloodFx._decals.clear()
+	BloodFx._cube = null
+	Surfaces._cache.clear()

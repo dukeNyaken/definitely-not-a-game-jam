@@ -59,8 +59,21 @@ func _ready() -> void:
 	add_child(elite)
 	elite.global_position = Vector3(x + 0.5, 0, 0)
 	elite.facing = Vector3(-0.3, 0, 1).normalized()
+	var boss := Actor.new()
+	add_child(boss)
+	boss.global_position = Vector3(x + 3.2, 0, 1.2)
+	var boss_items: Array[ItemState] = []
+	for id in [&"sword", &"shield", &"helmet", &"armor"]:
+		boss_items.append(ItemState.create(id))
+	boss.set_items(boss_items)
+	boss.set_physics_process(false)
+	var bm := ActorModel.new()
+	boss.add_child(bm)
+	bm.setup(boss, ActorModel.Kind.BOSS)
+	bm.scale = Vector3.ONE * 1.7
+	boss.facing = Vector3(-0.3, 0, 1).normalized()
 	var rig := CameraRig.new()
-	rig.size = 9.0
+	rig.size = 10.5
 	add_child(rig)
-	rig.global_position = Vector3(2.5, 0, 0)
+	rig.global_position = Vector3(4.0, 0, 0.5)
 	set_process(false)

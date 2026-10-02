@@ -97,10 +97,12 @@ func _spawn_hero() -> void:
 	Combat.hero = hero
 
 
-func _on_hero_hit(amount: float, _crit: bool, _ctx: ActionContext) -> void:
+func _on_hero_hit(amount: float, _crit: bool, ctx: ActionContext) -> void:
 	if amount > 0.0:
 		rig.shake(0.25)
 		Audio.play(&"hero_hurt")
+		var from := ctx.origin if ctx != null else hero.global_position
+		BloodFx.spurt(world, hero.global_position + Vector3(0, 1.0, 0), hero.global_position - from, 6)
 	if amount >= 15.0:
 		hitstop(0.06)
 
@@ -143,8 +145,9 @@ func start_stage(s: int) -> void:
 	hero.bus.reset_cooldowns()
 	rig.snap()
 	wave = -1
+	arena.show_floor_eclipse(RunState.is_boss_stage(s))
 	if RunState.is_boss_stage(s):
-		arena.set_tint(Color(0.24, 0.2, 0.28))
+		arena.set_tint(Color(0.24, 0.2, 0.22))
 		_start_boss()
 		return
 	var threat := RunState.threat_for(s)
@@ -297,6 +300,7 @@ func _on_portal_opened(portal: SpawnPortal) -> void:
 	enemy.global_position = portal.global_position
 	enemy.facing = Combat.flat_dir(hero.global_position - enemy.global_position)
 	enemy.died.connect(_on_enemy_died)
+	enemy.hit_received.connect(_on_enemy_hit.bind(enemy))
 	var model := enemy.get_node("Model") as Node3D
 	var final_scale := model.scale
 	model.scale = final_scale * 0.1
@@ -304,9 +308,19 @@ func _on_portal_opened(portal: SpawnPortal) -> void:
 	Audio.play(&"enemy_spawn", -12.0)
 
 
+func _on_enemy_hit(amount: float, crit: bool, ctx: ActionContext, enemy: Actor) -> void:
+	if amount <= 0.0 or not is_instance_valid(enemy):
+		return
+	var from := ctx.origin if ctx != null else hero.global_position
+	BloodFx.spurt(world, enemy.global_position + Vector3(0, 0.9, 0), enemy.global_position - from, 14 if crit else 8, BloodFx.color_for(enemy))
+
+
 func _on_enemy_died(enemy: Actor) -> void:
 	Audio.play(&"enemy_death", -4.0)
-	Vfx.burst(enemy, enemy.global_position + Vector3(0, 0.8, 0), Color(0.6, 0.2, 0.7), 1.2, 0.3)
+	var col := BloodFx.color_for(enemy)
+	BloodFx.spurt(world, enemy.global_position + Vector3(0, 0.8, 0), Vector3.UP, 18, col)
+	if col == BloodFx.BLOOD:
+		BloodFx.decal(world, enemy.global_position, 1.2 + enemy.body_radius * 1.6)
 	get_tree().create_timer(1.2).timeout.connect(_free_corpse.bind(enemy))
 
 

@@ -37,8 +37,14 @@ func _build_pedestals() -> void:
 		var ped := Node3D.new()
 		add_child(ped)
 		ped.global_position = pos
-		ped.add_child(LowPoly.cyl(0.6, 0.75, 1.0, 6, Color(0.3, 0.27, 0.3), Vector3(0, 0.5, 0)))
-		ped.add_child(LowPoly.cyl(0.75, 0.75, 0.1, 6, Color(0.5, 0.42, 0.6), Vector3(0, 1.05, 0), 0.5, 0.3))
+		# Каменный алтарь со свечами и подтёками крови.
+		ped.add_child(LowPoly.box(Vector3(1.2, 1.0, 1.2), Color(0.8, 0.75, 0.72), Vector3(0, 0.5, 0), 0.95, 0.0, 0.0, &"brick"))
+		ped.add_child(LowPoly.box(Vector3(1.35, 0.14, 1.35), Color(0.7, 0.66, 0.64), Vector3(0, 1.07, 0), 0.95, 0.0, 0.0, &"stone"))
+		ped.add_child(LowPoly.box(Vector3(0.3, 0.9, 0.02), Color(0.4, 0.03, 0.03), Vector3(0.2, 0.55, -0.61)))
+		for c in 3:
+			var cx := -0.45 + c * 0.45
+			ped.add_child(LowPoly.cyl(0.04, 0.05, 0.22 + c * 0.06, 5, Color(0.9, 0.86, 0.76), Vector3(cx, 1.25 + c * 0.03, 0.5)))
+			ped.add_child(LowPoly.prism(Vector3(0.05, 0.1, 0.05), Color(1.0, 0.55, 0.2), Vector3(cx, 1.42 + c * 0.06, 0.5), 0.5, 0.0, 4.0))
 		var display := ItemVisuals.build_display(snaps[i])
 		display.scale = Vector3.ONE * 1.4
 		add_child(display)
@@ -76,8 +82,8 @@ func _intro() -> void:
 			d.queue_free()
 	_displays.clear()
 	_spawn_boss()
-	Vfx.ring(self, BOSS_POS, 6.0, Color(0.7, 0.4, 1.0), 0.6, 0.5)
-	Vfx.burst(self, BOSS_POS + Vector3(0, 1.5, 0), Color(0.7, 0.4, 1.0), 3.0, 0.4)
+	Vfx.ring(self, BOSS_POS, 6.0, Color(0.9, 0.15, 0.08), 0.6, 0.5)
+	Vfx.burst(self, BOSS_POS + Vector3(0, 1.5, 0), Color(0.9, 0.15, 0.08), 3.0, 0.4)
 	Audio.play(&"boss_roar")
 	game.rig.shake(0.8)
 	await get_tree().create_timer(1.0, false).timeout
@@ -176,7 +182,7 @@ func _enter_phase(p: int) -> void:
 	boss.add_invulnerability(1.0)
 	for t in Combat.targets_in_radius(boss, boss.global_position, 4.0):
 		t.force_move(Combat.flat_dir(t.global_position - boss.global_position) * 3.0, 0.2)
-	Vfx.ring(self, boss.global_position, 5.0, Color(0.7, 0.4, 1.0), 0.5, 0.6)
+	Vfx.ring(self, boss.global_position, 5.0, Color(0.9, 0.15, 0.08), 0.5, 0.6)
 	Audio.play(&"boss_phase")
 	game.rig.shake(0.7)
 	phase_changed.emit(p)
@@ -199,7 +205,7 @@ func _fling(state: ItemState) -> void:
 func _on_boss_died(_a: Actor) -> void:
 	for s in boss.items:
 		_fling(s)
-	Vfx.burst(self, boss.global_position + Vector3(0, 1.5, 0), Color(0.75, 0.45, 1.0), 4.0, 0.6)
+	Vfx.burst(self, boss.global_position + Vector3(0, 1.5, 0), Color(0.9, 0.15, 0.08), 4.0, 0.6)
 	Audio.play(&"boss_death")
 	game.rig.shake(1.0)
 	boss_defeated.emit()

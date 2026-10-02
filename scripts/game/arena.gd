@@ -30,6 +30,37 @@ func build(p_radius: float) -> void:
 	_apply_render_mode(Render.mode)
 
 
+## Этап босса: на полу проступает затмение — чёрный круг в багровой короне.
+func show_floor_eclipse(on: bool) -> void:
+	var existing := get_node_or_null("FloorEclipse")
+	if not on:
+		if existing != null:
+			existing.queue_free()
+		return
+	if existing != null:
+		return
+	var root := Node3D.new()
+	root.name = "FloorEclipse"
+	add_child(root)
+	var disc := MeshInstance3D.new()
+	disc.mesh = Vfx.sector_mesh(4.6, 360.0, 0.0, 48)
+	disc.material_override = Vfx.material(Color(0.0, 0.0, 0.0, 0.82), 1.0, false)
+	disc.position.y = 0.02
+	root.add_child(disc)
+	var corona := MeshInstance3D.new()
+	corona.mesh = Vfx.ring_mesh(5.6, 1.0, 48)
+	corona.material_override = Vfx.material(Color(0.95, 0.12, 0.05, 0.6), 1.5, true)
+	corona.position.y = 0.022
+	root.add_child(corona)
+	var rim := MeshInstance3D.new()
+	rim.mesh = Vfx.ring_mesh(4.75, 0.18, 48)
+	rim.material_override = Vfx.material(Color(1.0, 0.55, 0.3, 0.9), 2.0, true)
+	rim.position.y = 0.024
+	root.add_child(rim)
+	for n in root.get_children():
+		(n as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 func set_tint(c: Color) -> void:
 	floor_tint = c
 	for i in _floor_mats.size():

@@ -5,7 +5,7 @@ extends Node3D
 signal opened(portal: SpawnPortal)
 
 var delay: float = 0.8
-var color: Color = Color(0.55, 0.2, 0.75)
+var color: Color = Color(0.75, 0.08, 0.05)
 var payload: Dictionary = {}
 var _t: float = 0.0
 var _ring: MeshInstance3D
@@ -15,7 +15,7 @@ var _disc: MeshInstance3D
 func _ready() -> void:
 	_disc = MeshInstance3D.new()
 	_disc.mesh = Vfx.sector_mesh(1.0, 360.0, 0.0, 20)
-	_disc.material_override = Vfx.material(Color(0.05, 0.0, 0.08, 0.85), 1.0, false)
+	_disc.material_override = Vfx.material(Color(0.02, 0.0, 0.0, 0.9), 1.0, false)
 	_disc.position.y = 0.03
 	_disc.scale = Vector3.ONE * 0.05
 	_disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
