@@ -15,6 +15,10 @@ var _last_stage := 0
 var _hooked_hero: Object
 var _strafe := 1.0
 var _status_t := 0.0
+var _block_t := 0.0
+var _shots: Array = []
+var _shot_prefix := ""
+var _start_stage := 1
 
 
 func _ready() -> void:
@@ -33,9 +37,15 @@ func _start() -> void:
 			"speed": _speed = float(kv[1])
 			"immortal": _immortal = kv[1] == "1"
 			"pick": _pick = int(kv[1])
+			"shots": _shots = Array(kv[1].split(",")).map(func(x): return float(x))
+			"prefix": _shot_prefix = kv[1]
+			"stage": _start_stage = int(kv[1])
 	var rs = get_tree().root.get_node("RunState")
 	rs.new_run(_seed)
 	rs.debug_immortal = _immortal
+	for i in _start_stage - 1:
+		rs.sacrifice(_pick % rs.ring.size())
+	rs.stage = _start_stage
 	get_tree().change_scene_to_file.call_deferred("res://scenes/game.tscn")
 
 
@@ -73,6 +83,14 @@ func _tick(delta: float) -> bool:
 		_stage_start = rs.elapsed
 		_stage_damage = 0.0
 	_drive(hero)
+	if not _shots.is_empty() and _t >= float(_shots[0]):
+		var at: float = _shots.pop_front()
+		var img := get_viewport().get_texture().get_image()
+		if img != null:
+			img.save_png("%s_%03d.png" % [_shot_prefix, int(at)])
+			print("shot ", at)
+		if _shots.is_empty() and _shot_prefix != "":
+			return true
 	_status_t += delta
 	if _status_t > 20.0:
 		_status_t = 0.0
@@ -80,7 +98,12 @@ func _tick(delta: float) -> bool:
 		if _game.boss_director != null and _game.boss_director.boss != null:
 			var b = _game.boss_director.boss
 			extra = " BOSS hp=%.0f phase=%d pos=%s items=%s inv=%.1f hero_items=%s" % [b.hp, _game.boss_director.phase, b.global_position, b.items.map(func(i): return i.def_id), b.invuln_time, hero.items.map(func(i): return i.def_id)]
-		print("t=%.0f stage=%d state=%d wave=%d alive=%d hero=%s hp=%.0f%s" % [_t, rs.stage, _game.state, _game.wave, _game.alive_enemies(), hero.global_position, hero.hp, extra])
+		var kinds := {}
+		for a in Combat.living_actors(get_tree()):
+			if a.faction != hero.faction:
+				var k: String = a.display_name
+				kinds[k] = int(kinds.get(k, 0)) + 1
+		print("t=%.0f stage=%d threat=%s state=%d wave=%d alive=%s hero_items=%s hp=%.0f%s" % [_t, rs.stage, rs.current_threat().id if rs.current_threat() != null else &"boss", _game.state, _game.wave, kinds, hero.items.map(func(i): return [i.def_id, i.properties.size()]), hero.hp, extra])
 	return false
 
 
@@ -127,6 +150,14 @@ func _drive(hero) -> void:
 	else:
 		hero.move_input = Vector3(-to.z, 0, to.x).normalized() * _strafe * 0.3
 	hero.press(&"attack")
+	# Щит: короткие поднятия, чтобы запускать дерево свойств щита.
+	_block_t += 0.016
+	if _block_t > 0.45:
+		_block_t = 0.0
+		hero.release(&"block")
+		hero.press(&"block")
+	elif _block_t > 0.12:
+		hero.release(&"block")
 	if best < 6.0:
 		hero.press(&"grab")
 	if best < 7.0:

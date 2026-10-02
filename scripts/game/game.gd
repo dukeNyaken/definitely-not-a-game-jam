@@ -30,6 +30,7 @@ var _state_timer: float = 0.0
 var _wave_time: float = 0.0
 var _shrine_timer: float = 0.0
 var _ui_lock: int = 0
+var _hitstop_end: int = 0
 
 
 func _ready() -> void:
@@ -85,12 +86,14 @@ func _spawn_hero() -> void:
 	hero_model.name = "Model"
 	hero.add_child(hero_model)
 	hero_model.setup(hero, ActorModel.Kind.HERO)
+	hero.add_child(HeroMarker.new())
 	controller = PlayerController.new()
 	controller.name = "PlayerController"
 	hero.add_child(controller)
 	controller.setup(hero, rig)
 	hero.died.connect(_on_hero_died)
 	hero.hit_received.connect(_on_hero_hit)
+	hero.crit_dealt.connect(func(_ctx, _target): hitstop(0.045))
 	Combat.hero = hero
 
 
@@ -98,6 +101,23 @@ func _on_hero_hit(amount: float, _crit: bool, _ctx: ActionContext) -> void:
 	if amount > 0.0:
 		rig.shake(0.25)
 		Audio.play(&"hero_hurt")
+	if amount >= 15.0:
+		hitstop(0.06)
+
+
+## Короткая остановка кадра на сильных ударах.
+func hitstop(sec: float) -> void:
+	if state == State.OVER or get_tree().paused:
+		return
+	Engine.time_scale = 0.05
+	_hitstop_end = Time.get_ticks_msec() + int(sec * 1000.0)
+
+
+func _process(_delta: float) -> void:
+	if _hitstop_end > 0 and Time.get_ticks_msec() >= _hitstop_end:
+		_hitstop_end = 0
+		if state != State.OVER:
+			Engine.time_scale = 1.0
 
 
 func set_state(s: int) -> void:

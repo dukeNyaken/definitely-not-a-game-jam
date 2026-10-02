@@ -70,7 +70,8 @@ func play_music(track: StringName, fade: float = 1.2) -> void:
 		tw.tween_callback(old.stop)
 	if s == null:
 		return
-	if s is AudioStreamWAV:
+	# Петли размечены при импорте (edit/loop_mode=2); на всякий случай включаем и здесь.
+	if s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED:
 		var w := s as AudioStreamWAV
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_end = int(w.get_length() * w.mix_rate)

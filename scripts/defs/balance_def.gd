@@ -40,6 +40,15 @@ extends Resource
 @export var boss_phase_item_counts: PackedInt32Array = PackedInt32Array([6, 3, 1])
 @export var boss_armor_restore_on_phase: bool = true
 @export var ai_reaction: float = 0.5
+## Правила ИИ для вещей героя (элиты и босс).
+@export var ai_sword_range: float = 2.5
+@export var ai_boots_close_distance: float = 6.0
+@export var ai_boots_retreat_hp: float = 0.3
+@export var ai_boots_retreat_distance: float = 4.0
+@export var ai_gloves_range: float = 6.0
+@export var ai_amulet_min: float = 4.0
+@export var ai_amulet_max: float = 8.0
+@export var ai_shield_trigger_range: float = 5.0
 @export var ai_shield_chance: float = 0.5
 @export var ai_shield_hold: float = 0.9
 ## После опускания щита ИИ какое-то время не поднимает его снова.

@@ -4,7 +4,7 @@ extends Node3D
 
 @export var pitch_degrees: float = 35.0
 @export var yaw_degrees: float = 45.0
-@export var size: float = 21.0
+@export var size: float = 17.5
 @export var distance: float = 40.0
 @export var cursor_lead: float = 0.22
 @export var max_lead: float = 4.0

@@ -141,7 +141,7 @@ func _on_target_attack() -> void:
 	if actor == null or actor.dead or not actor.has_item(&"shield"):
 		return
 	var dist := Combat.flat(_watched_target.global_position - actor.global_position).length()
-	if dist <= 5.0:
+	if dist <= Db.balance.ai_shield_trigger_range:
 		_maybe_raise_shield()
 
 
@@ -181,8 +181,9 @@ func _use_items(target: Actor, to: Vector3, dist: float, gap: float) -> void:
 			actor.release(&"block")
 	if now < _next_item_at:
 		return
+	var b := Db.balance
 	# Меч: игрок ближе 2,5 м.
-	if actor.has_item(&"sword") and _ready_after_reaction(&"sword", gap < 2.5):
+	if actor.has_item(&"sword") and _ready_after_reaction(&"sword", gap < b.ai_sword_range):
 		if actor.press(&"attack"):
 			var sword := actor.component(&"sword") as SwordAction
 			if sword.combo_step >= 2:
@@ -192,24 +193,24 @@ func _use_items(target: Actor, to: Vector3, dist: float, gap: float) -> void:
 	# Сапоги: сближение, если игрок дальше 6 м; отскок при HP ниже 30%.
 	if actor.has_item(&"boots"):
 		var boots := actor.component(&"boots") as BootsAction
-		var low := actor.hp < actor.max_hp * 0.3
-		if _ready_after_reaction(&"boots_retreat", low and dist < 4.0):
+		var low := actor.hp < actor.max_hp * b.ai_boots_retreat_hp
+		if _ready_after_reaction(&"boots_retreat", low and dist < b.ai_boots_retreat_distance):
 			boots.dash_direction = -to
 			if boots.press():
 				_used(&"boots_retreat", now)
 				return
-		elif _ready_after_reaction(&"boots_close", dist > 6.0):
+		elif _ready_after_reaction(&"boots_close", dist > b.ai_boots_close_distance):
 			boots.dash_direction = to
 			if boots.press():
 				_used(&"boots_close", now)
 				return
 	# Перчатки: игрок в пределах 6 м.
-	if actor.has_item(&"gloves") and _ready_after_reaction(&"gloves", dist <= 6.0):
+	if actor.has_item(&"gloves") and _ready_after_reaction(&"gloves", dist <= b.ai_gloves_range):
 		if actor.press(&"grab"):
 			_used(&"gloves", now)
 			return
 	# Амулет: игрок на расстоянии 4–8 м.
-	if actor.has_item(&"amulet") and _ready_after_reaction(&"amulet", dist >= 4.0 and dist <= 8.0):
+	if actor.has_item(&"amulet") and _ready_after_reaction(&"amulet", dist >= b.ai_amulet_min and dist <= b.ai_amulet_max):
 		if actor.press(&"volley"):
 			_used(&"amulet", now)
 			return

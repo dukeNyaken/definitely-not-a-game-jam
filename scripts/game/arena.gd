@@ -7,13 +7,19 @@ var floor_tint: Color = Color(0.32, 0.3, 0.28)
 var _floor_mats: Array[StandardMaterial3D] = []
 var _env: WorldEnvironment
 var _sun: DirectionalLight3D
+## Колонны: { "node": Node3D, "mats": [StandardMaterial3D], "base": Vector3, "top": Vector3, "alpha": float }
+var _pillars: Array[Dictionary] = []
+var _lights: Array[OmniLight3D] = []
+var _t: float = 0.0
 
 
 func build(p_radius: float) -> void:
 	radius = p_radius
 	_build_environment()
 	_build_floor()
+	_build_floor_decor()
 	_build_edge()
+	_build_dust()
 
 
 func set_tint(c: Color) -> void:
@@ -106,11 +112,17 @@ func _build_edge() -> void:
 		var pos := Vector3(cos(a), 0, sin(a)) * (radius + 0.9)
 		var broken := k % 4 == 1
 		var h := 1.6 if broken else 4.2 + (k % 3) * 0.5
+		var holder := Node3D.new()
+		add_child(holder)
 		var pillar := LowPoly.cyl(0.55, 0.65, h, 6, Color(0.36, 0.33, 0.32), pos + Vector3(0, h * 0.5, 0))
-		add_child(pillar)
-		add_child(LowPoly.box(Vector3(1.5, 0.3, 1.5), Color(0.28, 0.26, 0.25), pos + Vector3(0, 0.15, 0)))
+		var mat := (pillar.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+		pillar.material_override = mat
+		holder.add_child(pillar)
+		var mats: Array[StandardMaterial3D] = [mat]
 		if not broken and k % 2 == 0:
-			_brazier(pos + Vector3(0, h + 0.1, 0))
+			mats.append_array(_brazier(holder, pos + Vector3(0, h + 0.1, 0)))
+		add_child(LowPoly.box(Vector3(1.5, 0.3, 1.5), Color(0.28, 0.26, 0.25), pos + Vector3(0, 0.15, 0)))
+		_pillars.append({"node": holder, "mats": mats, "base": pos, "top": pos + Vector3(0, h + 1.0, 0), "alpha": 1.0})
 	# Обломки по краю.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
@@ -123,13 +135,130 @@ func _build_edge() -> void:
 		add_child(rock)
 
 
-func _brazier(pos: Vector3) -> void:
-	add_child(LowPoly.cyl(0.45, 0.3, 0.3, 6, Color(0.25, 0.22, 0.2), pos, 0.5, 0.5))
+func _brazier(holder: Node3D, pos: Vector3) -> Array[StandardMaterial3D]:
+	var bowl := LowPoly.cyl(0.45, 0.3, 0.3, 6, Color(0.25, 0.22, 0.2), pos, 0.5, 0.5)
+	var bowl_mat := (bowl.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+	bowl.material_override = bowl_mat
+	holder.add_child(bowl)
 	var flame := LowPoly.cyl(0.0, 0.32, 0.7, 5, Color(1.0, 0.55, 0.18), pos + Vector3(0, 0.45, 0), 0.5, 0.0, 3.0)
-	add_child(flame)
+	var flame_mat := (flame.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+	flame.material_override = flame_mat
+	holder.add_child(flame)
+	var fire := CPUParticles3D.new()
+	fire.amount = 10
+	fire.lifetime = 0.7
+	fire.position = pos + Vector3(0, 0.5, 0)
+	fire.direction = Vector3.UP
+	fire.spread = 15.0
+	fire.initial_velocity_min = 0.8
+	fire.initial_velocity_max = 1.6
+	fire.gravity = Vector3(0, 0.5, 0)
+	fire.scale_amount_min = 0.08
+	fire.scale_amount_max = 0.16
+	var spark := BoxMesh.new()
+	spark.size = Vector3.ONE
+	fire.mesh = spark
+	fire.material_override = Vfx.material(Color(1.0, 0.6, 0.2, 0.9), 2.5, true)
+	holder.add_child(fire)
 	var light := OmniLight3D.new()
 	light.light_color = Color(1.0, 0.6, 0.3)
 	light.light_energy = 1.6
 	light.omni_range = 9.0
 	light.position = pos + Vector3(0, 0.8, 0)
 	add_child(light)
+	_lights.append(light)
+	return [bowl_mat, flame_mat]
+
+
+## Пыль в воздухе над ареной.
+func _build_dust() -> void:
+	var dust := CPUParticles3D.new()
+	dust.amount = 60
+	dust.lifetime = 9.0
+	dust.preprocess = 9.0
+	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	dust.emission_box_extents = Vector3(radius, 2.5, radius)
+	dust.position = Vector3(0, 2.5, 0)
+	dust.direction = Vector3(0.3, 1, 0.1)
+	dust.spread = 60.0
+	dust.initial_velocity_min = 0.05
+	dust.initial_velocity_max = 0.25
+	dust.gravity = Vector3.ZERO
+	dust.scale_amount_min = 0.03
+	dust.scale_amount_max = 0.07
+	var m := BoxMesh.new()
+	m.size = Vector3.ONE
+	dust.mesh = m
+	dust.material_override = Vfx.material(Color(1.0, 0.85, 0.6, 0.5), 1.4, true)
+	add_child(dust)
+
+
+## Руны в центре и трещины в плитах.
+func _build_floor_decor() -> void:
+	var rune_col := Color(0.95, 0.75, 0.4, 0.22)
+	var ring := MeshInstance3D.new()
+	ring.mesh = Vfx.ring_mesh(4.2, 0.12, 64)
+	ring.material_override = Vfx.material(rune_col, 1.4, true)
+	ring.position.y = 0.015
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(ring)
+	var inner := MeshInstance3D.new()
+	inner.mesh = Vfx.ring_mesh(3.4, 0.06, 64)
+	inner.material_override = ring.material_override
+	inner.position.y = 0.015
+	add_child(inner)
+	for k in 7:
+		var a := TAU * k / 7.0 - PI / 2
+		var glyph := LowPoly.box(Vector3(0.18, 0.01, 0.5), Color(0.95, 0.75, 0.4), Vector3(cos(a), 0, sin(a)) * 3.8 + Vector3(0, 0.016, 0), 0.5, 0.0, 0.6)
+		glyph.rotation.y = -a
+		glyph.material_override = Vfx.material(rune_col, 1.6, true)
+		add_child(glyph)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for k in 34:
+		var a := rng.randf() * TAU
+		var r := rng.randf_range(5.0, radius - 0.5)
+		var crack := LowPoly.box(Vector3(rng.randf_range(0.04, 0.08), 0.01, rng.randf_range(0.5, 1.6)), Color(0.12, 0.1, 0.1), Vector3(cos(a) * r, 0.012, sin(a) * r))
+		crack.rotation.y = rng.randf() * TAU
+		add_child(crack)
+	for k in 18:
+		var a := rng.randf() * TAU
+		var r := rng.randf_range(4.5, radius - 1.0)
+		var slab := LowPoly.box(Vector3(rng.randf_range(0.8, 1.4), 0.04, rng.randf_range(0.8, 1.4)), Color(0, 0, 0, 0.12), Vector3(cos(a) * r, 0.01, sin(a) * r))
+		slab.material_override = Vfx.material(Color(0, 0, 0, 0.14), 1.0, false)
+		slab.rotation.y = rng.randf() * TAU
+		add_child(slab)
+
+
+func _process(delta: float) -> void:
+	_t += delta
+	for i in _lights.size():
+		_lights[i].light_energy = 1.5 + sin(_t * 9.0 + i * 1.7) * 0.12 + sin(_t * 23.0 + i) * 0.06
+	_fade_occluders(delta)
+
+
+## Колонны, заслоняющие героя от камеры, становятся полупрозрачными.
+func _fade_occluders(delta: float) -> void:
+	var cam := get_viewport().get_camera_3d()
+	var hero := Combat.hero
+	if cam == null or hero == null or not is_instance_valid(hero):
+		return
+	var hp := cam.unproject_position(hero.global_position + Vector3(0, 1.0, 0))
+	var cam_fwd := Combat.flat_dir(-cam.global_basis.z)
+	for p in _pillars:
+		var base: Vector3 = p["base"]
+		var closer := (base - hero.global_position).dot(-cam_fwd) > 0.0
+		var target := 1.0
+		if closer:
+			var a := cam.unproject_position(base)
+			var b := cam.unproject_position(p["top"])
+			var rect := Rect2(Vector2(minf(a.x, b.x) - 60, minf(a.y, b.y) - 20), Vector2(absf(a.x - b.x) + 120, absf(a.y - b.y) + 40))
+			if rect.has_point(hp):
+				target = 0.25
+		var alpha := move_toward(float(p["alpha"]), target, delta * 4.0)
+		if alpha != float(p["alpha"]):
+			p["alpha"] = alpha
+			for m in p["mats"]:
+				var mat := m as StandardMaterial3D
+				mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if alpha < 0.99 else BaseMaterial3D.TRANSPARENCY_DISABLED
+				mat.albedo_color.a = alpha
