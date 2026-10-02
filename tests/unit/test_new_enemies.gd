@@ -45,7 +45,7 @@ func test_jester_lunges_and_stabs_combo_hits() -> void:
 	add_child_autofree(jester)
 	# Рывок двигает физика, которой в тесте нет, — ставим шута сразу на дистанцию удара.
 	jester.global_position = Vector3(0, 0, -1.0)
-	jester.get_node("AI").set_physics_process(false)
+	(jester.get_node("AI") as AIController).active = false
 	var atk := jester.innate as EnemyAttack
 	assert_true(atk.press(), "замах")
 	atk._tick(def.windup + 0.01)
@@ -62,7 +62,7 @@ func test_jester_combo_is_cancelled_by_stun() -> void:
 	var jester := EnemyFactory.create(Db.enemy(&"jester"), 1)
 	add_child_autofree(jester)
 	jester.global_position = Vector3(0, 0, -1.0)
-	jester.get_node("AI").set_physics_process(false)
+	(jester.get_node("AI") as AIController).active = false
 	var atk := jester.innate as EnemyAttack
 	atk.press()
 	atk._tick(Db.enemy(&"jester").windup + 0.01)

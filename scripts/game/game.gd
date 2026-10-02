@@ -510,7 +510,7 @@ func _start_boss() -> void:
 	var cinematic := Cutscene.enabled()
 	if not cinematic:
 		Audio.play_music(&"music_boss")
-		banner.emit(Story.TYRANT_NAME, "всё, что вы отдали")
+		banner.emit("Этап 7", "всё, что ты отдал, вернётся")
 	boss_director = BossDirector.new()
 	boss_director.name = "BossDirector"
 	world.add_child(boss_director)

@@ -43,6 +43,8 @@ var variant: StringName = &""
 ## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer". Пустая — обычная анимация; rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
+## Осколки короны босса по вещам: def_id → узел.
+var _crown_shards: Dictionary = {}
 var _slime_cube: Node3D
 var _roll_basis: Basis = Basis()
 var _roll_phase: float = 0.0
@@ -723,6 +725,7 @@ func _rebuild_crown() -> void:
 		return
 	for ch in _crown.get_children():
 		ch.queue_free()
+	_crown_shards.clear()
 	var n := actor.items.size()
 	for i in n:
 		var color := actor.items[i].def().essence.color
@@ -730,6 +733,7 @@ func _rebuild_crown() -> void:
 		var shard := LowPoly.gem(0.06, 0.2, 0.1, 4, color, Vector3(cos(a) * 0.36, 0, sin(a) * 0.36), &"", 0.0, 2.5)
 		shard.rotation.z = 0.25
 		_crown.add_child(shard)
+		_crown_shards[actor.items[i].def_id] = shard
 
 
 func _connect_actions() -> void:
@@ -801,6 +805,30 @@ func reveal_addons(addons: Array[Node3D]) -> void:
 			tw.tween_property(a, "scale", a.get_meta(&"full_scale", Vector3.ONE) * 1.4, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			tw.tween_property(a, "scale", a.get_meta(&"full_scale", Vector3.ONE), 0.15)
 	_flash = 0.12
+
+
+## Вступление босса: все вещи и осколки короны скрыты, потом проявляются по одной.
+func hide_all_items() -> void:
+	for nodes in _item_nodes.values():
+		for n in nodes:
+			(n as Node3D).visible = false
+	for shard in _crown_shards.values():
+		(shard as Node3D).visible = false
+
+
+func reveal_item(id: StringName) -> void:
+	var pops: Array[Node3D] = []
+	for n in _item_nodes.get(id, []):
+		pops.append(n)
+	if _crown_shards.has(id):
+		pops.append(_crown_shards[id])
+	for n in pops:
+		n.visible = true
+		var full := n.scale
+		n.scale = full * 0.05
+		var tw := n.create_tween()
+		tw.tween_property(n, "scale", full * 1.35, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(n, "scale", full, 0.12)
 
 
 ## Позиция сокета в мире: откуда летят потоки при жертве.

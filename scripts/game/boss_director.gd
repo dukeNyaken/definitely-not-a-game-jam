@@ -10,6 +10,8 @@ signal phase_changed(phase: int)
 
 const PEDESTAL_RADIUS := 9.0
 const BOSS_POS := Vector3(0, 0, -3)
+## Вступление без сюжетных сцен: герой на одной вертикали кадра с боссом (камера смотрит вдоль (-1, 0, -1)).
+const HERO_POS_SOLO := BOSS_POS + Vector3(6, 0, 6)
 
 var game: Game
 var boss: Actor
@@ -24,7 +26,9 @@ var _fight_started: bool = false
 ## cinematic — вступление ведёт сюжетная сцена (GatesScene) через assemble_items / reveal_boss / start_fight.
 func setup(p_game: Game, cinematic: bool = false) -> void:
 	game = p_game
-	game.hero.global_position = Vector3(0, 0, 7)
+	game.hero.global_position = Vector3(0, 0, 7) if cinematic else HERO_POS_SOLO
+	game.hero.aim_point = BOSS_POS
+	game.hero.facing = Combat.flat_dir(BOSS_POS - game.hero.global_position)
 	game.rig.snap()
 	game.lock_input(true)
 	_build_pedestals()
@@ -69,12 +73,109 @@ func _process(delta: float) -> void:
 			d.rotation.y += delta * 0.8
 
 
+## Вступление без сюжетных сцен: камера отъезжает к центру, из тёмного вихря проступает пустой рыцарь,
+## вещи по одной слетаются с постаментов прямо на свои места, над головой загорается корона.
 func _intro() -> void:
+	game.rig.cine_to(BOSS_POS + Vector3(1.7, 0, 1.7), 15.5, 1.4)
+	game.hud.set_cinematic(true)
+	game.hud.letterbox(true)
+	Audio.play(&"boss_phase", -6.0)
+	await get_tree().create_timer(1.1, false).timeout
+	_spawn_boss(false)
+	boss_model.hide_all_items()
+	_vortex()
+	# Наезд: пока рыцарь собирается, камера подъезжает к нему. Точка чуть «за» боссом:
+	# рыцарь ростом под четыре метра встаёт в центр кадра, под титр.
+	var assembly := 1.7 + _displays.size() * 0.5 + 0.8
+	game.rig.cine_to(BOSS_POS + Vector3(-1.1, 0, -1.1), 10.0, assembly)
+	await get_tree().create_timer(1.7, false).timeout
+	for i in _displays.size():
+		_fly_to_boss(_displays[i], RunState.snapshots[i].def_id)
+		await get_tree().create_timer(0.5, false).timeout
+	await get_tree().create_timer(0.8, false).timeout
+	_displays.clear()
+	Vfx.ring(self, BOSS_POS, 7.0, Color(0.7, 0.8, 1.0, 0.7), 0.8, 0.35)
+	Vfx.ring(self, BOSS_POS, 4.0, Color(0.6, 0.05, 0.04, 0.8), 0.6, 0.5)
+	Audio.play(&"boss_roar")
+	game.rig.shake(0.9)
+	game.banner.emit(Story.TYRANT_NAME, "собран из всего, что ты отдал")
 	await get_tree().create_timer(1.6, false).timeout
-	await assemble_items()
-	reveal_boss()
-	await get_tree().create_timer(1.0, false).timeout
+	game.hud.set_cinematic(false)
+	game.hud.letterbox(false)
+	game.rig.cine_release(0.9)
+	await get_tree().create_timer(0.5, false).timeout
 	start_fight()
+
+
+## Тёмный вихрь: тело рыцаря поднимается из него.
+func _vortex() -> void:
+	var def: EnemyDef = load("res://data/enemies/boss.tres")
+	boss_model.scale = Vector3(0.05, 0.05, 0.05)
+	var tw := boss_model.create_tween()
+	tw.tween_property(boss_model, "scale", Vector3.ONE * def.scale, 1.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	for k in 3:
+		var ring := MeshInstance3D.new()
+		ring.mesh = Vfx.ring_mesh(1.0, 0.18, 24)
+		ring.material_override = Vfx.material(Color(0.05, 0.02, 0.06, 0.85), 1.0, false)
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(ring)
+		ring.global_position = BOSS_POS + Vector3(0, 0.05 + k * 0.6, 0)
+		ring.scale = Vector3.ONE * (2.6 - k * 0.6)
+		var rt := ring.create_tween().set_parallel(true)
+		rt.tween_property(ring, "rotation:y", TAU * (2.0 if k % 2 == 0 else -2.0), 2.2)
+		rt.tween_property(ring, "scale", Vector3.ONE * 0.2, 2.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		rt.chain().tween_callback(ring.queue_free)
+	var smoke := CPUParticles3D.new()
+	smoke.one_shot = true
+	smoke.explosiveness = 0.2
+	smoke.amount = 40
+	smoke.lifetime = 1.6
+	smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	smoke.emission_sphere_radius = 1.2
+	smoke.direction = Vector3.UP
+	smoke.spread = 25.0
+	smoke.initial_velocity_min = 1.0
+	smoke.initial_velocity_max = 2.5
+	smoke.gravity = Vector3(0, 0.6, 0)
+	smoke.scale_amount_min = 0.15
+	smoke.scale_amount_max = 0.35
+	var cube := BoxMesh.new()
+	cube.size = Vector3.ONE
+	smoke.mesh = cube
+	smoke.material_override = Vfx.material(Color(0.08, 0.04, 0.1, 0.8), 1.0, false)
+	add_child(smoke)
+	smoke.global_position = BOSS_POS + Vector3(0, 0.6, 0)
+	smoke.emitting = true
+	get_tree().create_timer(3.0).timeout.connect(smoke.queue_free)
+
+
+## Вещь слетает с постамента на своё место на теле рыцаря и проявляется там.
+func _fly_to_boss(display: Node3D, id: StringName) -> void:
+	if not is_instance_valid(display):
+		return
+	var from := display.global_position
+	var color := Db.item(id).essence.color
+	Audio.play(&"item_fly", -3.0)
+	var tw := display.create_tween().set_parallel(true)
+	tw.tween_method(func(t: float):
+		if not is_instance_valid(display) or not is_instance_valid(boss_model):
+			return
+		var to := boss_model.socket_position(id)
+		var mid := (from + to) * 0.5 + Vector3(0, 3.5, 0)
+		display.global_position = from.lerp(mid, t).lerp(mid.lerp(to, t), t)
+		display.rotation.y += 0.25
+	, 0.0, 1.0, 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(display, "scale", Vector3.ONE * 0.6, 0.6)
+	tw.chain().tween_callback(func():
+		if is_instance_valid(boss_model):
+			var at := boss_model.socket_position(id)
+			boss_model.reveal_item(id)
+			Vfx.burst(self, at, Color(color, 0.6), 0.55, 0.25)
+			Vfx.ring(self, Vector3(BOSS_POS.x, 0.0, BOSS_POS.z), 2.5, color, 0.4, 0.2)
+			Audio.play(&"absorb", -4.0)
+			game.rig.shake(0.25)
+		display.queue_free()
+	)
 
 
 ## Вещи по одной слетаются с постаментов в точку босса. on_item(i) — после вылета i-й вещи.
@@ -126,7 +227,9 @@ func reveal_boss() -> void:
 func freeze_boss() -> void:
 	if boss == null or _fight_started:
 		return
-	boss.get_node("AI").set_physics_process(false)
+	var ai := boss.get_node("AI") as AIController
+	ai.active = false
+	ai.set_physics_process(false)
 	boss.move_input = Vector3.ZERO
 	boss.global_position = BOSS_POS
 	boss.facing = Vector3.BACK
@@ -137,7 +240,10 @@ func start_fight() -> void:
 		return
 	_fight_started = true
 	game.lock_input(false)
-	boss.get_node("AI").set_physics_process(true)
+	var ai := boss.get_node("AI") as AIController
+	ai.active = true
+	ai.set_physics_process(true)
+	boss.invuln_time = 0.0
 	intro_finished.emit()
 
 
@@ -146,7 +252,8 @@ func _bezier(t: float, node: Node3D, a: Vector3, b: Vector3, c: Vector3) -> void
 		node.global_position = a.lerp(b, t).lerp(b.lerp(c, t), t)
 
 
-func _spawn_boss() -> void:
+## pop — короткое «выпрыгивание» модели (сюжетная сцена); у сольного вступления свой вихрь.
+func _spawn_boss(pop: bool = true) -> void:
 	var b := Db.balance
 	var def: EnemyDef = load("res://data/enemies/boss.tres")
 	boss = Actor.new()
@@ -184,12 +291,16 @@ func _spawn_boss() -> void:
 	boss.add_child(ai)
 	ai.setup(boss, def, atk)
 	ai.action_gap = b.boss_action_gaps[0]
-	ai.set_physics_process(false)
+	ai.active = false
 	game.world.add_child(boss)
 	boss.global_position = BOSS_POS
-	boss.facing = Vector3.BACK
+	boss.facing = Combat.flat_dir(game.hero.global_position - BOSS_POS, Vector3.BACK)
+	# Пока вступление не кончилось, босса нельзя ранить.
+	boss.add_invulnerability(999.0)
 	boss.damaged.connect(_on_boss_damaged)
 	boss.died.connect(_on_boss_died)
+	if not pop:
+		return
 	boss_model.scale = Vector3.ONE * 0.2
 	boss_model.create_tween().tween_property(boss_model, "scale", Vector3.ONE * def.scale, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 

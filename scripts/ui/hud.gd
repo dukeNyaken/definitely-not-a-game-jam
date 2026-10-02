@@ -27,6 +27,8 @@ var _status_box: Control
 var _ring_panel: Control
 var _action_bar: Control
 var _cinematic_tween: Tween
+## Чёрные полосы вступления босса (без сюжетных сцен).
+var _bars: Array[ColorRect] = []
 
 
 func setup(p_game: Game) -> void:
@@ -214,7 +216,7 @@ func _process(_delta: float) -> void:
 		_stage_label.text = "Этап %d/7 · %s" % [s, threat.display_name if threat != null else ""]
 	var sac := RunState.sacrifices_count()
 	_speed_label.text = "Скорость +%d%% · время %s" % [int(round(Db.balance.sacrifice_speed_bonus * sac * 100)), RunState.time_text()]
-	_boss_bar.visible = game.boss_director != null and game.boss_director.boss != null
+	_boss_bar.visible = game.state == Game.State.BOSS and game.boss_director != null and game.boss_director.boss != null
 	if _boss_bar.visible:
 		_boss_bar.queue_redraw()
 	_hp_bar.queue_redraw()
@@ -240,6 +242,25 @@ func _on_state_changed(state: int) -> void:
 func _refresh_ring() -> void:
 	ring.set_items(RunState.ring.items)
 	_seed_label.text = "Сид %d" % RunState.seed_value
+
+
+## Сверху и снизу выезжают чёрные полосы (интерфейс прячет set_cinematic).
+func letterbox(on: bool) -> void:
+	if _bars.is_empty():
+		for top in [true, false]:
+			var bar := ColorRect.new()
+			bar.color = Color(0, 0, 0, 1)
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			bar.set_anchors_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
+			bar.offset_top = 0.0 if top else 0.0
+			bar.offset_bottom = 0.0
+			root.add_child(bar)
+			root.move_child(bar, overlay.get_index() + 1)
+			_bars.append(bar)
+	var h := 96.0 if on else 0.0
+	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(_bars[0], "offset_bottom", h, 0.6)
+	tw.tween_property(_bars[1], "offset_top", -h, 0.6)
 
 
 func show_banner(title: String, subtitle: String) -> void:

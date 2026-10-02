@@ -20,6 +20,9 @@ var _dodge_ready_at: float = 0.0
 var _watched_target: Actor
 ## Пауза между действиями вещей (темп элит и фаз босса).
 var action_gap: float = 1.0
+## Выключенный ИИ стоит на месте (вступление босса, галерея). set_physics_process(false)
+## до входа в дерево ненадёжен: Godot включает физику снова при готовности узла.
+var active: bool = true
 var _next_item_at: float = 0.0
 
 
@@ -34,6 +37,9 @@ func setup(p_actor: Actor, p_def: EnemyDef, p_attack: EnemyAttack) -> void:
 
 func _physics_process(delta: float) -> void:
 	if actor == null or actor.dead:
+		return
+	if not active:
+		actor.move_input = Vector3.ZERO
 		return
 	var target := Combat.hero
 	if target == null or not is_instance_valid(target) or target.dead:
