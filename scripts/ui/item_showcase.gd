@@ -5,12 +5,15 @@ extends SubViewportContainer
 var viewport: SubViewport
 var pivot: Node3D
 var spin_speed: float = 0.35
+## Пикселизовать самостоятельно (если витрина лежит поверх ретро-постобработки).
+var self_pixelate: bool = true
 var _displays: Array[Node3D] = []
 
 
 func _init() -> void:
 	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	viewport = SubViewport.new()
 	viewport.transparent_bg = true
 	viewport.own_world_3d = true
@@ -84,6 +87,13 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	glow.light_energy = 1.6
 	glow.omni_range = 6.0
 	viewport.add_child(glow)
+	# Затмение за спиной героя.
+	var sky := EclipseSky.new()
+	viewport.add_child(sky)
+	sky.scale = Vector3.ONE * 0.33
+	var fwd := (Vector3(0, 0.3, 0) - Vector3(0, 3.2, 6.5)).normalized()
+	sky.position = Vector3(0.9, -1.2, -9.0)
+	sky.look_at(sky.position + fwd, Vector3.UP)
 
 
 ## Одна вещь крупно.
@@ -94,6 +104,16 @@ func show_single(state: ItemState) -> void:
 	pivot.add_child(d)
 	_displays.append(d)
 	spin_speed = 0.7
+
+
+func _ready() -> void:
+	Render.mode_changed.connect(_apply_retro)
+	_apply_retro(Render.mode)
+
+
+## В PS1 витрина рендерится в пониженном разрешении и растягивается без сглаживания.
+func _apply_retro(mode: int) -> void:
+	stretch_shrink = 3 if mode == Render.Mode.PS1 and self_pixelate else 1
 
 
 func _process(delta: float) -> void:

@@ -3,15 +3,15 @@ extends Node
 
 signal icons_ready
 
-const SIZE := 160
+const SIZE := 80
 const FRAMING := {
-	&"sword": [1.75, Vector3(0, 0, -0.75)],
-	&"shield": [1.15, Vector3(1.15, 0, 0)],
-	&"armor": [1.2, Vector3(0.25, -0.5, 0)],
-	&"helmet": [0.85, Vector3(0.2, -0.6, 0)],
-	&"gloves": [0.85, Vector3(0.3, 0, 0)],
-	&"boots": [0.95, Vector3(0.25, -0.6, 0)],
-	&"amulet": [0.62, Vector3(0.6, 0, 0)],
+	&"sword": [2.5, Vector3(0, 0, -0.75)],
+	&"shield": [1.35, Vector3(0.1, PI + 0.35, 0)],
+	&"armor": [1.55, Vector3(0.2, PI - 0.5, 0)],
+	&"helmet": [0.95, Vector3(0.15, PI - 0.7, 0)],
+	&"gloves": [0.95, Vector3(0.35, PI, 0)],
+	&"boots": [1.05, Vector3(0.2, PI - 0.6, 0)],
+	&"amulet": [0.62, Vector3(0.4, PI, 0)],
 }
 
 var icons: Dictionary = {}

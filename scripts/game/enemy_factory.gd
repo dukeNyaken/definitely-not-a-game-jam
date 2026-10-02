@@ -14,7 +14,7 @@ const KIND_BY_BEHAVIOR := {
 }
 
 
-static func create(def: EnemyDef, stage: int, elite_items: Array[StringName] = []) -> Actor:
+static func create(def: EnemyDef, stage: int, elite_items: Array[ItemState] = []) -> Actor:
 	var elite := not elite_items.is_empty()
 	var scale := RunState.enemy_scale(stage)
 	var a := Actor.new()
@@ -41,10 +41,7 @@ static func create(def: EnemyDef, stage: int, elite_items: Array[StringName] = [
 	atk.configure(def, def.damage * scale)
 	a.set_innate(atk)
 	if elite:
-		var states: Array[ItemState] = []
-		for id in elite_items:
-			states.append(ItemState.create(id))
-		a.set_items(states)
+		a.set_items(elite_items)
 		a.item_damage_mult = Db.balance.enemy_item_damage_mult
 	var model := ActorModel.new()
 	model.name = "Model"

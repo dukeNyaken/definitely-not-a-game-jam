@@ -23,6 +23,7 @@ var _stream_color: Color = Color.WHITE
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	mouse_filter = Control.MOUSE_FILTER_STOP if interactive else Control.MOUSE_FILTER_IGNORE
 	if not IconFactory.ready_done:
 		IconFactory.icons_ready.connect(queue_redraw)

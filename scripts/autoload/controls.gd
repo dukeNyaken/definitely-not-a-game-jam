@@ -12,6 +12,7 @@ const KEYS := {
 	&"tree": [KEY_TAB],
 	&"pause": [KEY_ESCAPE],
 	&"debug": [KEY_F1],
+	&"render": [KEY_F2],
 	&"interact": [KEY_F],
 }
 const MOUSE := {

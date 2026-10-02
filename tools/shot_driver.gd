@@ -17,6 +17,7 @@ func _ready() -> void:
 			continue
 		match kv[0]:
 			"preset": _preset = kv[1]
+			"render": Render.set_mode(Render.Mode.PS2 if kv[1] == "ps2" else Render.Mode.PS1)
 			"out": _out = kv[1]
 			"delay": _delay = float(kv[1])
 	RunState.new_run(424242)

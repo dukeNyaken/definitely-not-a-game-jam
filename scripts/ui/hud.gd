@@ -256,7 +256,7 @@ func show_controls_hint() -> void:
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_hint.offset_left = 20
 	_hint.offset_bottom = -20
-	_hint.offset_top = -260
+	_hint.offset_top = -290
 	_hint.offset_right = 420
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var text := UiKit.rich(
@@ -266,7 +266,8 @@ func show_controls_hint() -> void:
 		"ПКМ (держать) — щит\n" +
 		"Пробел — рывок сапогами\n" +
 		"Q — хват перчатками · E — волна амулета\n" +
-		"Tab — дерево свойств · Esc — пауза", 17)
+		"Tab — дерево свойств · Esc — пауза\n" +
+		"F2 — рендер PS1 / PS2", 17)
 	text.custom_minimum_size = Vector2(380, 0)
 	_hint.add_child(text)
 	root.add_child(_hint)

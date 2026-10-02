@@ -14,14 +14,22 @@ func _ready() -> void:
 	Audio.play_music(&"music_menu")
 	Audio.play(&"victory" if victory else &"defeat_sting")
 
+	var ui_layer := CanvasLayer.new()
+	ui_layer.layer = 10
+	add_child(ui_layer)
+	var ui := Control.new()
+	ui.theme = UiKit.theme()
+	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiKit.full_rect(ui)
+	ui_layer.add_child(ui)
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.offset_left = -720
 	panel.offset_right = 720
 	panel.offset_top = -410
 	panel.offset_bottom = 410
-	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.09, 0.075, 0.1, 0.97), UiKit.GOLD if victory else UiKit.BORDER, 3, 14, 26))
-	add_child(panel)
+	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.05, 0.035, 0.04, 0.97), UiKit.GOLD if victory else UiKit.BLOOD, 3, 2, 26))
+	ui.add_child(panel)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 28)
 	panel.add_child(h)

@@ -19,9 +19,10 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 Controls="*res://scripts/autoload/controls.gd"
 Db="*res://scripts/autoload/db.gd"
-IconFactory="*res://scripts/autoload/icon_factory.gd"
 RunState="*res://scripts/autoload/run_state.gd"
 Audio="*res://scripts/autoload/audio.gd"
+Render="*res://scripts/autoload/render_settings.gd"
+IconFactory="*res://scripts/autoload/icon_factory.gd"
 DebugMenu="*res://scripts/autoload/debug_menu.gd"
 
 [display]
@@ -41,3 +42,18 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 anti_aliasing/quality/msaa_3d=2
 environment/defaults/default_clear_color=Color(0.05, 0.05, 0.07, 1)
+
+[shader_globals]
+
+retro_snap_res={
+"type": "float",
+"value": 0.0
+}
+retro_aspect={
+"type": "float",
+"value": 1.7778
+}
+retro_pixel={
+"type": "float",
+"value": 1.0
+}

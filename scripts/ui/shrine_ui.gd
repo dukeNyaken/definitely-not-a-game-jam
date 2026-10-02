@@ -59,7 +59,9 @@ func _ready() -> void:
 	_swap_button = UiKit.button("Поменять", _swap)
 	_swap_button.disabled = true
 	v.add_child(_swap_button)
-	v.add_child(UiKit.button("Не менять", func(): finished.emit(false)))
+	var decline := UiKit.button("Отказаться (Esc) — святилище исчезнет", func(): finished.emit(false))
+	decline.add_theme_color_override(&"font_color", UiKit.MUTED)
+	v.add_child(decline)
 
 
 func _on_click(i: int) -> void:

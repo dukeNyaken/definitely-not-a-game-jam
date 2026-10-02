@@ -54,7 +54,7 @@ func _ready() -> void:
 		e.global_position = Vector3(x, 0, 0)
 		e.facing = Vector3(-0.3, 0, 1).normalized()
 		x += 1.3 * def.scale + 0.4
-	var elite := EnemyFactory.create(Db.enemy(&"infantry"), 1, [&"shield", &"helmet"] as Array[StringName])
+	var elite := EnemyFactory.create(Db.enemy(&"infantry"), 1, [ItemState.create(&"shield"), ItemState.create(&"helmet")] as Array[ItemState])
 	elite.get_node("AI").set_physics_process(false)
 	add_child(elite)
 	elite.global_position = Vector3(x + 0.5, 0, 0)

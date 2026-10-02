@@ -187,18 +187,11 @@ func start_wave(index: int) -> void:
 		for i in threat.elite_count:
 			var base: StringName = threat.elite_bases[rng.randi_range(0, threat.elite_bases.size() - 1)]
 			var def := Db.enemy(base)
-			var pool := EnemyFactory.elite_item_pool(def)
-			var items: Array[StringName] = []
-			var n := rng.randi_range(1, Db.balance.elite_item_count_max)
-			for k in n:
-				var id: StringName = pool[rng.randi_range(0, pool.size() - 1)]
-				pool.erase(id)
-				items.append(id)
-			list.append({"def": def, "items": items})
+			list.append({"def": def, "items": _elite_items(def)})
 	for id in comp.keys():
 		var count := int(round(int(comp[id]) * _count_scale()))
 		for k in count:
-			list.append({"def": Db.enemy(StringName(id)), "items": [] as Array[StringName]})
+			list.append({"def": Db.enemy(StringName(id)), "items": [] as Array[ItemState]})
 	# Перемешиваем, но элиты идут первыми.
 	var elites := list.filter(func(e): return not (e["items"] as Array).is_empty())
 	var rest := list.filter(func(e): return (e["items"] as Array).is_empty())
@@ -215,6 +208,25 @@ func start_wave(index: int) -> void:
 	if index == ELITE_WAVE:
 		banner.emit("Элитная волна", "враги с вещами героя")
 		Audio.play(&"elite_horn")
+
+
+## Вещи элиты: сначала уже пожертвованные (со свойствами на момент жертвы), потом любые.
+func _elite_items(def: EnemyDef) -> Array[ItemState]:
+	var pool := EnemyFactory.elite_item_pool(def)
+	var n := rng.randi_range(1, Db.balance.elite_item_count_max)
+	var sacrificed: Array[ItemState] = []
+	for snap in RunState.snapshots:
+		if snap.def_id in pool:
+			sacrificed.append(snap)
+	var out: Array[ItemState] = []
+	while out.size() < n and not sacrificed.is_empty():
+		var snap: ItemState = sacrificed.pop_at(rng.randi_range(0, sacrificed.size() - 1))
+		out.append(snap.snapshot())
+		pool.erase(snap.def_id)
+	while out.size() < n and not pool.is_empty():
+		var id: StringName = pool.pop_at(rng.randi_range(0, pool.size() - 1))
+		out.append(ItemState.create(id))
+	return out
 
 
 func alive_enemies() -> int:
@@ -278,7 +290,7 @@ func _spawn_point() -> Vector3:
 func _on_portal_opened(portal: SpawnPortal) -> void:
 	_pending_portals = maxi(_pending_portals - 1, 0)
 	var entry: Dictionary = portal.payload
-	var items: Array[StringName] = []
+	var items: Array[ItemState] = []
 	items.assign(entry["items"])
 	var enemy := EnemyFactory.create(entry["def"], RunState.stage, items)
 	world.add_child(enemy)
@@ -333,13 +345,16 @@ func _on_shrine_stepped() -> void:
 	hud.open_shrine()
 
 
+## Святилище закрыто: обменом или отказом — в обоих случаях оно исчезает до конца этапа.
 func shrine_done(swapped: bool) -> void:
-	if swapped and shrine != null:
+	RunState.shrine_used[RunState.stage] = true
+	if shrine != null:
 		shrine.vanish()
 		shrine = null
+	if swapped:
 		hero.set_items(RunState.ring.items.duplicate())
 		Audio.play(&"shrine_swap")
-	if state == State.SHRINE and swapped:
+	if state == State.SHRINE:
 		_shrine_timer = minf(_shrine_timer, 1.0)
 
 

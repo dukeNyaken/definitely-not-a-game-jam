@@ -3,6 +3,8 @@ extends Control
 
 var _seed_edit: LineEdit
 var _rules: PanelContainer
+var ui: Control
+var _render_button: Button
 
 
 func _ready() -> void:
@@ -25,6 +27,7 @@ func _ready() -> void:
 	UiKit.full_rect(bg)
 	add_child(bg)
 	var showcase := ItemShowcase.new()
+	showcase.self_pixelate = false
 	showcase.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	showcase.offset_left = -900
 	showcase.offset_right = -20
@@ -36,6 +39,15 @@ func _ready() -> void:
 		preview.append(ItemState.create(id))
 	showcase.show_ring(preview)
 
+	# Интерфейс — на слое поверх ретро-постобработки, чтобы текст оставался чётким.
+	var ui_layer := CanvasLayer.new()
+	ui_layer.layer = 10
+	add_child(ui_layer)
+	ui = Control.new()
+	ui.theme = UiKit.theme()
+	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiKit.full_rect(ui)
+	ui_layer.add_child(ui)
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_CENTER_LEFT)
 	v.offset_left = 110
@@ -43,8 +55,13 @@ func _ready() -> void:
 	v.offset_top = -300
 	v.offset_bottom = 320
 	v.add_theme_constant_override(&"separation", 16)
-	add_child(v)
+	ui.add_child(v)
 	v.add_child(UiKit.outlined(UiKit.label("Только самое нужное", 64, UiKit.GOLD), 8))
+	var line := ColorRect.new()
+	line.color = UiKit.BLOOD
+	line.custom_minimum_size = Vector2(620, 3)
+	line.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(line)
 	v.add_child(UiKit.label("Семь вещей. Шесть жертв. Один предмет.", 26, UiKit.TEXT))
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 30)
@@ -62,6 +79,11 @@ func _ready() -> void:
 	_seed_edit.max_length = 9
 	seed_row.add_child(_seed_edit)
 	v.add_child(seed_row)
+	_render_button = UiKit.button("", _toggle_render)
+	_render_button.custom_minimum_size = Vector2(360, 50)
+	_render_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(_render_button)
+	_update_render_button()
 	var how := UiKit.button("Как играть", _toggle_rules)
 	how.custom_minimum_size = Vector2(360, 50)
 	how.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -71,14 +93,28 @@ func _ready() -> void:
 		quit.custom_minimum_size = Vector2(360, 50)
 		quit.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		v.add_child(quit)
-	var foot := UiKit.label("Геймджем «Только самое нужное» · Godot 4", 15, Color(UiKit.MUTED, 0.7))
+	var foot := UiKit.label("Геймджем «Только самое нужное» · Godot 4 · F2 — переключить рендер PS1/PS2", 15, Color(UiKit.MUTED, 0.7))
 	foot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	foot.offset_left = 24
 	foot.offset_top = -40
 	foot.offset_bottom = -14
-	foot.offset_right = 700
-	add_child(foot)
+	foot.offset_right = 900
+	ui.add_child(foot)
 	Audio.play_music(&"music_menu")
+
+
+func _toggle_render() -> void:
+	Render.toggle()
+	_update_render_button()
+
+
+func _update_render_button() -> void:
+	_render_button.text = "Рендер: %s" % Render.mode_name()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"render"):
+		_update_render_button.call_deferred()
 
 
 func _start() -> void:
@@ -112,4 +148,4 @@ func _toggle_rules() -> void:
 	var ok := UiKit.button("Закрыть", _toggle_rules)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(ok)
-	add_child(_rules)
+	ui.add_child(_rules)

@@ -18,8 +18,8 @@ func _ready() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.offset_left = -220
 	panel.offset_right = 220
-	panel.offset_top = -230
-	panel.offset_bottom = 230
+	panel.offset_top = -270
+	panel.offset_bottom = 270
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override(&"separation", 14)
@@ -29,8 +29,20 @@ func _ready() -> void:
 	v.add_child(UiKit.button("Продолжить", func(): resumed.emit()))
 	v.add_child(UiKit.button("Новый забег", _restart))
 	v.add_child(UiKit.button("Главное меню", _menu))
-	v.add_child(_volume_row("Звуки", Audio.sfx_volume_db, func(val): Audio.sfx_volume_db = val))
-	v.add_child(_volume_row("Музыка", Audio.music_volume_db, func(val): Audio.set_music_volume(val)))
+	var render_btn := UiKit.button("Рендер: %s" % Render.mode_name(), func(): pass)
+	render_btn.pressed.connect(func():
+		Render.toggle()
+		render_btn.text = "Рендер: %s" % Render.mode_name()
+	)
+	v.add_child(render_btn)
+	v.add_child(_volume_row("Звуки", Audio.sfx_volume_db, func(val):
+		Audio.sfx_volume_db = val
+		Render.save_settings()
+	))
+	v.add_child(_volume_row("Музыка", Audio.music_volume_db, func(val):
+		Audio.set_music_volume(val)
+		Render.save_settings()
+	))
 
 
 func _volume_row(title: String, value: float, setter: Callable) -> Control:

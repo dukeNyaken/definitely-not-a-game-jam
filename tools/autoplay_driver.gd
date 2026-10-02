@@ -37,6 +37,7 @@ func _start() -> void:
 			"speed": _speed = float(kv[1])
 			"immortal": _immortal = kv[1] == "1"
 			"pick": _pick = int(kv[1])
+			"render": Render.set_mode(Render.Mode.PS2 if kv[1] == "ps2" else Render.Mode.PS1)
 			"shots": _shots = Array(kv[1].split(",")).map(func(x): return float(x))
 			"prefix": _shot_prefix = kv[1]
 			"stage": _start_stage = int(kv[1])

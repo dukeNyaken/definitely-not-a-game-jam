@@ -12,6 +12,7 @@ var _flash: float = 0.0
 
 func _init() -> void:
 	custom_minimum_size = Vector2(66, 86)
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 

@@ -4,7 +4,7 @@ extends Node3D
 
 @export var pitch_degrees: float = 35.0
 @export var yaw_degrees: float = 45.0
-@export var size: float = 17.5
+@export var size: float = 14.5
 @export var distance: float = 40.0
 @export var cursor_lead: float = 0.22
 @export var max_lead: float = 4.0
@@ -26,6 +26,10 @@ func _ready() -> void:
 	rotation_degrees = Vector3(-pitch_degrees, yaw_degrees, 0)
 	camera.position = Vector3(0, 0, distance)
 	camera.current = true
+	var sky := EclipseSky.new()
+	sky.name = "Eclipse"
+	camera.add_child(sky)
+	sky.position = Vector3(size * 0.12, size * 0.36, -80.0)
 
 
 func snap() -> void:
