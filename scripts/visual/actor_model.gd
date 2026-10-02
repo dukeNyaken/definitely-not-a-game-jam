@@ -546,18 +546,25 @@ func _build_slime() -> void:
 	_slime_cube = LowPoly.pivot("Cube", Vector3(0, SLIME_EDGE * 0.5, 0))
 	add_child(_slime_cube)
 	var bone := Color(0.9, 0.86, 0.75)
-	var skull := LowPoly.pivot("Skull", Vector3(0.02, 0.0, -0.02))
+	# Сколько костей внутри — из данных: у большого слизня кости и ядро, у слизнёныша один череп.
+	var bones := 3
+	if actor != null and actor.has_meta(&"enemy_def"):
+		bones = (actor.get_meta(&"enemy_def") as EnemyDef).slime_bones
+	var skull := LowPoly.pivot("Skull", Vector3(0.02, 0.0, -0.02) if bones > 0 else Vector3.ZERO)
 	skull.rotation = Vector3(0.3, 0.6, 0.2)
+	if bones == 0:
+		skull.scale = Vector3.ONE * 1.35
 	_slime_cube.add_child(skull)
 	_ball(skull, 0.13, bone, Vector3.ZERO, &"bone", Vector3(0.95, 1.0, 1.1))
 	_put(skull, LowPoly.wedge(Vector3(0.14, 0.07, 0.08), bone, Vector3(0, -0.12, -0.05), &"bone"), Vector3(PI, 0, 0))
 	for side in [-1.0, 1.0]:
 		skull.add_child(LowPoly.box(Vector3(0.05, 0.045, 0.02), Color(0.5, 1.0, 0.3), Vector3(side * 0.05, 0.01, -0.13), 0.5, 0.0, 3.0))
-	for k in 3:
+	for k in bones:
 		var b := LowPoly.box(Vector3(0.05, 0.05, 0.36), bone, Vector3((k - 1) * 0.2, -0.22 + k * 0.08, 0.15 - k * 0.1), 0.9, 0.0, 0.0, &"bone")
 		b.rotation = Vector3(k * 0.7, k * 1.3, 0.4)
 		_slime_cube.add_child(b)
-	_slime_cube.add_child(LowPoly.gem(0.09, 0.1, 0.1, 5, Color(0.5, 1.0, 0.25), Vector3(-0.15, 0.15, 0.12), &"", 0.0, 2.5))
+	if bones > 0:
+		_slime_cube.add_child(LowPoly.gem(0.09, 0.1, 0.1, 5, Color(0.5, 1.0, 0.25), Vector3(-0.15, 0.15, 0.12), &"", 0.0, 2.5))
 	var jelly := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE * SLIME_EDGE

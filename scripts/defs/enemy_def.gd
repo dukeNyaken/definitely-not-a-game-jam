@@ -35,6 +35,8 @@ enum Behavior { MELEE, RANGED, SWARM, BRUTE, CASTER, SLIME, JESTER }
 ## При смерти распадается на split_count врагов split_into.
 @export var split_into: StringName = &""
 @export var split_count: int = 0
+## Кости внутри куба (у большого слизня — кости и ядро; 0 — только череп).
+@export var slime_bones: int = 3
 
 @export_group("Jester")
 ## Выпад и серия ударов ножами, затем сальто назад.

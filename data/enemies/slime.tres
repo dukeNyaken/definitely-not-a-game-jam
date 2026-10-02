@@ -23,5 +23,6 @@ trail_lifetime = 4.0
 trail_spacing = 0.85
 split_into = &"slime_small"
 split_count = 2
+slime_bones = 3
 color = Color(0.35, 0.85, 0.25, 1)
 scale = 1.0
