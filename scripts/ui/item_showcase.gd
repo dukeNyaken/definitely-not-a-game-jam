@@ -87,8 +87,8 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	glow.light_energy = 1.6
 	glow.omni_range = 6.0
 	viewport.add_child(glow)
-	# Затмение за спиной героя.
-	var sky := EclipseSky.new()
+	# Луна в кольце из семи осколков за спиной героя.
+	var sky := RingMoon.new()
 	viewport.add_child(sky)
 	sky.scale = Vector3.ONE * 0.33
 	var fwd := (Vector3(0, 0.3, 0) - Vector3(0, 3.2, 6.5)).normalized()

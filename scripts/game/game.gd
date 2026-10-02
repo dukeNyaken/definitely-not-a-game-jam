@@ -145,7 +145,11 @@ func start_stage(s: int) -> void:
 	hero.bus.reset_cooldowns()
 	rig.snap()
 	wave = -1
-	arena.show_floor_eclipse(RunState.is_boss_stage(s))
+	var sigil: Array = []
+	if RunState.is_boss_stage(s):
+		for snap in RunState.snapshots:
+			sigil.append(Db.item(snap.def_id).essence.color)
+	arena.show_boss_sigil(sigil)
 	if RunState.is_boss_stage(s):
 		arena.set_tint(Color(0.24, 0.2, 0.22))
 		_start_boss()

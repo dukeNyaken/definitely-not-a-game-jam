@@ -86,9 +86,9 @@ func apply() -> void:
 		p.set_shader_parameter(&"bloom", 0.0)
 		p.set_shader_parameter(&"grain", 0.0)
 		p.set_shader_parameter(&"scanlines", 0.0)
-		p.set_shader_parameter(&"saturation", 0.62)
-		p.set_shader_parameter(&"contrast", 1.12)
-		p.set_shader_parameter(&"vignette", 0.45)
+		p.set_shader_parameter(&"saturation", 0.7)
+		p.set_shader_parameter(&"contrast", 1.05)
+		p.set_shader_parameter(&"vignette", 0.3)
 	else:
 		p.set_shader_parameter(&"levels", 96.0)
 		p.set_shader_parameter(&"dither_amount", 0.35)
@@ -96,9 +96,9 @@ func apply() -> void:
 		p.set_shader_parameter(&"bloom", 0.6)
 		p.set_shader_parameter(&"grain", 0.05)
 		p.set_shader_parameter(&"scanlines", 0.06)
-		p.set_shader_parameter(&"saturation", 0.62)
-		p.set_shader_parameter(&"contrast", 1.18)
-		p.set_shader_parameter(&"vignette", 0.5)
+		p.set_shader_parameter(&"saturation", 0.72)
+		p.set_shader_parameter(&"contrast", 1.1)
+		p.set_shader_parameter(&"vignette", 0.35)
 	get_viewport().msaa_3d = Viewport.MSAA_DISABLED if mode == Mode.PS1 else Viewport.MSAA_2X
 	_update_resolution()
 

@@ -74,6 +74,13 @@ func _ready() -> void:
 	boss.facing = Vector3(-0.3, 0, 1).normalized()
 	var rig := CameraRig.new()
 	rig.size = 10.5
+	var focus := Vector3(4.0, 0, 0.5)
+	# cam=размер,x,z из аргументов командной строки.
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("cam="):
+			var v := a.substr(4).split(",")
+			rig.size = float(v[0])
+			focus = Vector3(float(v[1]), 0, float(v[2]))
 	add_child(rig)
-	rig.global_position = Vector3(4.0, 0, 0.5)
+	rig.global_position = focus
 	set_process(false)

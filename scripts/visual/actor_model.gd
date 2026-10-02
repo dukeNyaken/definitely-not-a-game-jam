@@ -33,6 +33,7 @@ var _windup: float = 0.0
 var _yaw: float = 0.0
 var _dying: bool = false
 var _base_y: float = 0.0
+var _crown: Node3D
 
 
 func setup(p_actor: Actor, p_kind: int, p_body: Color = SKIN, p_accent: Color = Color(0.92, 0.9, 0.84)) -> void:
@@ -96,26 +97,62 @@ func _proportions() -> Dictionary:
 		Kind.ARCHER:
 			return {"hip_y": 0.9, "hip_w": 0.11, "leg": 0.84, "chest": Vector3(0.38, 0.56, 0.22), "shoulder": 0.27, "arm": 0.66, "limb": 0.1}
 		Kind.BRUTE:
-			return {"hip_y": 0.82, "hip_w": 0.17, "leg": 0.76, "chest": Vector3(0.74, 0.66, 0.5), "shoulder": 0.47, "arm": 0.72, "limb": 0.24}
+			return {"hip_y": 0.82, "hip_w": 0.17, "leg": 0.76, "chest": Vector3(0.78, 0.68, 0.5), "shoulder": 0.48, "arm": 0.72, "limb": 0.24}
 		Kind.CASTER:
 			return {"hip_y": 0.92, "hip_w": 0.12, "leg": 0.86, "chest": Vector3(0.44, 0.6, 0.28), "shoulder": 0.3, "arm": 0.66, "limb": 0.14}
 		Kind.BOSS:
-			return {"hip_y": 0.94, "hip_w": 0.14, "leg": 0.88, "chest": Vector3(0.6, 0.66, 0.34), "shoulder": 0.38, "arm": 0.7, "limb": 0.18}
+			return {"hip_y": 0.96, "hip_w": 0.14, "leg": 0.9, "chest": Vector3(0.62, 0.7, 0.34), "shoulder": 0.4, "arm": 0.74, "limb": 0.17}
 		Kind.INFANTRY:
 			return {"hip_y": 0.9, "hip_w": 0.13, "leg": 0.84, "chest": Vector3(0.52, 0.6, 0.3), "shoulder": 0.34, "arm": 0.66, "limb": 0.16}
 		_:
-			return {"hip_y": 0.92, "hip_w": 0.13, "leg": 0.86, "chest": Vector3(0.58, 0.62, 0.34), "shoulder": 0.38, "arm": 0.7, "limb": 0.18}
+			return {"hip_y": 0.92, "hip_w": 0.13, "leg": 0.86, "chest": Vector3(0.6, 0.62, 0.34), "shoulder": 0.39, "arm": 0.7, "limb": 0.19}
 
 
-func _add(parent: Node3D, mi: Node3D, rot: Vector3 = Vector3.ZERO) -> Node3D:
+# --- Строительные блоки -----------------------------------------------------
+
+func _put(parent: Node3D, mi: MeshInstance3D, rot: Vector3) -> MeshInstance3D:
 	mi.rotation = rot
 	parent.add_child(mi)
 	return mi
 
 
-## Конечность: сегмент от сустава вниз.
-func _limb_mesh(pivot: Node3D, width: float, length: float, color: Color, surface: StringName) -> void:
-	pivot.add_child(LowPoly.box(Vector3(width, length, width * 1.08), color, Vector3(0, -length * 0.5, 0), 0.9, 0.0, 0.0, surface))
+## Усечённая пирамида: нижний и верхний прямоугольники X×Z.
+func _f(parent: Node3D, bottom: Vector2, top: Vector2, h: float, color: Color, pos: Vector3, surface: StringName = &"", top_offset: Vector2 = Vector2.ZERO, rot: Vector3 = Vector3.ZERO, metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _put(parent, LowPoly.frustum(bottom, top, h, color, pos, surface, top_offset, metallic, emission), rot)
+
+
+func _pyr(parent: Node3D, base: Vector2, h: float, color: Color, pos: Vector3, surface: StringName = &"", rot: Vector3 = Vector3.ZERO, metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _put(parent, LowPoly.pyramid(base, h, color, pos, surface, metallic, emission), rot)
+
+
+func _bx(parent: Node3D, size: Vector3, color: Color, pos: Vector3, surface: StringName = &"", rot: Vector3 = Vector3.ZERO, metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _put(parent, LowPoly.box(size, color, pos, 0.6 if metallic > 0.0 else 0.9, metallic, emission, surface), rot)
+
+
+func _gm(parent: Node3D, r: float, up: float, down: float, sides: int, color: Color, pos: Vector3, surface: StringName = &"", rot: Vector3 = Vector3.ZERO, metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _put(parent, LowPoly.gem(r, up, down, sides, color, pos, surface, metallic, emission), rot)
+
+
+## Сужающаяся гранёная конечность от сустава вниз (радиусы сверху и снизу).
+func _limb(pivot: Node3D, top_r: float, bottom_r: float, length: float, color: Color, surface: StringName, sides: int = 6) -> void:
+	pivot.add_child(LowPoly.cyl(top_r, bottom_r, length, sides, color, Vector3(0, -length * 0.5, 0), 0.9, 0.0, 0.0, surface))
+
+
+## Овальная гранёная «бочка»: торс, таз, брюхо. depth — сплющивание по глубине.
+func _oval(parent: Node3D, top_r: float, bottom_r: float, h: float, depth: float, color: Color, pos: Vector3, surface: StringName = &"", sides: int = 8, rot: Vector3 = Vector3.ZERO, metallic: float = 0.0) -> MeshInstance3D:
+	var mi := LowPoly.cyl(top_r, bottom_r, h, sides, color, pos, 0.6 if metallic > 0.0 else 0.9, metallic, 0.0, surface)
+	mi.scale = Vector3(1.0, 1.0, depth)
+	mi.rotation = rot
+	parent.add_child(mi)
+	return mi
+
+
+## Гранёный шар (голова, сустав, мышца).
+func _ball(parent: Node3D, r: float, color: Color, pos: Vector3, surface: StringName = &"", scale_v: Vector3 = Vector3.ONE, segments: int = 7, rings: int = 4) -> MeshInstance3D:
+	var mi := LowPoly.sphere(r, segments, rings, color, pos, 0.9, 0.0, 0.0, surface)
+	mi.scale = scale_v
+	parent.add_child(mi)
+	return mi
 
 
 func _add_shadow() -> void:
@@ -129,200 +166,264 @@ func _add_shadow() -> void:
 
 
 func _eyes(color: Color, y: float, z: float, spread: float = 0.075, energy: float = 3.5) -> void:
-	head.add_child(LowPoly.box(Vector3(0.06, 0.035, 0.02), color, Vector3(-spread, y, z), 0.5, 0.0, energy))
-	head.add_child(LowPoly.box(Vector3(0.06, 0.035, 0.02), color, Vector3(spread, y, z), 0.5, 0.0, energy))
+	_bx(head, Vector3(0.06, 0.035, 0.02), color, Vector3(-spread, y, z), &"", Vector3.ZERO, 0.0, energy)
+	_bx(head, Vector3(0.06, 0.035, 0.02), color, Vector3(spread, y, z), &"", Vector3.ZERO, 0.0, energy)
 
 
-# --- Герой: наёмник в шрамах и бинтах, под вещами — набедренная повязка -------
+## Голая ступня: клин носком вперёд.
+func _foot(leg: Node3D, length: float, color: Color, surface: StringName) -> void:
+	_f(leg, Vector2(0.15, 0.3), Vector2(0.12, 0.12), 0.11, color, Vector3(0, -length + 0.03, -0.05), surface, Vector2(0, 0.07))
+
+
+## Кисть: небольшая усечённая пирамида.
+func _hand(arm: Node3D, length: float, color: Color, surface: StringName) -> void:
+	_f(arm, Vector2(0.1, 0.08), Vector2(0.12, 0.11), 0.14, color, Vector3(0, -length - 0.02, 0), surface)
+
+
+# --- Герой: бритоголовый наёмник со шрамами, бородой и в бинтах ----------------
 
 func _dress_hero(p: Dictionary) -> void:
-	var skin := Color(0.86, 0.8, 0.76)
-	var wrap := Color(0.82, 0.78, 0.68)
-	var limb: float = p["limb"]
-	_limb_mesh(leg_l, limb + 0.02, p["leg"], skin, &"skin")
-	_limb_mesh(leg_r, limb + 0.02, p["leg"], skin, &"skin")
+	var skin := Color(0.9, 0.82, 0.76)
+	var wrap := Color(0.86, 0.8, 0.68)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
 	for leg in [leg_l, leg_r]:
-		leg.add_child(LowPoly.box(Vector3(limb + 0.06, 0.1, limb + 0.08), wrap, Vector3(0, -0.42, 0), 0.9, 0.0, 0.0, &"cloth"))
-	hips.add_child(LowPoly.box(Vector3(0.46, 0.22, 0.32), Color(0.62, 0.56, 0.46), Vector3(0, -0.02, 0), 0.9, 0.0, 0.0, &"cloth"))
-	hips.add_child(LowPoly.box(Vector3(0.5, 0.08, 0.35), Color(0.7, 0.6, 0.5), Vector3(0, 0.08, 0), 0.8, 0.0, 0.0, &"leather"))
-	hips.add_child(LowPoly.box(Vector3(0.24, 0.36, 0.04), Color(0.55, 0.48, 0.42), Vector3(0, -0.16, -0.17), 0.9, 0.0, 0.0, &"rags"))
-	hips.add_child(LowPoly.box(Vector3(0.28, 0.32, 0.04), Color(0.5, 0.44, 0.4), Vector3(0, -0.15, 0.17), 0.9, 0.0, 0.0, &"rags"))
+		_limb(leg, 0.13, 0.075, leg_len, skin, &"skin")
+		_ball(leg, 0.11, skin, Vector3(0, -0.2, -0.01), &"skin", Vector3(1, 1.6, 1))
+		_ball(leg, 0.075, skin, Vector3(0, -0.6, 0.02), &"skin", Vector3(1, 1.7, 1))
+		_oval(leg, 0.105, 0.1, 0.08, 1.0, wrap, Vector3(0, -0.45, 0), &"cloth", 6)
+		_foot(leg, leg_len, skin, &"skin")
+	# Таз, пояс, набедренная повязка.
+	_oval(hips, 0.24, 0.19, 0.24, 0.72, Color(0.66, 0.6, 0.5), Vector3(0, -0.03, 0), &"cloth")
+	_oval(hips, 0.26, 0.25, 0.08, 0.72, Color(0.75, 0.62, 0.5), Vector3(0, 0.08, 0), &"leather")
+	_f(hips, Vector2(0.3, 0.04), Vector2(0.2, 0.04), 0.42, Color(0.6, 0.52, 0.44), Vector3(0, -0.21, -0.17), &"rags")
+	_f(hips, Vector2(0.34, 0.04), Vector2(0.24, 0.04), 0.38, Color(0.55, 0.48, 0.42), Vector3(0, -0.19, 0.17), &"rags")
+	# Торс клином: широкая грудь, узкая талия, грудные мышцы, трапеции.
 	var chest: Vector3 = p["chest"]
-	torso.add_child(LowPoly.box(chest, skin, Vector3(0, chest.y * 0.52, 0), 0.9, 0.0, 0.0, &"skin"))
-	torso.add_child(LowPoly.box(Vector3(chest.x * 0.86, 0.2, chest.z * 0.9), skin, Vector3(0, 0.06, 0), 0.9, 0.0, 0.0, &"skin"))
-	# Бинт через грудь.
-	_add(torso, LowPoly.box(Vector3(0.07, 0.76, chest.z + 0.02), wrap, Vector3(0, chest.y * 0.52, 0), 0.9, 0.0, 0.0, &"cloth"), Vector3(0, 0, 0.62))
-	head.add_child(LowPoly.cyl(0.08, 0.09, 0.12, 6, skin, Vector3(0, 0.02, 0), 0.9, 0.0, 0.0, &"skin"))
-	head.add_child(LowPoly.box(Vector3(0.3, 0.34, 0.32), skin, Vector3(0, 0.22, 0), 0.9, 0.0, 0.0, &"skin"))
-	head.add_child(LowPoly.box(Vector3(0.3, 0.05, 0.04), Color(0.25, 0.18, 0.16), Vector3(0, 0.29, -0.16)))
-	head.add_child(LowPoly.box(Vector3(0.05, 0.04, 0.02), Color(0.06, 0.05, 0.05), Vector3(-0.07, 0.25, -0.165)))
-	head.add_child(LowPoly.box(Vector3(0.05, 0.04, 0.02), Color(0.06, 0.05, 0.05), Vector3(0.07, 0.25, -0.165)))
-	_add(head, LowPoly.box(Vector3(0.02, 0.16, 0.02), Color(0.55, 0.18, 0.16), Vector3(0.05, 0.22, -0.165)), Vector3(0, 0, 0.5))
-	# Чёрные растрёпанные волосы.
-	var hair := Color(0.07, 0.06, 0.06)
-	head.add_child(LowPoly.box(Vector3(0.33, 0.12, 0.35), hair, Vector3(0, 0.39, 0.02)))
-	for k in 6:
-		var a := TAU * k / 6.0
-		_add(head, LowPoly.prism(Vector3(0.1, 0.2, 0.1), hair, Vector3(cos(a) * 0.1, 0.48, sin(a) * 0.1 + 0.03)), Vector3(sin(a) * 0.5, 0, -cos(a) * 0.5))
+	_oval(torso, 0.34, 0.21, chest.y * 0.8, 0.6, skin, Vector3(0, chest.y * 0.47, 0), &"skin")
+	_oval(torso, 0.22, 0.2, 0.2, 0.66, skin, Vector3(0, 0.05, 0), &"skin")
+	for side in [-1.0, 1.0]:
+		_ball(torso, 0.13, skin, Vector3(side * 0.11, chest.y * 0.68, -0.12), &"skin", Vector3(1.0, 0.75, 0.55))
+	_f(torso, Vector2(0.5, 0.2), Vector2(0.18, 0.16), 0.16, skin, Vector3(0, chest.y * 0.92, 0.03), &"skin")
+	_bx(torso, Vector3(0.07, 0.8, chest.z * 0.72), wrap, Vector3(0, chest.y * 0.5, 0), &"cloth", Vector3(0, 0, 0.62))
+	# Голова: бритый череп, тяжёлая челюсть, борода, шрам.
+	head.add_child(LowPoly.cyl(0.07, 0.08, 0.14, 6, skin, Vector3(0, 0.03, 0), 0.9, 0.0, 0.0, &"skin"))
+	_ball(head, 0.16, skin, Vector3(0, 0.25, 0.01), &"skin", Vector3(0.95, 1.12, 1.05))
+	_f(head, Vector2(0.18, 0.16), Vector2(0.26, 0.24), 0.14, skin, Vector3(0, 0.15, -0.03), &"skin")
+	_bx(head, Vector3(0.26, 0.04, 0.06), skin.darkened(0.15), Vector3(0, 0.28, -0.14), &"skin")
+	_put(head, LowPoly.wedge(Vector3(0.05, 0.09, 0.07), skin, Vector3(0, 0.22, -0.17), &"skin"), Vector3(deg_to_rad(-90), 0, 0))
+	_bx(head, Vector3(0.05, 0.03, 0.02), Color(0.05, 0.04, 0.04), Vector3(-0.065, 0.25, -0.163))
+	_bx(head, Vector3(0.05, 0.03, 0.02), Color(0.05, 0.04, 0.04), Vector3(0.065, 0.25, -0.163))
+	var beard := Color(0.3, 0.21, 0.16)
+	_f(head, Vector2(0.12, 0.1), Vector2(0.26, 0.2), 0.16, beard, Vector3(0, 0.09, -0.07), &"fur")
+	_bx(head, Vector3(0.025, 0.2, 0.02), Color(0.62, 0.2, 0.18), Vector3(0.06, 0.33, -0.15), &"", Vector3(0, 0, 0.45))
+	for side in [-1.0, 1.0]:
+		_ball(head, 0.04, skin, Vector3(side * 0.155, 0.23, 0.02), &"skin", Vector3(0.6, 1.2, 1), 5, 3)
 	for arm in [arm_l, arm_r]:
-		_limb_mesh(arm, limb, p["arm"], skin, &"skin")
-		arm.add_child(LowPoly.box(Vector3(limb + 0.04, 0.22, limb + 0.06), wrap, Vector3(0, -0.5, 0), 0.9, 0.0, 0.0, &"cloth"))
+		_ball(arm, 0.13, skin, Vector3(0, -0.04, 0), &"skin", Vector3(1, 0.9, 1))
+		_limb(arm, 0.1, 0.065, arm_len, skin, &"skin")
+		_ball(arm, 0.09, skin, Vector3(0, -0.22, 0.01), &"skin", Vector3(1, 1.6, 1))
+		_oval(arm, 0.085, 0.08, 0.22, 1.0, wrap, Vector3(0, -0.5, 0), &"cloth", 6)
+		_hand(arm, arm_len, skin, &"skin")
 
 
-# --- Пехотинец: восставший латник в ржавом шлеме-шапеле --------------------
+# --- Пехотинец: восставший мертвец в кольчуге и ржавой шапели ---------------
 
 func _dress_infantry(p: Dictionary) -> void:
-	var flesh := Color(0.62, 0.68, 0.56)
-	var mail := Color(0.75, 0.75, 0.8)
-	var tabard := Color(0.6, 0.18, 0.15)
-	var limb: float = p["limb"]
+	var corpse := Color(0.66, 0.74, 0.6)
+	var mail := Color(0.85, 0.85, 0.9)
+	var tabard := Color(0.75, 0.22, 0.17)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
 	for leg in [leg_l, leg_r]:
-		_limb_mesh(leg, limb, p["leg"], mail, &"iron")
-		leg.add_child(LowPoly.box(Vector3(limb + 0.06, 0.22, limb + 0.12), Color(0.7, 0.6, 0.5), Vector3(0, -0.74, -0.02), 0.9, 0.0, 0.0, &"leather"))
-	hips.add_child(LowPoly.box(Vector3(0.44, 0.22, 0.3), mail, Vector3(0, -0.02, 0), 0.6, 0.4, 0.0, &"iron"))
+		_limb(leg, 0.11, 0.07, leg_len, mail, &"iron")
+		_f(leg, Vector2(0.17, 0.32), Vector2(0.14, 0.17), 0.2, Color(0.72, 0.6, 0.5), Vector3(0, -leg_len + 0.1, -0.03), &"leather", Vector2(0, 0.04))
+	_oval(hips, 0.25, 0.24, 0.3, 0.72, mail, Vector3(0, -0.06, 0), &"iron", 8, Vector3.ZERO, 0.3)
 	var chest: Vector3 = p["chest"]
-	torso.add_child(LowPoly.box(chest, mail, Vector3(0, chest.y * 0.52, 0), 0.6, 0.4, 0.0, &"iron"))
-	torso.add_child(LowPoly.box(Vector3(chest.x * 0.8, chest.y * 1.15, chest.z + 0.04), tabard, Vector3(0, chest.y * 0.4, 0), 0.9, 0.0, 0.0, &"rags"))
-	head.add_child(LowPoly.box(Vector3(0.28, 0.32, 0.3), flesh, Vector3(0, 0.2, 0), 0.9, 0.0, 0.0, &"skin"))
-	head.add_child(LowPoly.cyl(0.17, 0.2, 0.18, 7, Color(1, 1, 1), Vector3(0, 0.38, 0), 0.7, 0.3, 0.0, &"rust"))
-	head.add_child(LowPoly.cyl(0.34, 0.34, 0.03, 9, Color(1, 1, 1), Vector3(0, 0.3, 0), 0.7, 0.3, 0.0, &"rust"))
-	head.add_child(LowPoly.box(Vector3(0.18, 0.06, 0.04), Color(0.1, 0.06, 0.05), Vector3(0, 0.12, -0.15)))
-	_eyes(Color(0.75, 1.0, 0.45), 0.22, -0.155, 0.065, 3.0)
+	_oval(torso, 0.3, 0.22, chest.y * 0.9, 0.62, mail, Vector3(0, chest.y * 0.45, 0), &"iron", 8, Vector3.ZERO, 0.3)
+	# Табард: сужается к плечам, рваный низ.
+	_f(torso, Vector2(0.42, 0.02), Vector2(0.3, 0.02), 0.95, tabard, Vector3(0, 0.12, -chest.z * 0.55), &"rags")
+	_f(torso, Vector2(0.42, 0.02), Vector2(0.3, 0.02), 0.95, tabard, Vector3(0, 0.12, chest.z * 0.55), &"rags")
+	_oval(torso, 0.26, 0.26, 0.06, 0.66, Color(0.65, 0.52, 0.42), Vector3(0, 0.0, 0), &"leather")
+	# Голова: впалый череп, отвисшая челюсть, шапель.
+	_ball(head, 0.14, corpse, Vector3(0, 0.21, 0), &"skin", Vector3(0.9, 1.15, 1.0))
+	_f(head, Vector2(0.12, 0.1), Vector2(0.18, 0.16), 0.12, corpse.darkened(0.15), Vector3(0, 0.07, -0.05), &"skin")
+	_bx(head, Vector3(0.12, 0.05, 0.03), Color(0.12, 0.06, 0.05), Vector3(0, 0.1, -0.12))
+	_eyes(Color(0.75, 1.0, 0.45), 0.24, -0.135, 0.055, 3.0)
+	head.add_child(LowPoly.cyl(0.33, 0.35, 0.035, 9, Color(1, 1, 1), Vector3(0, 0.31, 0), 0.6, 0.4, 0.0, &"rust"))
+	head.add_child(LowPoly.cyl(0.07, 0.18, 0.2, 7, Color(1, 1, 1), Vector3(0, 0.43, 0), 0.6, 0.4, 0.0, &"rust"))
+	_pyr(head, Vector2(0.06, 0.06), 0.1, Color(1, 1, 1), Vector3(0, 0.58, 0), &"rust", Vector3.ZERO, 0.4)
 	for arm in [arm_l, arm_r]:
-		_limb_mesh(arm, limb, p["arm"], flesh, &"skin")
-		arm.add_child(LowPoly.box(Vector3(limb + 0.08, 0.16, limb + 0.1), mail, Vector3(0, -0.06, 0), 0.6, 0.4, 0.0, &"iron"))
+		_limb(arm, 0.085, 0.055, arm_len, corpse, &"skin")
+		_oval(arm, 0.12, 0.11, 0.2, 1.0, mail, Vector3(0, -0.08, 0), &"iron", 6, Vector3.ZERO, 0.3)
+		_hand(arm, arm_len, corpse, &"skin")
+	# Тесак-фальшион: клинок расширяется к острию.
 	var sword := LowPoly.pivot("EnemySword")
-	sword.add_child(LowPoly.box(Vector3(0.09, 0.72, 0.03), Color(1, 1, 1), Vector3(0, 0.42, 0), 0.5, 0.5, 0.0, &"rust"))
-	sword.add_child(LowPoly.box(Vector3(0.24, 0.05, 0.06), Color(0.35, 0.25, 0.2), Vector3(0, 0.06, 0)))
+	_f(sword, Vector2(0.07, 0.03), Vector2(0.13, 0.03), 0.62, Color(1, 1, 1), Vector3(0, 0.4, 0), &"rust", Vector2(0.02, 0), Vector3.ZERO, 0.4)
+	_put(sword, LowPoly.wedge(Vector3(0.13, 0.14, 0.03), Color(1, 1, 1), Vector3(0.02, 0.78, 0), &"rust", 0.4), Vector3.ZERO)
+	_bx(sword, Vector3(0.26, 0.05, 0.06), Color(0.4, 0.3, 0.24), Vector3(0, 0.07, 0))
+	_bx(sword, Vector3(0.05, 0.16, 0.05), Color(0.35, 0.25, 0.2), Vector3(0, -0.04, 0), &"leather")
 	sword.rotation.x = deg_to_rad(-100)
 	sockets[&"r_hand"].add_child(sword)
 
 
-# --- Лучник: скелет-арбалетчик в капюшоне ---------------------------------
+# --- Лучник: скелет-арбалетчик в остроконечном капюшоне --------------------
 
 func _dress_archer(p: Dictionary) -> void:
 	var bone := Color(1, 1, 1)
-	var hood := Color(0.35, 0.3, 0.28)
-	var limb: float = p["limb"]
+	var hood := Color(0.42, 0.36, 0.33)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
 	for leg in [leg_l, leg_r]:
-		_limb_mesh(leg, limb, p["leg"], bone, &"bone")
-	hips.add_child(LowPoly.box(Vector3(0.3, 0.12, 0.18), bone, Vector3.ZERO, 0.9, 0.0, 0.0, &"bone"))
-	hips.add_child(LowPoly.box(Vector3(0.36, 0.42, 0.04), hood, Vector3(0, -0.2, -0.12), 0.9, 0.0, 0.0, &"rags"))
+		_limb(leg, 0.045, 0.03, leg_len, bone, &"bone", 5)
+		_gm(leg, 0.06, 0.04, 0.04, 5, bone, Vector3(0, -leg_len * 0.5, 0), &"bone")
+		_foot(leg, leg_len, bone, &"bone")
+	_f(hips, Vector2(0.18, 0.12), Vector2(0.32, 0.18), 0.14, bone, Vector3.ZERO, &"bone")
 	var chest: Vector3 = p["chest"]
-	torso.add_child(LowPoly.box(Vector3(0.06, chest.y, 0.06), bone, Vector3(0, chest.y * 0.5, 0.06), 0.9, 0.0, 0.0, &"bone"))
+	_bx(torso, Vector3(0.05, chest.y, 0.05), bone, Vector3(0, chest.y * 0.5, 0.07), &"bone")
 	for k in 4:
-		torso.add_child(LowPoly.box(Vector3(chest.x * (1.0 - k * 0.1), 0.05, chest.z), bone, Vector3(0, chest.y * (0.3 + k * 0.17), 0), 0.9, 0.0, 0.0, &"bone"))
-	torso.add_child(LowPoly.box(Vector3(chest.x + 0.12, chest.y * 0.9, 0.05), hood, Vector3(0, chest.y * 0.55, 0.14), 0.9, 0.0, 0.0, &"rags"))
-	head.add_child(LowPoly.box(Vector3(0.26, 0.28, 0.28), bone, Vector3(0, 0.2, 0), 0.9, 0.0, 0.0, &"bone"))
-	head.add_child(LowPoly.box(Vector3(0.2, 0.08, 0.06), bone, Vector3(0, 0.05, -0.1), 0.9, 0.0, 0.0, &"bone"))
-	head.add_child(LowPoly.box(Vector3(0.07, 0.06, 0.02), Color(0.02, 0.01, 0.01), Vector3(-0.065, 0.22, -0.142)))
-	head.add_child(LowPoly.box(Vector3(0.07, 0.06, 0.02), Color(0.02, 0.01, 0.01), Vector3(0.065, 0.22, -0.142)))
-	_eyes(Color(1.0, 0.2, 0.1), 0.22, -0.152, 0.065, 4.0)
-	head.add_child(LowPoly.cyl(0.0, 0.25, 0.44, 6, hood, Vector3(0, 0.36, 0.04), 0.9, 0.0, 0.0, &"rags"))
+		var w := chest.x * (0.78 + k * 0.08)
+		_f(torso, Vector2(w * 0.9, chest.z * 0.9), Vector2(w, chest.z), 0.045, bone, Vector3(0, chest.y * (0.3 + k * 0.16), 0), &"bone")
+	_bx(torso, Vector3(chest.x + 0.08, 0.04, 0.08), bone, Vector3(0, chest.y * 0.92, 0), &"bone")
+	# Плащ за спиной и капюшон-пирамида.
+	_f(torso, Vector2(chest.x + 0.3, 0.04), Vector2(chest.x + 0.04, 0.04), chest.y * 1.5, hood, Vector3(0, chest.y * 0.3, 0.15), &"rags")
+	_ball(head, 0.135, bone, Vector3(0, 0.22, 0), &"bone", Vector3(0.95, 1.05, 1.1))
+	_put(head, LowPoly.wedge(Vector3(0.16, 0.08, 0.1), bone, Vector3(0, 0.07, -0.06), &"bone"), Vector3(PI, 0, 0))
+	_bx(head, Vector3(0.07, 0.06, 0.02), Color(0.02, 0.01, 0.01), Vector3(-0.06, 0.22, -0.13))
+	_bx(head, Vector3(0.07, 0.06, 0.02), Color(0.02, 0.01, 0.01), Vector3(0.06, 0.22, -0.13))
+	_eyes(Color(1.0, 0.2, 0.1), 0.22, -0.142, 0.06, 4.0)
+	_put(head, LowPoly.cyl(0.0, 0.23, 0.58, 6, hood, Vector3(0, 0.36, 0.06), 0.9, 0.0, 0.0, &"rags"), Vector3(0.2, 0, 0))
 	for arm in [arm_l, arm_r]:
-		_limb_mesh(arm, limb, p["arm"], bone, &"bone")
-	torso.add_child(LowPoly.box(Vector3(0.14, 0.5, 0.14), Color(0.8, 0.65, 0.5), Vector3(0.14, chest.y * 0.6, 0.2), 0.9, 0.0, 0.0, &"leather"))
+		_limb(arm, 0.04, 0.028, arm_len, bone, &"bone", 5)
+		_hand(arm, arm_len, bone, &"bone")
+	_f(torso, Vector2(0.12, 0.12), Vector2(0.15, 0.15), 0.52, Color(0.8, 0.65, 0.5), Vector3(0.14, chest.y * 0.6, 0.22), &"leather")
 	var bow := LowPoly.pivot("Crossbow")
-	bow.add_child(LowPoly.box(Vector3(0.06, 0.06, 0.6), Color(1, 1, 1), Vector3(0, 0, -0.2), 0.9, 0.0, 0.0, &"wood"))
-	bow.add_child(LowPoly.box(Vector3(0.62, 0.05, 0.05), Color(1, 1, 1), Vector3(0, 0.02, -0.46), 0.6, 0.4, 0.0, &"iron"))
-	bow.add_child(LowPoly.box(Vector3(0.6, 0.01, 0.01), Color(0.8, 0.75, 0.6), Vector3(0, 0.03, -0.36)))
+	_f(bow, Vector2(0.07, 0.07), Vector2(0.05, 0.05), 0.62, Color(1, 1, 1), Vector3(0, 0, -0.2), &"wood", Vector2.ZERO, Vector3(PI / 2, 0, 0))
+	for side in [-1.0, 1.0]:
+		_put(bow, LowPoly.frustum(Vector2(0.05, 0.05), Vector2(0.03, 0.03), 0.34, Color(1, 1, 1), Vector3(side * 0.16, 0.0, -0.46), &"iron", Vector2.ZERO, 0.4), Vector3(0, 0, side * deg_to_rad(-75)))
+	_bx(bow, Vector3(0.6, 0.01, 0.01), Color(0.8, 0.75, 0.6), Vector3(0, 0.02, -0.38))
 	bow.position = Vector3(0, -0.02, -0.04)
 	bow.rotation.x = deg_to_rad(-80)
 	sockets[&"l_hand"].add_child(bow)
 
 
-# --- Громила: мясник-апостол с тесаком ------------------------------------
+# --- Громила: сутулый палач-мясник в кожаном капюшоне, с секирой ---------
 
 func _dress_brute(p: Dictionary) -> void:
-	var flesh := Color(0.8, 0.76, 0.74)
-	var pale := Color(0.72, 0.74, 0.66)
-	var limb: float = p["limb"]
+	var pale := Color(0.84, 0.8, 0.72)
+	var flesh := Color(0.86, 0.74, 0.7)
+	var leather := Color(0.42, 0.32, 0.27)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
 	for leg in [leg_l, leg_r]:
-		_limb_mesh(leg, limb, p["leg"], pale, &"skin")
-	hips.add_child(LowPoly.box(Vector3(0.62, 0.3, 0.46), Color(0.6, 0.5, 0.42), Vector3(0, -0.04, 0), 0.9, 0.0, 0.0, &"leather"))
+		_limb(leg, 0.17, 0.11, leg_len, pale, &"skin")
+		_ball(leg, 0.15, pale, Vector3(0, -0.2, 0), &"skin", Vector3(1, 1.4, 1))
+		_f(leg, Vector2(0.26, 0.38), Vector2(0.22, 0.24), 0.18, leather, Vector3(0, -leg_len + 0.08, -0.04), &"leather", Vector2(0, 0.05))
+	_oval(hips, 0.34, 0.3, 0.32, 0.75, leather, Vector3(0, -0.05, 0), &"leather")
+	torso.rotation.x = 0.0
 	var chest: Vector3 = p["chest"]
-	torso.add_child(LowPoly.box(chest, pale, Vector3(0, chest.y * 0.55, 0), 0.9, 0.0, 0.0, &"skin"))
-	var belly := LowPoly.sphere(0.36, 7, 4, flesh, Vector3(0, 0.18, -0.14), 0.9, 0.0, 0.0, &"flesh")
-	belly.scale = Vector3(1.0, 0.85, 0.9)
-	torso.add_child(belly)
-	torso.add_child(LowPoly.box(Vector3(0.6, 0.62, 0.05), Color(0.85, 0.7, 0.6), Vector3(0, 0.12, -0.36), 0.9, 0.0, 0.0, &"leather"))
-	torso.add_child(LowPoly.box(Vector3(0.3, 0.2, 0.06), Color(0.45, 0.04, 0.04), Vector3(0.08, 0.0, -0.39)))
+	var hunch := LowPoly.pivot("Hunch", Vector3(0, 0.0, 0))
+	hunch.rotation.x = -0.28
+	torso.add_child(hunch)
+	_oval(hunch, 0.46, 0.32, chest.y, 0.66, pale, Vector3(0, chest.y * 0.55, 0), &"skin")
+	_ball(hunch, 0.36, pale, Vector3(0, 0.22, -0.16), &"skin", Vector3(1.05, 0.9, 0.9))
+	# Фартук в крови и шипы, вросшие в спину.
+	_f(hunch, Vector2(0.62, 0.03), Vector2(0.44, 0.03), 0.72, Color(0.62, 0.48, 0.4), Vector3(0, 0.1, -0.44), &"leather")
+	_bx(hunch, Vector3(0.28, 0.24, 0.035), Color(0.45, 0.04, 0.04), Vector3(0.1, 0.0, -0.46))
 	for k in 4:
 		var a := -0.6 + k * 0.4
-		_add(torso, LowPoly.prism(Vector3(0.1, 0.3, 0.1), Color(1, 1, 1), Vector3(sin(a) * 0.3, chest.y + 0.05, 0.12), 0.9, 0.0, 0.0, &"bone"), Vector3(0.5, 0, a))
-	head.add_child(LowPoly.box(Vector3(0.32, 0.28, 0.32), pale, Vector3(0, 0.12, -0.04), 0.9, 0.0, 0.0, &"skin"))
-	head.add_child(LowPoly.box(Vector3(0.26, 0.06, 0.04), Color(0.95, 0.9, 0.75), Vector3(0, 0.02, -0.2)))
-	var eye := Color(1.0, 0.15, 0.05)
-	for e in [Vector3(-0.08, 0.17, -0.2), Vector3(0.08, 0.17, -0.2), Vector3(0, 0.24, -0.2)]:
-		head.add_child(LowPoly.box(Vector3(0.05, 0.04, 0.02), eye, e, 0.5, 0.0, 4.0))
+		_pyr(hunch, Vector2(0.1, 0.1), 0.34, Color(1, 1, 1), Vector3(sin(a) * 0.3, chest.y + 0.05, 0.16), &"bone", Vector3(0.5, 0, a))
+	for side in [-1.0, 1.0]:
+		_ball(hunch, 0.22, flesh, Vector3(side * 0.42, chest.y * 0.92, 0.02), &"flesh", Vector3(1.1, 0.85, 1.0))
+	# Голова вперёд, под капюшоном палача.
+	head.position.z = -0.12
+	_ball(head, 0.17, pale, Vector3(0, 0.1, -0.03), &"skin", Vector3(1.05, 0.9, 1.0))
+	_put(head, LowPoly.cyl(0.0, 0.24, 0.52, 6, leather, Vector3(0, 0.34, 0.0), 0.9, 0.0, 0.0, &"leather"), Vector3(0.12, 0, 0))
+	_eyes(Color(1.0, 0.15, 0.05), 0.24, -0.2, 0.07, 4.0)
 	for arm in [arm_l, arm_r]:
-		_limb_mesh(arm, limb, p["arm"], flesh, &"flesh")
-	var cleaver := LowPoly.pivot("Cleaver")
-	cleaver.add_child(LowPoly.cyl(0.05, 0.05, 0.55, 6, Color(1, 1, 1), Vector3(0, 0.15, 0), 0.9, 0.0, 0.0, &"wood"))
-	cleaver.add_child(LowPoly.box(Vector3(0.5, 0.8, 0.05), Color(1, 1, 1), Vector3(0.14, 0.82, 0), 0.6, 0.5, 0.0, &"rust"))
-	cleaver.add_child(LowPoly.box(Vector3(0.12, 0.3, 0.06), Color(0.4, 0.03, 0.03), Vector3(0.32, 1.0, 0)))
-	cleaver.rotation.x = deg_to_rad(-80)
-	sockets[&"r_hand"].add_child(cleaver)
+		_ball(arm, 0.18, flesh, Vector3(0, -0.06, 0), &"flesh")
+		_limb(arm, 0.15, 0.1, arm_len, flesh, &"flesh")
+		_ball(arm, 0.14, flesh, Vector3(0, -0.24, 0), &"flesh", Vector3(1, 1.5, 1))
+		_oval(arm, 0.12, 0.13, 0.26, 1.0, leather, Vector3(0, -arm_len * 0.72, 0), &"leather", 6)
+		_hand(arm, arm_len, pale, &"skin")
+	# Секира палача: длинное топорище и широкое лезвие клином.
+	var axe := LowPoly.pivot("Cleaver")
+	axe.add_child(LowPoly.cyl(0.03, 0.035, 1.2, 6, Color(1, 1, 1), Vector3(0, 0.45, 0), 0.9, 0.0, 0.0, &"wood"))
+	_put(axe, LowPoly.frustum(Vector2(0.06, 0.2), Vector2(0.025, 0.7), 0.5, Color(1, 1, 1), Vector3(0.28, 0.85, 0), &"rust", Vector2.ZERO, 0.5), Vector3(0, 0, deg_to_rad(-90)))
+	_bx(axe, Vector3(0.2, 0.3, 0.07), Color(0.4, 0.03, 0.03), Vector3(0.4, 0.95, 0))
+	axe.rotation.x = deg_to_rad(-80)
+	sockets[&"r_hand"].add_child(axe)
 
 
-# --- Заклинатель: культист в клювастой маске со свечным посохом -------------
+# --- Заклинатель: культист в остроконечном капюшоне и маске-клюве -----------
 
 func _dress_caster(p: Dictionary) -> void:
-	var robe := Color(0.85, 0.36, 0.32)
-	var limb: float = p["limb"]
+	var robe := Color(0.82, 0.3, 0.28)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
 	for leg in [leg_l, leg_r]:
-		_limb_mesh(leg, limb, p["leg"], robe, &"cloth")
-	hips.add_child(LowPoly.cyl(0.26, 0.46, 0.92, 8, robe, Vector3(0, -0.42, 0), 0.9, 0.0, 0.0, &"rags"))
+		_limb(leg, 0.08, 0.06, leg_len, robe, &"cloth")
+	hips.add_child(LowPoly.cyl(0.2, 0.44, 0.96, 8, robe, Vector3(0, -0.42, 0), 0.9, 0.0, 0.0, &"rags"))
 	var chest: Vector3 = p["chest"]
-	torso.add_child(LowPoly.box(chest, robe, Vector3(0, chest.y * 0.52, 0), 0.9, 0.0, 0.0, &"cloth"))
-	torso.add_child(LowPoly.box(Vector3(0.1, chest.y, 0.03), Color(0.75, 0.6, 0.3), Vector3(0, chest.y * 0.5, -chest.z * 0.52), 0.6, 0.4, 0.0, &"gold"))
-	head.add_child(LowPoly.cyl(0.0, 0.27, 0.52, 7, robe.darkened(0.3), Vector3(0, 0.3, 0.03), 0.9, 0.0, 0.0, &"cloth"))
-	head.add_child(LowPoly.box(Vector3(0.24, 0.24, 0.2), Color(1, 1, 1), Vector3(0, 0.18, -0.06), 0.9, 0.0, 0.0, &"bone"))
-	_add(head, LowPoly.prism(Vector3(0.12, 0.34, 0.1), Color(1, 1, 1), Vector3(0, 0.12, -0.3), 0.9, 0.0, 0.0, &"bone"), Vector3(deg_to_rad(-100), 0, 0))
-	_eyes(Color(1.0, 0.25, 0.1), 0.22, -0.162, 0.06, 4.0)
+	_oval(torso, 0.24, 0.19, chest.y * 0.9, 0.7, robe, Vector3(0, chest.y * 0.45, 0), &"cloth")
+	torso.add_child(LowPoly.cyl(0.16, 0.36, 0.26, 8, robe.darkened(0.25), Vector3(0, chest.y * 0.84, 0), 0.9, 0.0, 0.0, &"rags"))
+	_bx(torso, Vector3(0.08, chest.y * 0.9, 0.03), Color(0.8, 0.65, 0.35), Vector3(0, chest.y * 0.42, -chest.z * 0.52), &"gold", Vector3.ZERO, 0.4)
+	# Капюшон-пирамида, костяная маска с клювом.
+	_put(head, LowPoly.cyl(0.0, 0.24, 0.64, 6, robe.darkened(0.35), Vector3(0, 0.34, 0.06), 0.9, 0.0, 0.0, &"cloth"), Vector3(0.22, 0, 0))
+	_f(head, Vector2(0.18, 0.2), Vector2(0.22, 0.22), 0.24, Color(1, 1, 1), Vector3(0, 0.19, -0.06), &"bone")
+	_pyr(head, Vector2(0.12, 0.1), 0.36, Color(1, 1, 1), Vector3(0, 0.12, -0.32), &"bone", Vector3(deg_to_rad(-100), 0, 0))
+	_eyes(Color(1.0, 0.25, 0.1), 0.23, -0.172, 0.055, 4.0)
 	for arm in [arm_l, arm_r]:
-		_limb_mesh(arm, limb + 0.04, p["arm"], robe, &"cloth")
+		_limb(arm, 0.08, 0.13, arm_len, robe, &"cloth")
+		_hand(arm, arm_len, Color(0.75, 0.72, 0.62), &"bone")
+	# Посох: шип-клетка со свечой и подвешенными костями.
 	var staff := LowPoly.pivot("Staff")
-	staff.add_child(LowPoly.cyl(0.03, 0.035, 1.6, 5, Color(1, 1, 1), Vector3(0, 0.25, 0), 0.9, 0.0, 0.0, &"wood"))
-	staff.add_child(LowPoly.box(Vector3(0.16, 0.16, 0.16), Color(1, 1, 1), Vector3(0, 1.08, 0), 0.9, 0.0, 0.0, &"bone"))
-	staff.add_child(LowPoly.cyl(0.03, 0.04, 0.12, 5, Color(0.9, 0.85, 0.7), Vector3(0, 1.22, 0)))
-	staff.add_child(LowPoly.prism(Vector3(0.07, 0.14, 0.07), Color(1.0, 0.45, 0.15), Vector3(0, 1.35, 0), 0.5, 0.0, 4.0))
+	_f(staff, Vector2(0.06, 0.06), Vector2(0.04, 0.04), 1.6, Color(1, 1, 1), Vector3(0, 0.25, 0), &"wood")
+	for k in 3:
+		var a := TAU * k / 3.0
+		_pyr(staff, Vector2(0.04, 0.04), 0.3, Color(1, 1, 1), Vector3(cos(a) * 0.07, 1.18, sin(a) * 0.07), &"iron", Vector3(sin(a) * 0.4, 0, -cos(a) * 0.4), 0.4)
+	_f(staff, Vector2(0.06, 0.06), Vector2(0.05, 0.05), 0.14, Color(0.9, 0.86, 0.74), Vector3(0, 1.12, 0))
+	_pyr(staff, Vector2(0.06, 0.06), 0.14, Color(1.0, 0.45, 0.15), Vector3(0, 1.27, 0), &"", Vector3.ZERO, 0.0, 4.0)
+	_bx(staff, Vector3(0.03, 0.18, 0.03), Color(1, 1, 1), Vector3(0.09, 0.95, 0), &"bone")
 	sockets[&"r_hand"].add_child(staff)
 
 
-# --- Босс: чёрный рыцарь с черепом, короной шипов и затмением за спиной ---
+# --- Босс «Отвергнутый»: пустой рыцарь с бледными швами и короной осколков ----
 
 func _dress_boss(p: Dictionary) -> void:
-	var body := Color(0.13, 0.1, 0.14)
-	var limb: float = p["limb"]
+	var body := Color(0.24, 0.22, 0.26)
+	var seam := Color(0.62, 0.72, 0.95)
+	var leg_len: float = p["leg"]
+	var arm_len: float = p["arm"]
 	for leg in [leg_l, leg_r]:
-		_limb_mesh(leg, limb, p["leg"], body, &"iron")
-	hips.add_child(LowPoly.box(Vector3(0.48, 0.26, 0.34), body, Vector3(0, -0.02, 0), 0.6, 0.4, 0.0, &"iron"))
+		_limb(leg, 0.11, 0.065, leg_len, body, &"iron")
+		_bx(leg, Vector3(0.025, leg_len * 0.7, 0.025), seam, Vector3(0, -leg_len * 0.5, -0.11), &"", Vector3.ZERO, 0.0, 2.5)
+		_foot(leg, leg_len, body, &"iron")
+	_oval(hips, 0.25, 0.2, 0.26, 0.7, body, Vector3(0, -0.02, 0), &"iron", 8, Vector3.ZERO, 0.4)
 	var chest: Vector3 = p["chest"]
-	torso.add_child(LowPoly.box(chest, body, Vector3(0, chest.y * 0.52, 0), 0.6, 0.4, 0.0, &"iron"))
-	torso.add_child(LowPoly.box(Vector3(0.9, 1.6, 0.04), Color(0.22, 0.12, 0.14), Vector3(0, -0.15, 0.26), 0.9, 0.0, 0.0, &"rags"))
-	head.add_child(LowPoly.box(Vector3(0.3, 0.32, 0.32), Color(0.75, 0.72, 0.65), Vector3(0, 0.2, 0), 0.9, 0.0, 0.0, &"bone"))
-	head.add_child(LowPoly.box(Vector3(0.22, 0.1, 0.08), Color(0.75, 0.72, 0.65), Vector3(0, 0.04, -0.12), 0.9, 0.0, 0.0, &"bone"))
-	head.add_child(LowPoly.box(Vector3(0.08, 0.07, 0.02), Color(0.01, 0.0, 0.0), Vector3(-0.07, 0.22, -0.162)))
-	head.add_child(LowPoly.box(Vector3(0.08, 0.07, 0.02), Color(0.01, 0.0, 0.0), Vector3(0.07, 0.22, -0.162)))
-	_eyes(Color(1.0, 0.1, 0.05), 0.22, -0.172, 0.07, 5.0)
-	for k in 7:
-		var a := TAU * k / 7.0
-		_add(head, LowPoly.prism(Vector3(0.05, 0.22, 0.05), Color(1, 1, 1), Vector3(cos(a) * 0.15, 0.44, sin(a) * 0.15), 0.6, 0.4, 0.0, &"iron"), Vector3(sin(a) * 0.3, 0, -cos(a) * 0.3))
+	_oval(torso, 0.35, 0.2, chest.y * 0.9, 0.58, body, Vector3(0, chest.y * 0.45, 0), &"iron", 8, Vector3.ZERO, 0.4)
+	# Бледные швы-трещины на груди.
+	for k in 3:
+		_bx(torso, Vector3(0.03, 0.34, 0.02), seam, Vector3(-0.12 + k * 0.12, chest.y * 0.5, -chest.z * 0.52), &"", Vector3(0, 0, -0.3 + k * 0.3), 0.0, 2.5)
+	_f(torso, Vector2(1.0, 0.04), Vector2(0.62, 0.04), 1.7, Color(0.34, 0.24, 0.26), Vector3(0, -0.2, 0.26), &"rags", Vector2.ZERO, Vector3(0.08, 0, 0))
+	# Вытянутый череп.
+	_ball(head, 0.16, Color(0.82, 0.8, 0.74), Vector3(0, 0.22, 0), &"bone", Vector3(0.9, 1.25, 1.05))
+	_put(head, LowPoly.wedge(Vector3(0.22, 0.1, 0.12), Color(0.82, 0.8, 0.74), Vector3(0, 0.03, -0.08), &"bone"), Vector3(PI, 0, 0))
+	_bx(head, Vector3(0.08, 0.07, 0.02), Color(0.01, 0.0, 0.0), Vector3(-0.07, 0.23, -0.162))
+	_bx(head, Vector3(0.08, 0.07, 0.02), Color(0.01, 0.0, 0.0), Vector3(0.07, 0.23, -0.162))
+	_eyes(seam, 0.23, -0.172, 0.07, 5.0)
 	for arm in [arm_l, arm_r]:
-		_limb_mesh(arm, limb, p["arm"], body, &"iron")
-	# Затмение: чёрный диск в багровой короне за головой.
-	var halo := LowPoly.pivot("Eclipse", Vector3(0, 0.25, 0.34))
-	var disc := LowPoly.cyl(0.42, 0.42, 0.03, 16, Color(0.0, 0.0, 0.0))
-	disc.rotation.x = PI / 2
-	halo.add_child(disc)
-	var corona := LowPoly.torus(0.42, 0.54, 16, 4, Color(0.9, 0.12, 0.06), Vector3.ZERO, 0.5, 0.0, 3.5)
-	corona.rotation.x = PI / 2
-	halo.add_child(corona)
-	head.add_child(halo)
+		_ball(arm, 0.12, body, Vector3(0, -0.04, 0), &"iron")
+		_limb(arm, 0.09, 0.06, arm_len, body, &"iron")
+		_bx(arm, Vector3(0.025, arm_len * 0.7, 0.025), seam, Vector3(0, -arm_len * 0.5, -0.1), &"", Vector3.ZERO, 0.0, 2.5)
+		for k in 3:
+			_pyr(arm, Vector2(0.035, 0.035), 0.14, Color(0.82, 0.8, 0.74), Vector3(-0.04 + k * 0.04, -arm_len - 0.1, -0.03), &"bone", Vector3(PI, 0, 0))
+	# Корона из семи осколков: цвет каждого — сущность надетой вещи (обновляется в refresh_items).
+	_crown = LowPoly.pivot("ShardCrown", Vector3(0, 0.62, 0))
+	head.add_child(_crown)
 
 
-## Рой: бес-падальщик на четырёх лапах, с пастью и костяными шипами по хребту.
+## Рой: мертвенно-зелёный бес на четырёх лапах, с рогами, пастью и шипами по хребту.
 func _build_swarm() -> void:
 	hips = LowPoly.pivot("Hips", Vector3(0, 0.9, 0))
 	add_child(hips)
@@ -338,24 +439,26 @@ func _build_swarm() -> void:
 		torso.add_child(n)
 	var body := LowPoly.pivot("Body", Vector3(0, -0.55, 0))
 	torso.add_child(body)
-	var flesh := Color(0.85, 0.72, 0.72)
-	var trunk := LowPoly.sphere(0.36, 7, 4, flesh, Vector3(0, 0.08, 0.08), 0.9, 0.0, 0.0, &"flesh")
-	trunk.scale = Vector3(0.9, 0.7, 1.35)
-	body.add_child(trunk)
-	var jaw := LowPoly.box(Vector3(0.3, 0.2, 0.3), flesh, Vector3(0, 0.08, -0.46), 0.9, 0.0, 0.0, &"flesh")
-	body.add_child(jaw)
-	body.add_child(LowPoly.box(Vector3(0.24, 0.05, 0.04), Color(0.25, 0.02, 0.03), Vector3(0, 0.03, -0.62)))
+	var hide := Color(0.62, 0.72, 0.5)
+	var dark := Color(0.4, 0.46, 0.32)
+	_f(body, Vector2(0.36, 0.62), Vector2(0.26, 0.4), 0.3, hide, Vector3(0, 0.08, 0.06), &"skin", Vector2(0, -0.06))
+	_f(body, Vector2(0.24, 0.3), Vector2(0.18, 0.2), 0.2, hide, Vector3(0, 0.12, -0.38), &"skin", Vector2(0, -0.04))
+	_put(body, LowPoly.wedge(Vector3(0.22, 0.12, 0.2), dark, Vector3(0, 0.0, -0.46), &"skin"), Vector3(PI, 0, 0))
 	for k in 4:
-		_add(body, LowPoly.prism(Vector3(0.04, 0.08, 0.04), Color(0.95, 0.9, 0.8), Vector3(-0.09 + k * 0.06, 0.09, -0.62)), Vector3(PI, 0, 0))
+		_pyr(body, Vector2(0.035, 0.035), 0.07, Color(0.95, 0.9, 0.8), Vector3(-0.07 + k * 0.045, 0.06, -0.55), &"", Vector3(PI, 0, 0))
+	for side in [-1.0, 1.0]:
+		_pyr(body, Vector2(0.06, 0.06), 0.24, Color(0.9, 0.85, 0.75), Vector3(side * 0.08, 0.28, -0.36), &"bone", Vector3(-0.5, 0, side * -0.4))
 	var eye := Color(1.0, 0.85, 0.15)
-	body.add_child(LowPoly.box(Vector3(0.06, 0.04, 0.03), eye, Vector3(-0.08, 0.17, -0.6), 0.5, 0.0, 4.0))
-	body.add_child(LowPoly.box(Vector3(0.06, 0.04, 0.03), eye, Vector3(0.08, 0.17, -0.6), 0.5, 0.0, 4.0))
+	_bx(body, Vector3(0.06, 0.035, 0.03), eye, Vector3(-0.06, 0.16, -0.48), &"", Vector3.ZERO, 0.0, 4.0)
+	_bx(body, Vector3(0.06, 0.035, 0.03), eye, Vector3(0.06, 0.16, -0.48), &"", Vector3.ZERO, 0.0, 4.0)
 	for k in 4:
-		_add(body, LowPoly.prism(Vector3(0.07, 0.2, 0.07), Color(1, 1, 1), Vector3(0, 0.32, 0.25 - k * 0.15), 0.9, 0.0, 0.0, &"bone"), Vector3(-0.4, 0, 0))
+		_pyr(body, Vector2(0.07, 0.07), 0.2, Color(1, 1, 1), Vector3(0, 0.3, 0.25 - k * 0.15), &"bone", Vector3(-0.35, 0, 0))
 	for side in [-1.0, 1.0]:
 		for k in 2:
-			_add(body, LowPoly.box(Vector3(0.36, 0.07, 0.07), flesh.darkened(0.3), Vector3(side * 0.34, -0.12, -0.18 + k * 0.4), 0.9, 0.0, 0.0, &"flesh"), Vector3(0, 0, side * -0.7))
-	_add(body, LowPoly.box(Vector3(0.05, 0.05, 0.45), flesh.darkened(0.2), Vector3(0, 0.12, 0.62), 0.9, 0.0, 0.0, &"flesh"), Vector3(0.3, 0, 0))
+			var leg := _f(body, Vector2(0.05, 0.05), Vector2(0.09, 0.09), 0.4, dark, Vector3(side * 0.24, -0.08, -0.16 + k * 0.38), &"skin")
+			leg.rotation = Vector3(0, 0, side * 0.6)
+	for k in 3:
+		_f(body, Vector2(0.06 - k * 0.015, 0.16), Vector2(0.08 - k * 0.015, 0.16), 0.06, dark, Vector3(0, 0.1 - k * 0.02, 0.42 + k * 0.15), &"skin", Vector2.ZERO, Vector3(PI / 2 - 0.3, 0, 0))
 	sockets[&"chest"] = _socket(body, Vector3(0, 0.34, 0.05))
 	for key in [&"head", &"neck", &"l_hand", &"r_hand", &"l_foot", &"r_foot"]:
 		sockets[key] = sockets[&"chest"]
@@ -371,6 +474,25 @@ func _socket(parent: Node3D, pos: Vector3) -> Node3D:
 func _collect_meshes() -> void:
 	_meshes.clear()
 	_collect(self)
+	_apply_rim()
+
+
+## Контурный свет по силуэту: герой — тёплый, враги — холодный, элиты — золотой, босс — бледный.
+func _apply_rim() -> void:
+	var rim := Color(0.55, 0.7, 1.0)
+	var strength := 0.55
+	if actor != null and actor.faction == Actor.Faction.HERO:
+		rim = Color(1.0, 0.8, 0.5)
+		strength = 0.6
+	elif kind == Kind.BOSS:
+		rim = Color(0.7, 0.8, 1.0)
+		strength = 0.7
+	elif actor != null and actor.get_meta(&"elite", false):
+		rim = Color(1.0, 0.75, 0.3)
+		strength = 0.7
+	for m in _meshes:
+		if is_instance_valid(m) and m.material_override is ShaderMaterial:
+			m.material_override = LowPoly.rim_variant(m.material_override as ShaderMaterial, rim, strength)
 
 
 func _collect(n: Node) -> void:
@@ -397,7 +519,23 @@ func refresh_items() -> void:
 		_item_nodes[state.def_id] = nodes
 	_hide_kind_weapons()
 	_connect_actions()
+	_rebuild_crown()
 	_collect_meshes.call_deferred()
+
+
+## Корона босса: по осколку на каждую надетую вещь, цвета их сущностей.
+func _rebuild_crown() -> void:
+	if _crown == null:
+		return
+	for ch in _crown.get_children():
+		ch.queue_free()
+	var n := actor.items.size()
+	for i in n:
+		var color := actor.items[i].def().essence.color
+		var a := TAU * i / maxf(n, 1)
+		var shard := LowPoly.gem(0.06, 0.2, 0.1, 4, color, Vector3(cos(a) * 0.36, 0, sin(a) * 0.36), &"", 0.0, 2.5)
+		shard.rotation.z = 0.25
+		_crown.add_child(shard)
 
 
 func _connect_actions() -> void:
@@ -507,6 +645,8 @@ func _process(delta: float) -> void:
 		return
 	if actor.innate is EnemyAttack:
 		_windup = (actor.innate as EnemyAttack).windup_progress()
+	if _crown != null:
+		_crown.rotation.y += delta * 0.9
 	_animate(delta)
 	_update_overlay(delta)
 

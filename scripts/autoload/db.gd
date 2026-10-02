@@ -69,6 +69,7 @@ func event_word(event_id: StringName) -> String:
 func _exit_tree() -> void:
 	LowPoly._materials.clear()
 	LowPoly._meshes.clear()
+	LowPoly._variants.clear()
 	Vfx._mat_cache.clear()
 	UiKit._theme = null
 	BloodFx._decals.clear()

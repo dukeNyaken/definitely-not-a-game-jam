@@ -5,7 +5,7 @@ signal icons_ready
 
 const SIZE := 80
 const FRAMING := {
-	&"sword": [2.5, Vector3(0, 0, -0.75)],
+	&"sword": [1.9, Vector3(0, 0, -0.75)],
 	&"shield": [1.35, Vector3(0.1, PI + 0.35, 0)],
 	&"armor": [1.55, Vector3(0.2, PI - 0.5, 0)],
 	&"helmet": [0.95, Vector3(0.15, PI - 0.7, 0)],

@@ -148,6 +148,128 @@ static func torus(inner: float, outer: float, rings: int, ring_segments: int, co
 	return _instance(_meshes[key], color, pos, roughness, metallic, emission, surface)
 
 
+## Выпуклый многогранник из граней (петли вершин). Нормали плоские и смотрят наружу:
+## порядок вершин каждого треугольника выправляется относительно центра фигуры.
+static func convex(faces: Array) -> ArrayMesh:
+	var centroid := Vector3.ZERO
+	var count := 0
+	for f in faces:
+		for v in f:
+			centroid += v
+			count += 1
+	centroid /= maxf(count, 1)
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	for f in faces:
+		for i in range(1, f.size() - 1):
+			var a: Vector3 = f[0]
+			var b: Vector3 = f[i]
+			var c: Vector3 = f[i + 1]
+			var n := (c - a).cross(b - a)
+			if n.length_squared() < 1e-10:
+				continue
+			if n.dot((a + b + c) / 3.0 - centroid) < 0.0:
+				var t := b
+				b = c
+				c = t
+				n = -n
+			n = n.normalized()
+			verts.append(a)
+			verts.append(b)
+			verts.append(c)
+			norms.append(n)
+			norms.append(n)
+			norms.append(n)
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
+
+
+## Усечённая пирамида (центр — в середине высоты): нижний и верхний прямоугольники X×Z,
+## верх можно сдвинуть. Верх 0×0 — пирамида, верх X×0 — клин.
+static func frustum_mesh(bottom: Vector2, top: Vector2, height: float, top_offset: Vector2 = Vector2.ZERO) -> Mesh:
+	var key := "fru%s|%s|%.3f|%s" % [bottom, top, height, top_offset]
+	if _meshes.has(key):
+		return _meshes[key]
+	var h := height * 0.5
+	var bx := bottom.x * 0.5
+	var bz := bottom.y * 0.5
+	var tx := top.x * 0.5
+	var tz := top.y * 0.5
+	var ox := top_offset.x
+	var oz := top_offset.y
+	var b := [Vector3(-bx, -h, -bz), Vector3(bx, -h, -bz), Vector3(bx, -h, bz), Vector3(-bx, -h, bz)]
+	var t := [Vector3(-tx + ox, h, -tz + oz), Vector3(tx + ox, h, -tz + oz), Vector3(tx + ox, h, tz + oz), Vector3(-tx + ox, h, tz + oz)]
+	var faces := [b, t]
+	for i in 4:
+		var j := (i + 1) % 4
+		faces.append([b[i], b[j], t[j], t[i]])
+	var m := convex(faces)
+	_meshes[key] = m
+	return m
+
+
+## Двойная пирамида (кристалл, осколок): кольцо из sides точек и две вершины.
+static func gem_mesh(radius: float, up: float, down: float, sides: int) -> Mesh:
+	var key := "gem%.3f|%.3f|%.3f|%d" % [radius, up, down, sides]
+	if _meshes.has(key):
+		return _meshes[key]
+	var ring := []
+	for i in sides:
+		var a := TAU * i / sides
+		ring.append(Vector3(cos(a) * radius, 0, sin(a) * radius))
+	var faces := []
+	for i in sides:
+		var j := (i + 1) % sides
+		faces.append([ring[i], ring[j], Vector3(0, up, 0)])
+		faces.append([ring[j], ring[i], Vector3(0, -down, 0)])
+	var m := convex(faces)
+	_meshes[key] = m
+	return m
+
+
+static func _shape(mesh: Mesh, color: Color, pos: Vector3, surface: StringName, metallic: float, emission: float) -> MeshInstance3D:
+	return _instance(mesh, color, pos, 0.6 if metallic > 0.0 else 0.9, metallic, emission, surface)
+
+
+static func frustum(bottom: Vector2, top: Vector2, height: float, color: Color, pos: Vector3 = Vector3.ZERO, surface: StringName = &"", top_offset: Vector2 = Vector2.ZERO, metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _shape(frustum_mesh(bottom, top, height, top_offset), color, pos, surface, metallic, emission)
+
+
+static func pyramid(base: Vector2, height: float, color: Color, pos: Vector3 = Vector3.ZERO, surface: StringName = &"", metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _shape(frustum_mesh(base, Vector2.ZERO, height), color, pos, surface, metallic, emission)
+
+
+static func wedge(size: Vector3, color: Color, pos: Vector3 = Vector3.ZERO, surface: StringName = &"", metallic: float = 0.0) -> MeshInstance3D:
+	return _shape(frustum_mesh(Vector2(size.x, size.z), Vector2(size.x, 0.0), size.y), color, pos, surface, metallic, 0.0)
+
+
+static func gem(radius: float, up: float, down: float, sides: int, color: Color, pos: Vector3 = Vector3.ZERO, surface: StringName = &"", metallic: float = 0.0, emission: float = 0.0) -> MeshInstance3D:
+	return _shape(gem_mesh(radius, up, down, sides), color, pos, surface, metallic, emission)
+
+
+## Вариант материала для персонажа: контурный свет по силуэту (у героя тёплый, у врагов холодный).
+static var _variants: Dictionary = {}
+
+
+static func rim_variant(base: ShaderMaterial, rim: Color, strength: float) -> ShaderMaterial:
+	if base.has_meta(&"rim_variant"):
+		return base
+	var key := "%d|%s|%.2f" % [base.get_instance_id(), rim.to_html(), strength]
+	if _variants.has(key):
+		return _variants[key]
+	var m := unique(base)
+	m.set_shader_parameter(&"rim_color", rim)
+	m.set_shader_parameter(&"rim_strength", strength)
+	m.set_meta(&"rim_variant", true)
+	_variants[key] = m
+	return m
+
+
 static func pivot(name: String, pos: Vector3 = Vector3.ZERO) -> Node3D:
 	var n := Node3D.new()
 	n.name = name

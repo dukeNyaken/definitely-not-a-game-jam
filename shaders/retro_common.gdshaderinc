@@ -23,6 +23,9 @@ uniform float roughness_v : hint_range(0.0, 1.0) = 0.9;
 uniform float metallic_v : hint_range(0.0, 1.0) = 0.0;
 // 1 — непрозрачно; меньше — «решётчатая» прозрачность дизерингом, как на старых консолях.
 uniform float fade : hint_range(0.0, 1.0) = 1.0;
+// Контурный свет по силуэту — персонажи читаются на тёмном полу.
+uniform float rim_strength = 0.0;
+uniform vec4 rim_color : source_color = vec4(1.0, 0.85, 0.65, 1.0);
 
 varying vec3 tri_pos;
 varying vec3 tri_nrm;
@@ -79,4 +82,8 @@ void fragment() {
 	ROUGHNESS = roughness_v;
 	METALLIC = metallic_v;
 	EMISSION = emission_color.rgb * emission_energy;
+	if (rim_strength > 0.0) {
+		float rim = 1.0 - clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
+		EMISSION += rim_color.rgb * pow(rim, 2.2) * rim_strength;
+	}
 }

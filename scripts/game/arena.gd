@@ -1,7 +1,7 @@
 class_name Arena
 extends Node3D
 ## Арена-лобное место: брусчатка в крови, кровавый круг-клеймо в центре, по краю — руины,
-## колья с черепами, колёса на столбах, клетки, мёртвые деревья и жаровни. Над всем — затмение.
+## колья с черепами, колёса на столбах, клетки, мёртвые деревья и жаровни. В небе — луна в кольце осколков.
 
 const EDGE_PROPS := [&"wall", &"brazier", &"stakes", &"wheel", &"wall", &"tree", &"brazier", &"gibbet", &"wall", &"stakes", &"brazier", &"wheel", &"tree", &"wall"]
 
@@ -30,33 +30,33 @@ func build(p_radius: float) -> void:
 	_apply_render_mode(Render.mode)
 
 
-## Этап босса: на полу проступает затмение — чёрный круг в багровой короне.
-func show_floor_eclipse(on: bool) -> void:
-	var existing := get_node_or_null("FloorEclipse")
-	if not on:
-		if existing != null:
-			existing.queue_free()
-		return
+## Этап босса: на полу — разбитое кольцо из семи сегментов. Сегменты пожертвованных вещей
+## светятся цветом их сущностей; кольцо треснуло — сегменты сдвинуты.
+func show_boss_sigil(colors: Array) -> void:
+	var existing := get_node_or_null("BossSigil")
 	if existing != null:
+		existing.queue_free()
+	if colors.is_empty():
 		return
 	var root := Node3D.new()
-	root.name = "FloorEclipse"
+	root.name = "BossSigil"
 	add_child(root)
-	var disc := MeshInstance3D.new()
-	disc.mesh = Vfx.sector_mesh(4.6, 360.0, 0.0, 48)
-	disc.material_override = Vfx.material(Color(0.0, 0.0, 0.0, 0.82), 1.0, false)
-	disc.position.y = 0.02
-	root.add_child(disc)
-	var corona := MeshInstance3D.new()
-	corona.mesh = Vfx.ring_mesh(5.6, 1.0, 48)
-	corona.material_override = Vfx.material(Color(0.95, 0.12, 0.05, 0.6), 1.5, true)
-	corona.position.y = 0.022
-	root.add_child(corona)
-	var rim := MeshInstance3D.new()
-	rim.mesh = Vfx.ring_mesh(4.75, 0.18, 48)
-	rim.material_override = Vfx.material(Color(1.0, 0.55, 0.3, 0.9), 2.0, true)
-	rim.position.y = 0.024
-	root.add_child(rim)
+	var dark := MeshInstance3D.new()
+	dark.mesh = Vfx.sector_mesh(4.4, 360.0, 0.0, 40)
+	dark.material_override = Vfx.material(Color(0.0, 0.0, 0.0, 0.5), 1.0, false)
+	dark.position.y = 0.02
+	root.add_child(dark)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for k in 7:
+		var seg := MeshInstance3D.new()
+		seg.mesh = Vfx.sector_mesh(5.4, 360.0 / 7.0 - 7.0, 4.5, 8)
+		var c: Color = colors[k] if k < colors.size() else Color(0.35, 0.3, 0.3)
+		seg.material_override = Vfx.material(Color(c, 0.75 if k < colors.size() else 0.35), 1.5, k < colors.size())
+		var a := TAU * (k + 0.5) / 7.0
+		seg.rotation.y = -a + PI / 2
+		seg.position = Vector3(cos(a), 0, sin(a)) * rng.randf_range(-0.25, 0.35) + Vector3(0, 0.022 + k * 0.001, 0)
+		root.add_child(seg)
 	for n in root.get_children():
 		(n as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
@@ -64,9 +64,9 @@ func show_floor_eclipse(on: bool) -> void:
 func set_tint(c: Color) -> void:
 	floor_tint = c
 	for i in _floor_mats.size():
-		var k := 1.15 * (1.0 - 0.1 * (i % 2))
+		var k := 1.4 * (1.0 - 0.06 * (i % 2))
 		var l := (c.r + c.g + c.b) / 3.0
-		var d := Color(lerpf(l, c.r, 0.5), lerpf(l, c.g, 0.5), lerpf(l, c.b, 0.5))
+		var d := Color(lerpf(l, c.r, 0.35), lerpf(l, c.g, 0.35), lerpf(l, c.b, 0.35))
 		_floor_mats[i].set_shader_parameter(&"albedo_color", Color(d.r * k, d.g * k, d.b * k))
 
 
@@ -110,8 +110,8 @@ func _apply_render_mode(mode: int) -> void:
 	e.glow_intensity = 0.9
 	e.glow_bloom = 0.12
 	e.glow_hdr_threshold = 0.9
-	e.ambient_light_energy = 1.0 if ps1 else 0.6
-	_moon.light_energy = 1.05 if ps1 else 0.85
+	e.ambient_light_energy = 1.5 if ps1 else 0.8
+	_moon.light_energy = 1.35 if ps1 else 1.05
 
 
 # --- Пол --------------------------------------------------------------------
@@ -140,7 +140,7 @@ func _build_floor() -> void:
 	add_child(mud)
 	add_child(LowPoly.cyl(radius + 1.4, radius + 0.8, 2.0, 40, Color(0.7, 0.62, 0.58), Vector3(0, -1.3, 0), 0.95, 0.0, 0.0, &"brick"))
 	# Пятна крови.
-	for k in 16:
+	for k in 9:
 		var a := _rng.randf() * TAU
 		var r := _rng.randf_range(2.5, radius - 0.5)
 		_blood_decal(Vector3(cos(a) * r, 0.012, sin(a) * r), _rng.randf_range(0.9, 2.2))
@@ -405,7 +405,7 @@ func _gibbet(h: Node3D) -> void:
 	_occluder(h, 4.2)
 
 
-# --- Пепел, угли, затмение --------------------------------------------------
+# --- Пепел и угли ----------------------------------------------------------
 
 func _build_particles() -> void:
 	var ash := CPUParticles3D.new()

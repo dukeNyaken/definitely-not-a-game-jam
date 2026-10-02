@@ -122,7 +122,7 @@ def stone():
     v = voronoi(22, 1)
     n = fbm(2)
     r = random.Random(3)
-    tints = [r.uniform(0.85, 1.12) for _ in range(22)]
+    tints = [r.uniform(0.92, 1.06) for _ in range(22)]
     base = (0.46, 0.42, 0.38)
     px = []
     for y in range(S):
@@ -132,10 +132,10 @@ def stone():
             edge = d2 - d1
             k = tints[i] * (0.75 + 0.5 * n[y][x])
             c = shade(base, k)
-            if edge < 1.6:
-                c = shade(c, 0.35)
-            elif edge < 2.8:
-                c = shade(c, 0.7)
+            if edge < 1.4:
+                c = shade(c, 0.62)
+            elif edge < 2.4:
+                c = shade(c, 0.84)
             row.append(c)
         px.append(row)
     write_png("stone", px)
