@@ -57,7 +57,7 @@ static func _body(cs: Cutscene, game: Game) -> void:
 	var taker_at := c + up * 2.4 + right * 1.3
 	var giver := cs.spawn(&"hero", giver_at, taker_at, KEYS[0])
 	var taker := cs.spawn(&"refugee", taker_at, giver_at, KEYS[1])
-	var sword := ItemVisuals.build_display(ItemState.create(&"sword"))
+	var sword := ItemVisuals.build_display(Cutscene.item_state(&"sword"))
 	giver.hold(sword, giver.offer_hand(), SWORD_SCALE)
 	giver.set_pose(&"hold")
 	var shade := _gild(giver, _gild(taker, Vfx.material(Color(GOLD, 0.0), 1.3, true)))

@@ -119,7 +119,6 @@ func _show_item(id: StringName) -> void:
 		var state := ItemState.create(id)
 		state.appearance = tier
 		preview.show_single(state)
-		preview.viewport.get_camera_3d().size = minf(2.6, float(IconFactory.FRAMING[id][0]) * 1.6)
 		var status := UiKit.label("", 15, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 		contents.add_child(status)
 		_tier_status.append(status)

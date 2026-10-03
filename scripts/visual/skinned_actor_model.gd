@@ -85,6 +85,7 @@ static func select(id: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("hero", "variant", id)
 	cfg.save(CHOICE)
+	IconFactory.refresh()
 
 
 static func _read_config() -> Dictionary:

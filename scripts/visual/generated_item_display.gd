@@ -16,26 +16,42 @@ const UPRIGHT := [&"sword"]
 
 
 ## Слот -> Node3D с вещью; начало координат — середина вещи (витрина её вращает).
-static func build(states: Array[ItemState] = []) -> Dictionary:
+static func build(states: Array[ItemState] = [], only_slot: StringName = &"") -> Dictionary:
 	var out := {}
 	if not SkinnedActorModel.available():
 		return out
 	var scene: Node3D = (load(SkinnedActorModel.current()["model"]) as PackedScene).instantiate()
 	var parts := {}            # слот -> [MeshInstance3D]
 	for mi: MeshInstance3D in scene.find_children("item_*", "MeshInstance3D", true, false):
+		var slot := SkinnedActorModel._slot_of(mi.name.trim_prefix("item_"))
+		if only_slot != &"" and slot != only_slot:
+			continue
 		var copy := MeshInstance3D.new()
 		copy.name = mi.name
 		copy.mesh = mi.mesh    # без скина сетка рисуется в позе покоя
 		var src := mi.get_active_material(0) as BaseMaterial3D
 		copy.material_override = LowPoly.mat_textured(src.albedo_texture if src else null)
-		parts.get_or_add(SkinnedActorModel._slot_of(mi.name.trim_prefix("item_")), []).append(copy)
+		parts.get_or_add(slot, []).append(copy)
 	scene.free()
 	for slot in parts:
 		out[slot] = _display(slot, parts[slot])
+		out[slot].set_meta(&"hero_variant", SkinnedActorModel.current()["id"])
 	for state in states:
-		if state.appearance > 1 and out.has(state.def_id):
+		if (state.appearance > 1 or not state.properties.is_empty()) and out.has(state.def_id):
 			_decorate(out[state.def_id], parts[state.def_id], state)
 	return out
+
+
+## Внешняя оболочка сохраняет нормализацию glb при задании масштаба в витрине или сцене.
+static func build_single(state: ItemState) -> Node3D:
+	var shown := build([state], state.def_id)
+	if not shown.has(state.def_id):
+		return null
+	var root := Node3D.new()
+	root.name = "Item_%s" % state.def_id
+	root.set_meta(&"hero_variant", SkinnedActorModel.current()["id"])
+	root.add_child(shown[state.def_id])
+	return root
 
 
 ## Те же кристаллы обликов поверх сгенерированных вещей; размер украшения не зависит
@@ -55,19 +71,19 @@ static func _decorate(root: Node3D, meshes: Array, state: ItemState) -> void:
 			faces.append((transform * vertex) * root.scale.x)
 	for y in [0.25, -0.25]:
 		for x in [-0.25, 0.25]:
-			var point := box.get_center() + Vector3(box.size.x * x, box.size.y * y, -box.size.z * 0.5)
+			var point := box.get_center() + Vector3(box.size.x * x, box.size.y * y, box.size.z * 0.5)
 			point = _surface_point(point, faces, box.size.z)
-			anchors.append(ItemVisuals._anchor(point, Vector3.FORWARD))
-	ItemVisuals._mastery_trim({"node": trim, "anchors": anchors}, state)
+			anchors.append(ItemVisuals._anchor(point, Vector3.BACK))
+	ItemVisuals.decorate([{"node": trim, "anchors": anchors}], state)
 
 
 ## Передняя поверхность; если точка попала за контур клинка или щита — ближайший край.
 static func _surface_point(target: Vector3, faces: PackedVector3Array, depth: float) -> Vector3:
-	var origin := target - Vector3(0, 0, depth + 0.01)
+	var origin := target + Vector3(0, 0, depth + 0.01)
 	var nearest := target
 	var distance := INF
 	for i in range(0, faces.size(), 3):
-		var hit = Geometry3D.ray_intersects_triangle(origin, Vector3.BACK, faces[i], faces[i + 1], faces[i + 2])
+		var hit = Geometry3D.ray_intersects_triangle(origin, Vector3.FORWARD, faces[i], faces[i + 1], faces[i + 2])
 		if hit != null:
 			var d: float = origin.distance_squared_to(hit)
 			if d < distance:

@@ -119,6 +119,56 @@ func test_mesh_names_map_to_slots() -> void:
 	assert_eq(SkinnedActorModel._slot_of("gloves_R"), &"gloves")
 
 
+func test_single_mastery_previews_use_character_meshes_for_all_three_forms() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for variant in SkinnedActorModel.variants():
+		SkinnedActorModel.select(variant["id"])
+		var source: Node3D = (load(variant["model"]) as PackedScene).instantiate()
+		var meshes := {}
+		for mesh in source.find_children("item_*", "MeshInstance3D", true, false):
+			meshes[mesh.name] = mesh.mesh
+		for slot in SLOTS:
+			for tier in [1, 2, 3]:
+				var state := ItemState.create(slot)
+				state.appearance = tier
+				var display := ItemVisuals.build_display(state)
+				assert_eq(display.get_meta(&"hero_variant"), variant["id"])
+				assert_eq(display.scale, Vector3.ONE, "масштаб витрины не перезапишет нормализацию glb")
+				var originals := display.find_children("item_*", "MeshInstance3D", true, false)
+				assert_gt(originals.size(), 0)
+				for mesh in originals:
+					assert_same(mesh.mesh, meshes[mesh.name], "модель вещи принадлежит выбранному персонажу")
+				var trim := display.find_child("AppearanceTrim", true, false)
+				if tier == 1:
+					assert_null(trim)
+				else:
+					assert_eq(trim.get_child_count(), 2 if tier == 2 else 4)
+				display.free()
+		source.free()
+
+
+func test_generated_artifact_preserves_absorbed_property_effects() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for tier in [1, 3]:
+		var state := ItemState.create(&"armor")
+		state.appearance = tier
+		state.properties.append(Property.create(&"on_hurt", &"bulwark", &"on_block", &"shield", 0.4))
+		state.properties.append(Property.create(&"on_block", &"blade", &"on_hit", &"sword", 0.4))
+		var display := ItemVisuals.build_display(state)
+		var effects := display.find_child("AppearanceTrim", true, false)
+		var properties: Array[int] = []
+		for child in effects.get_children():
+			if child.has_meta(&"prop_index"):
+				properties.append(child.get_meta(&"prop_index"))
+		assert_eq(properties, [0, 1], "у артефакта остались украшения обеих поглощённых сил")
+		assert_eq(state.properties.size(), 2, "показ модели не меняет дерево свойств")
+		display.free()
+
+
 func test_locomotion_speeds_increase() -> void:
 	if not SkinnedActorModel.available():
 		pending("модели героев не собраны")

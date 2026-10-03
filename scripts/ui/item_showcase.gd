@@ -136,6 +136,9 @@ func show_single(state: ItemState) -> void:
 	_add_camera(Vector3(0, 0.9, 4.0), Vector3(0, 0.0, 0), 2.6)
 	var d := ItemVisuals.build_display(state)
 	d.scale = Vector3.ONE * 1.6
+	if d.has_meta(&"hero_variant"):
+		# Одно кадрирование для всех трёх обликов, с местом для кристаллов реликвии.
+		viewport.get_camera_3d().size = 1.6 * (float(GeneratedItemDisplay.FIT.get(state.def_id, GeneratedItemDisplay.FIT_DEFAULT)) + 0.4)
 	pivot.add_child(d)
 	_displays.append(d)
 	spin_speed = 0.7
@@ -159,7 +162,7 @@ func show_cast(whos: Array[StringName], aspect: float) -> void:
 			# Солдат — при всех семи вещах: такой он в начале пути.
 			var gear: Array[ItemState] = []
 			for id in Db.ITEM_IDS:
-				gear.append(ItemState.create(id))
+				gear.append(Mastery.make_item(id))
 			p.set_items(gear)
 
 

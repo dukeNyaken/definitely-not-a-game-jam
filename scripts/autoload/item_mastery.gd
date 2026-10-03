@@ -35,6 +35,12 @@ func selected(id: StringName) -> int:
 	return clampi(int(choices.get(id, level(id))), 1, level(id))
 
 
+func make_item(id: StringName) -> ItemState:
+	var state := ItemState.create(id)
+	state.appearance = selected(id)
+	return state
+
+
 func begin_run() -> void:
 	run_xp.clear()
 	run_start_xp = xp.duplicate()

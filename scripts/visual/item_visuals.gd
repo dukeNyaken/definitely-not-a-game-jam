@@ -14,6 +14,12 @@ const ADDON_SCALE := 1.7
 
 static func build(state: ItemState) -> Array:
 	var parts := _parts(state.def_id)
+	decorate(parts, state)
+	return parts
+
+
+## Украшения облика и поглощённых сил одинаковы для процедурных и новых моделей.
+static func decorate(parts: Array, state: ItemState) -> void:
 	if state.appearance > 1:
 		for part in parts:
 			_mastery_trim(part, state)
@@ -27,11 +33,13 @@ static func build(state: ItemState) -> Array:
 		addon.transform = t.scaled_local(Vector3.ONE * ADDON_SCALE)
 		addon.set_meta(&"prop_index", i)
 		(part["node"] as Node3D).add_child(addon)
-	return parts
 
 
 ## Вещь целиком, вне тела: для постаментов, иконок и алтаря.
 static func build_display(state: ItemState) -> Node3D:
+	var generated := GeneratedItemDisplay.build_single(state)
+	if generated != null:
+		return generated
 	var root := Node3D.new()
 	root.name = "Item_%s" % state.def_id
 	var parts := build(state)
