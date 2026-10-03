@@ -11,6 +11,19 @@ static func metric(label: String, value: Variant, unit: String = "") -> Dictiona
 	return {"label": label, "value": (number(float(value)) if value is float or value is int else str(value)) + unit}
 
 
+## Только эффект переданной сущности: особые эффекты облика жертвы не наследуются.
+static func effect_summary(prop: Property) -> String:
+	match prop.essence_id:
+		&"blade": return "Разрез перед героем."
+		&"bulwark": return "Неуязвимость; отражение снарядов."
+		&"mass": return "Отброс и оглушение вокруг."
+		&"gaze": return "Враги рядом открыты для крита."
+		&"grip": return "Притягивание перед героем."
+		&"gust": return "Рывок к курсору."
+		&"energy": return "Сквозная волна к курсору."
+	return ""
+
+
 static func native(item: ItemState) -> Array[Dictionary]:
 	var def := item.def()
 	var s := def.stats
