@@ -299,7 +299,7 @@ func refresh_items() -> void:
 			continue
 		for part in _item_nodes[id]:
 			for ch in (part as Node).get_children():
-				if not ch.has_meta(&"prop_index"):
+				if not ch.has_meta(&"prop_index") and not ch.has_meta(&"mastery_trim"):
 					(ch as Node3D).visible = false
 	if _idle_node != null and _cfg.has("armed_idle"):
 		_idle_node.animation = _cfg["armed_idle"] if actor.has_item(&"sword") else _cfg["locomotion"][0]

@@ -45,6 +45,7 @@ func _ready() -> void:
 		item.appearance = Mastery.selected(id)
 		preview.append(item)
 	showcase.show_ring(preview)
+	Mastery.changed.connect(_refresh_appearances)
 
 	# Интерфейс — на слое поверх ретро-постобработки, чтобы текст оставался чётким.
 	var ui_layer := CanvasLayer.new()
@@ -61,7 +62,7 @@ func _ready() -> void:
 	v.offset_right = 760
 	v.offset_top = -340
 	v.offset_bottom = 340
-	v.add_theme_constant_override(&"separation", 14)
+	v.add_theme_constant_override(&"separation", 10)
 	ui.add_child(v)
 	v.add_child(UiKit.outlined(UiKit.label("Только самое нужное", 64, UiKit.GOLD), 8))
 	var line := ColorRect.new()
@@ -71,7 +72,7 @@ func _ready() -> void:
 	v.add_child(line)
 	v.add_child(UiKit.label("Семь вещей. Шесть жертв. Один предмет.", 26, UiKit.TEXT))
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 30)
+	spacer.custom_minimum_size = Vector2(0, 16)
 	v.add_child(spacer)
 	var start := UiKit.button("Начать забег", _start)
 	start.custom_minimum_size = Vector2(360, 58)
@@ -147,6 +148,12 @@ func _next_hero() -> void:
 	var i := list.find(SkinnedActorModel.current())
 	SkinnedActorModel.select(list[(i + 1) % list.size()]["id"])
 	_update_hero_button()
+	_showcase.rebuild_hero()
+
+
+func _refresh_appearances() -> void:
+	for state in _showcase._ring_states:
+		state.appearance = Mastery.selected(state.def_id)
 	_showcase.rebuild_hero()
 
 

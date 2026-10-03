@@ -140,6 +140,24 @@ func test_result_equipping_preview_updates_in_place_and_switching_item_selects_i
 	assert_eq(card._form_name.text, str(Mastery.form(&"sword", 2)["name"]))
 
 
+func test_main_menu_meta_collection_and_content_buttons_fit_together() -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(1600, 900)
+	add_child_autofree(viewport)
+	var menu = load("res://scenes/main_menu.tscn").instantiate()
+	viewport.add_child(menu)
+	await wait_process_frames(6)
+	var controls: VBoxContainer = menu.ui.get_child(0)
+	var captions: Array[String] = []
+	for child in controls.get_children():
+		if child is Button:
+			captions.append(child.text)
+			assert_true(Rect2(0, 0, 1600, 860).encloses(child.get_global_rect()), "%s помещается выше подписи внизу" % child.text)
+	assert_has(captions, "Катсцены")
+	assert_has(captions, "Облики и опыт вещей")
+	assert_has(captions, Render.cutscenes_text())
+
+
 func test_result_layout_stays_still_when_switching_all_items_and_forms() -> void:
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i(1600, 900)

@@ -23,7 +23,7 @@ var _screen: Control
 var _screen_kind: StringName = &""
 ## Части интерфейса, которые прячутся в сюжетных сценах.
 var _status_box: Control
-var _ring_panel: Control
+var _tree_hint: Control
 var _action_bar: Control
 var _cinematic_tween: Tween
 ## Чёрные полосы вступления босса (без сюжетных сцен).
@@ -102,6 +102,7 @@ func _build_tree_hint() -> void:
 	v.offset_bottom = 70
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(v)
+	_tree_hint = v
 	v.add_child(UiKit.outlined(UiKit.label("Tab — кольцо навыков", 17, UiKit.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)))
 	_seed_label = UiKit.outlined(UiKit.label("Сид %d" % RunState.seed_value, 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_RIGHT))
 	v.add_child(_seed_label)
@@ -261,12 +262,12 @@ func fade(to_black: bool, duration: float) -> void:
 	tw.tween_property(_fade, "color:a", 1.0 if to_black else 0.0, duration)
 
 
-## Сюжетная сцена: статус, кольцо, панель действий, подсказка, полоса босса и цифры над врагами уходят.
+## Сюжетная сцена: статус, подсказка Tab, панель действий, полоса босса и цифры над врагами уходят.
 func set_cinematic(on: bool, duration: float = 0.4) -> void:
 	if _cinematic_tween != null and _cinematic_tween.is_valid():
 		_cinematic_tween.kill()
 	_cinematic_tween = create_tween().set_parallel(true)
-	var parts: Array[Control] = [_status_box, _ring_panel, _action_bar, _boss_bar, overlay]
+	var parts: Array[Control] = [_status_box, _tree_hint, _action_bar, _boss_bar, overlay]
 	if _hint != null:
 		parts.append(_hint)
 	for c in parts:

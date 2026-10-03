@@ -32,6 +32,20 @@ func test_enabled_respects_setting_and_bot_flag() -> void:
 	assert_false(Cutscene.enabled(), "настройка игрока")
 
 
+func test_cinematic_hides_and_restores_meta_tree_hint() -> void:
+	var hud := Hud.new()
+	add_child_autofree(hud)
+	hud.set_process(false)
+	hud._tree_hint = Control.new()
+	hud.add_child(hud._tree_hint)
+	hud.set_cinematic(true, 0.0)
+	await wait_process_frames(2)
+	assert_almost_eq(hud._tree_hint.modulate.a, 0.0, 0.001, "подсказка Tab не видна поверх сцены")
+	hud.set_cinematic(false, 0.0)
+	await wait_process_frames(2)
+	assert_almost_eq(hud._tree_hint.modulate.a, 1.0, 0.001, "подсказка возвращается в бою")
+
+
 func test_after_skip_steps_return_at_once() -> void:
 	var cs := _cutscene()
 	cs.active = true

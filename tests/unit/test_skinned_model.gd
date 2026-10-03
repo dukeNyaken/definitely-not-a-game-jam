@@ -65,6 +65,52 @@ func test_equip_toggles_item_and_body_under_it() -> void:
 			assert_true(mi.visible, "%s снят — тело под ним (%s) видно" % [slot, mi.name])
 
 
+func test_mastery_trim_survives_generated_geometry_and_updates_on_upgrade() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for v in SkinnedActorModel.variants():
+		for kind in [ActorModel.Kind.HERO, ActorModel.Kind.BOSS]:
+			var m := _model(v["id"], kind, SLOTS)
+			for tier in [2, 3, 1]:
+				for state in m.actor.items:
+					state.appearance = tier
+				m.refresh_items()
+				for slot in SLOTS:
+					var trims := 0
+					for part in m._item_nodes[slot]:
+						for child in part.get_children():
+							if child.has_meta(&"mastery_trim"):
+								trims += 1
+								assert_true(child.is_visible_in_tree(), "%s/%d/%s/%d: украшение видно" % [v["id"], kind, slot, tier])
+					if tier == 1:
+						assert_eq(trims, 0, "возврат к исходному облику убирает украшения")
+					else:
+						assert_gt(trims, 0, "у улучшенного облика есть украшения")
+
+
+func test_generated_menu_items_show_selected_mastery_appearance() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	var states: Array[ItemState] = []
+	for slot in SLOTS:
+		var state := ItemState.create(slot)
+		state.appearance = 3
+		states.append(state)
+	for v in SkinnedActorModel.variants():
+		SkinnedActorModel.select(v["id"])
+		var shown := GeneratedItemDisplay.build(states)
+		for slot in SLOTS:
+			var display: Node3D = shown[slot]
+			add_child_autofree(display)
+			var trim := display.find_child("AppearanceTrim", true, false)
+			assert_not_null(trim, "%s/%s: выбранный облик на сгенерированной вещи" % [v["id"], slot])
+			if trim != null:
+				assert_eq(trim.get_child_count(), 4)
+				assert_almost_eq((display.scale * trim.scale).x, 1.0, 0.001, "украшения сохраняют размер на маленьких исходных сетках")
+
+
 func test_mesh_names_map_to_slots() -> void:
 	# item_<слот>[__<часть>][_L|_R|_under]: часть вещи и подложка — тот же слот
 	for n in ["armor", "armor__legs", "armor_under", "armor__legs_under"]:

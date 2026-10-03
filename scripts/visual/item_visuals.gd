@@ -295,6 +295,7 @@ static func _mastery_trim(part: Dictionary, state: ItemState) -> void:
 	for i in mini(anchors.size(), 2 if state.appearance == 2 else 4):
 		var trim := Node3D.new()
 		trim.name = "Mastery_%d" % i
+		trim.set_meta(&"mastery_trim", true)
 		trim.transform = anchors[i]
 		root.add_child(trim)
 		_fr(trim, Vector2(0.15, 0.12), Vector2(0.11, 0.08), 0.06, GOLD, Vector3.ZERO, &"gold", Vector2.ZERO, Vector3.ZERO, 0.8)

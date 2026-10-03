@@ -62,6 +62,22 @@ func test_kill_rewards_all_equipped_once_including_passives() -> void:
 		assert_eq(Mastery.run_xp[id], 18)
 
 
+func test_every_enemy_from_main_awards_mastery_xp_once() -> void:
+	var hero := hero_with(&"sword")
+	var earned := 0
+	for id in Db.ENEMY_IDS:
+		var target := EnemyFactory.create(Db.enemy(id), 3)
+		add_child_autofree(target)
+		target.set_physics_process(false)
+		var reward := Mastery.reward(id, 3)
+		assert_gt(reward, 0, "%s даёт опыт" % id)
+		assert_eq(int(target.get_meta(&"mastery_xp")), reward)
+		Combat.deal(ActionContext.make(hero, null), target, target.max_hp + 1)
+		target.die(hero)
+		earned += reward
+		assert_eq(int(Mastery.run_xp.get(&"sword", 0)), earned, "убийство %s засчитано один раз" % id)
+
+
 func test_debug_death_and_enemy_kills_do_not_reward() -> void:
 	hero_with(&"boots")
 	var target := TestHelpers.dummy(self, Vector3.ZERO, 1)
@@ -160,6 +176,28 @@ func test_save_reload_replace_and_backup_recovery() -> void:
 	for suffix in ["", ".bak", ".tmp"]:
 		if FileAccess.file_exists(path + suffix):
 			DirAccess.remove_absolute(path + suffix)
+
+
+func test_reset_updates_live_hero_during_cutscene_without_touching_gift_snapshot() -> void:
+	var old_ring := RunState.ring
+	var old_outcome := RunState.outcome
+	var hero := hero_with(&"armor", 3)
+	RunState.ring = Ring.from_ids([&"armor"])
+	RunState.ring.items[0].appearance = 3
+	var gift := hero.items[0].snapshot()
+	var game := Node3D.new()
+	add_child_autofree(game)
+	game.add_to_group(&"game")
+	RunState.running = false
+	RunState.outcome = RunState.Outcome.NONE
+	Mastery.xp[&"armor"] = 1000
+	Mastery.reset_progress()
+	assert_eq(hero.items[0].appearance, 1)
+	assert_eq(RunState.ring.items[0].appearance, 1)
+	assert_eq(hero.max_armor, 50.0)
+	assert_eq(gift.appearance, 3, "дар остаётся историческим снимком")
+	RunState.ring = old_ring
+	RunState.outcome = old_outcome
 
 
 func test_reset_persists_empty_profile_including_backup_recovery() -> void:

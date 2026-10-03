@@ -16,7 +16,7 @@ const UPRIGHT := [&"sword"]
 
 
 ## Слот -> Node3D с вещью; начало координат — середина вещи (витрина её вращает).
-static func build() -> Dictionary:
+static func build(states: Array[ItemState] = []) -> Dictionary:
 	var out := {}
 	if not SkinnedActorModel.available():
 		return out
@@ -32,7 +32,57 @@ static func build() -> Dictionary:
 	scene.free()
 	for slot in parts:
 		out[slot] = _display(slot, parts[slot])
+	for state in states:
+		if state.appearance > 1 and out.has(state.def_id):
+			_decorate(out[state.def_id], parts[state.def_id], state)
 	return out
+
+
+## Те же кристаллы обликов поверх сгенерированных вещей; размер украшения не зависит
+## от исходного масштаба glb (особенно у маленького амулета).
+static func _decorate(root: Node3D, meshes: Array, state: ItemState) -> void:
+	var box := _bounds(meshes, root)
+	box = AABB(box.position * root.scale.x, box.size * root.scale.x)
+	var trim := Node3D.new()
+	trim.name = "AppearanceTrim"
+	trim.scale = Vector3.ONE / root.scale.x
+	root.add_child(trim)
+	var anchors: Array = []
+	var faces := PackedVector3Array()
+	for mesh: MeshInstance3D in meshes:
+		var transform := _local_transform(mesh, root)
+		for vertex in mesh.mesh.get_faces():
+			faces.append((transform * vertex) * root.scale.x)
+	for y in [0.25, -0.25]:
+		for x in [-0.25, 0.25]:
+			var point := box.get_center() + Vector3(box.size.x * x, box.size.y * y, -box.size.z * 0.5)
+			point = _surface_point(point, faces, box.size.z)
+			anchors.append(ItemVisuals._anchor(point, Vector3.FORWARD))
+	ItemVisuals._mastery_trim({"node": trim, "anchors": anchors}, state)
+
+
+## Передняя поверхность; если точка попала за контур клинка или щита — ближайший край.
+static func _surface_point(target: Vector3, faces: PackedVector3Array, depth: float) -> Vector3:
+	var origin := target - Vector3(0, 0, depth + 0.01)
+	var nearest := target
+	var distance := INF
+	for i in range(0, faces.size(), 3):
+		var hit = Geometry3D.ray_intersects_triangle(origin, Vector3.BACK, faces[i], faces[i + 1], faces[i + 2])
+		if hit != null:
+			var d: float = origin.distance_squared_to(hit)
+			if d < distance:
+				distance = d
+				nearest = hit
+	if distance < INF:
+		return nearest
+	for i in range(0, faces.size(), 3):
+		for edge in 3:
+			var point := Geometry3D.get_closest_point_to_segment(target, faces[i + edge], faces[i + (edge + 1) % 3])
+			var d := target.distance_squared_to(point)
+			if d < distance:
+				distance = d
+				nearest = point
+	return nearest
 
 
 static func _display(slot: StringName, meshes: Array) -> Node3D:

@@ -91,7 +91,7 @@ func _rebuild_ring_items() -> void:
 	for d in _displays:
 		d.queue_free()
 	_displays.clear()
-	var generated := GeneratedItemDisplay.build()
+	var generated := GeneratedItemDisplay.build(_ring_states)
 	var n := _ring_states.size()
 	for i in n:
 		var a := TAU * i / n

@@ -10,6 +10,9 @@
     "archer": 6,
     "caster": 10,
     "brute": 18,
+    "slime": 8,
+    "slime_small": 2,
+    "jester": 8,
     "boss": 150
   },
   "elite_multiplier": 3,

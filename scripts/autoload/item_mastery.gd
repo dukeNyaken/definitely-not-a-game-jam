@@ -114,7 +114,9 @@ func reset_progress(path: String = SAVE_PATH) -> bool:
 			push_warning("Не удалось сбросить резервную копию опыта: %s" % error_string(err))
 		saved = not save_error
 	# Прошедший забег и снимки жертв сохраняют свои облики; текущий герой — нет.
-	if RunState.running:
+	# Катсцена временно останавливает running, но не завершает настоящий забег.
+	var ongoing_scene := RunState.outcome == RunState.Outcome.NONE and not Theater.requested() and get_tree().get_first_node_in_group(&"game") != null
+	if RunState.running or ongoing_scene:
 		for item in RunState.ring.items:
 			item.appearance = 1
 		var hero := Combat.hero
