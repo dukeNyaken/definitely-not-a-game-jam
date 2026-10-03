@@ -65,7 +65,7 @@ func _ready() -> void:
 	var legend := VBoxContainer.new()
 	legend.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(legend)
-	legend.add_child(UiKit.label("Цвет — открыт · Тёмный — закрыт · Золотая точка — выбран", 17, UiKit.MUTED))
+	legend.add_child(UiKit.label("Цвет — открыт · Тёмный — закрыт", 17, UiKit.MUTED))
 	legend.add_child(UiKit.label("От центра: I · II (%d XP) · III (%d XP)" % [int(Mastery.rules["thresholds"][1]), int(Mastery.rules["thresholds"][2])], 16, UiKit.GOLD))
 	var close := UiKit.button("Закрыть", queue_free)
 	close.custom_minimum_size.x = 180

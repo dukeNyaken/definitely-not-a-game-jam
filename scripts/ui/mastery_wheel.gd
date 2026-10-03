@@ -250,9 +250,6 @@ func _draw_collection_sector(index: int, radius: float) -> void:
 		draw_arc(_center(), outer, angle - half, angle + half, 24, Color(color, 0.8) if unlocked else Color(0.24, 0.2, 0.27), 1.0, true)
 		var seal := _center() + Vector2.from_angle(angle) * (inner + outer) * 0.5
 		draw_string(UiKit.body_font(), seal + Vector2(-20, 7), ROMAN[tier - 1], HORIZONTAL_ALIGNMENT_CENTER, 40, 20, UiKit.TEXT if unlocked else UiKit.MUTED.darkened(0.35))
-		if tier == Mastery.selected(id):
-			var mark := _center() + Vector2.from_angle(angle + half - 0.09) * (inner + outer) * 0.5
-			draw_circle(mark, 3.5, UiKit.GOLD)
 	var outline := _band_points(58.0, radius, angle - half, angle + half)
 	outline.append(outline[0])
 	draw_polyline(outline, Color(color, 0.95 if hot else 0.25), 2.0 if hot else 1.0, true)
@@ -286,9 +283,6 @@ func _draw_sector(index: int, radius: float) -> void:
 		var seal := _center() + Vector2.from_angle(angle) * (inner + outer) * 0.5
 		draw_string_outline(UiKit.body_font(), seal + Vector2(-20, 7), ROMAN[tier - 1], HORIZONTAL_ALIGNMENT_CENTER, 40, 20, 2, Color(0.02, 0.015, 0.025, 0.65))
 		draw_string(UiKit.body_font(), seal + Vector2(-20, 7), ROMAN[tier - 1], HORIZONTAL_ALIGNMENT_CENTER, 40, 20, UiKit.TEXT if tier_progress(value, tier) > 0 else UiKit.MUTED)
-		if tier > tier_at(start) and unlocked:
-			var mark := _center() + Vector2.from_angle(angle + half - 0.1) * (inner + outer) * 0.5
-			draw_circle(mark, 3.5, UiKit.GOLD)
 	var outline := _band_points(58.0, radius, angle - half, angle + half)
 	outline.append(outline[0])
 	draw_polyline(outline, Color(color, 0.95 if hot else 0.28), 2.0 if hot else 1.0, true)
