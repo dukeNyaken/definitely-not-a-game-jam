@@ -27,8 +27,14 @@ uniform float fade : hint_range(0.0, 1.0) = 1.0;
 uniform float rim_strength = 0.0;
 uniform vec4 rim_color : source_color = vec4(1.0, 0.85, 0.65, 1.0);
 
+// Текстура по UV вместо проекции по граням — для запечённых моделей (experiments/char3d,
+// assets/characters/): у них своя развёртка. В PS1 UV интерполируются аффинно — текстура «плывёт».
+uniform bool use_uv = false;
+
 varying vec3 tri_pos;
 varying vec3 tri_nrm;
+// UV, умноженные на w, и сам w: деление в fragment() убирает поправку на перспективу.
+varying vec3 uv_affine;
 
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
@@ -55,6 +61,7 @@ void vertex() {
 		clip.xy = round(clip.xy / clip.w * grid) / grid * clip.w;
 	}
 	POSITION = clip;
+	uv_affine = vec3(UV * clip.w, clip.w);
 #endif
 }
 
@@ -68,7 +75,15 @@ void fragment() {
 	} else {
 		uv = tri_pos.xy;
 	}
-	vec4 t = texture(surface_tex, uv * tex_scale + tex_offset);
+	uv = uv * tex_scale + tex_offset;
+	if (use_uv) {
+#ifdef RETRO_PS1
+		uv = uv_affine.xy / uv_affine.z;
+#else
+		uv = UV;
+#endif
+	}
+	vec4 t = texture(surface_tex, uv);
 	if (t.a < 0.5) {
 		discard;
 	}

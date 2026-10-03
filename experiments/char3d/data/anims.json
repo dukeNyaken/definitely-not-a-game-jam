@@ -1,0 +1,91 @@
+{
+  "_comment": "Ключевые позы. Углы — градусы [X, Y, Z] в осях кости (договорённость — в rig.py, у calculate_roll). Hips_loc — сдвиг таза в метрах в осях кости Hips: Y — вверх. Кадры при fps. Поза \"mirror\": \"<имя позы>\" — та же поза, отражённая: Left<->Right, у углов меняется знак Y и Z. Каждое действие начинается позой base; кости, которых нет в ключе, берутся из base.",
+  "fps": 30,
+  "base": {
+    "_why": "Расслабленная стойка из А-позы: руки ближе к телу, колени чуть мягкие — из прямых ног движение выглядит деревянным.",
+    "LeftArm": [-12, 0, 0], "RightArm": [-12, 0, 0],
+    "LeftForeArm": [0, 0, -10], "RightForeArm": [0, 0, 10],
+    "LeftUpLeg": [4, 0, 0], "RightUpLeg": [4, 0, 0],
+    "LeftLeg": [-7, 0, 0], "RightLeg": [-7, 0, 0],
+    "LeftFoot": [3, 0, 0], "RightFoot": [3, 0, 0],
+    "Hips_loc": [0, -0.01, 0]
+  },
+  "poses": {
+    "breathe_in": {"Spine1": [-2, 0, 0], "Spine2": [-2, 0, 0], "LeftShoulder": [2, 0, 0], "RightShoulder": [2, 0, 0], "Head": [2, 0, 0]},
+
+    "contact": {
+      "_why": "левая нога впереди на пятке, правая отталкивается носком; руки — против ног",
+      "LeftUpLeg": [25, 0, 0], "LeftLeg": [-5, 0, 0], "LeftFoot": [12, 0, 0],
+      "RightUpLeg": [-18, 0, 0], "RightLeg": [-15, 0, 0], "RightFoot": [-18, 0, 0],
+      "LeftArm": [-12, 0, 22], "RightArm": [-12, 0, 22],
+      "LeftForeArm": [0, 0, -10], "RightForeArm": [0, 0, 25],
+      "Spine": [0, -5, 0], "Hips": [0, 4, 0],
+      "Hips_loc": [0, -0.01, 0]
+    },
+    "down": {
+      "_why": "вес принят на левую ногу — таз ниже всего",
+      "LeftUpLeg": [15, 0, 0], "LeftLeg": [-20, 0, 0], "LeftFoot": [2, 0, 0],
+      "RightUpLeg": [-10, 0, 0], "RightLeg": [-45, 0, 0], "RightFoot": [-10, 0, 0],
+      "LeftArm": [-12, 0, 15], "RightArm": [-12, 0, 15],
+      "LeftForeArm": [0, 0, -10], "RightForeArm": [0, 0, 20],
+      "Spine": [0, -3, 0], "Hips": [0, 2, 0],
+      "Hips_loc": [0, -0.035, 0]
+    },
+    "pass": {
+      "_why": "правая нога проходит под телом, левая прямая",
+      "LeftUpLeg": [-2, 0, 0], "LeftLeg": [-5, 0, 0], "LeftFoot": [0, 0, 0],
+      "RightUpLeg": [18, 0, 0], "RightLeg": [-60, 0, 0], "RightFoot": [8, 0, 0],
+      "LeftArm": [-12, 0, 0], "RightArm": [-12, 0, 0],
+      "Hips_loc": [0, -0.005, 0]
+    },
+    "up": {
+      "_why": "левая пятка поднимается, тело в верхней точке",
+      "LeftUpLeg": [-15, 0, 0], "LeftLeg": [-2, 0, 0], "LeftFoot": [-12, 0, 0],
+      "RightUpLeg": [30, 0, 0], "RightLeg": [-30, 0, 0], "RightFoot": [5, 0, 0],
+      "LeftArm": [-12, 0, -12], "RightArm": [-12, 0, -12],
+      "LeftForeArm": [0, 0, -20], "RightForeArm": [0, 0, 10],
+      "Spine": [0, 3, 0], "Hips": [0, -2, 0],
+      "Hips_loc": [0, 0.012, 0]
+    },
+
+    "ready": {
+      "_why": "боевая стойка: правая рука согнута у груди, корпус чуть повёрнут",
+      "RightArm": [10, 0, 25], "RightForeArm": [0, 0, 95], "RightHand": [0, 0, 0],
+      "LeftArm": [5, 0, -20], "LeftForeArm": [0, 0, -70],
+      "Spine1": [5, -10, 0], "Head": [0, 10, 0],
+      "LeftUpLeg": [12, 0, 0], "RightUpLeg": [-4, 0, 0], "LeftLeg": [-15, 0, 0], "RightLeg": [-12, 0, 0],
+      "Hips_loc": [0, -0.03, 0]
+    },
+    "windup": {
+      "_why": "замах: корпус довёрнут вправо, правая рука поднята и отведена назад",
+      "RightArm": [55, 0, -25], "RightForeArm": [0, 0, 100],
+      "LeftArm": [10, 0, -35], "LeftForeArm": [0, 0, -60],
+      "Spine": [0, -10, 0], "Spine1": [0, -20, 0], "Spine2": [-5, -5, 0], "Head": [0, 25, 0],
+      "LeftUpLeg": [15, 0, 0], "RightUpLeg": [-8, 0, 0], "LeftLeg": [-18, 0, 0], "RightLeg": [-10, 0, 0],
+      "Hips_loc": [0, -0.03, 0]
+    },
+    "strike": {
+      "_why": "удар: корпус довёрнут влево, рука выброшена вперёд-вниз и выпрямлена",
+      "RightArm": [15, 0, 75], "RightForeArm": [0, 0, 10],
+      "LeftArm": [-15, 0, 25], "LeftForeArm": [0, 0, -40],
+      "Spine": [5, 10, 0], "Spine1": [10, 20, 0], "Spine2": [5, 5, 0], "Head": [0, -20, 0],
+      "LeftUpLeg": [25, 0, 0], "RightUpLeg": [-15, 0, 0], "LeftLeg": [-25, 0, 0], "RightLeg": [-5, 0, 0],
+      "Hips_loc": [0, -0.05, 0]
+    },
+    "follow": {
+      "_why": "проводка: рука по инерции уходит ниже и левее",
+      "RightArm": [-5, 0, 60], "RightForeArm": [0, 0, 20],
+      "LeftArm": [-15, 0, 20], "LeftForeArm": [0, 0, -40],
+      "Spine": [5, 12, 0], "Spine1": [12, 22, 0], "Head": [0, -15, 0],
+      "LeftUpLeg": [22, 0, 0], "RightUpLeg": [-12, 0, 0], "LeftLeg": [-25, 0, 0], "RightLeg": [-8, 0, 0],
+      "Hips_loc": [0, -0.05, 0]
+    }
+  },
+  "actions": {
+    "Idle":   {"loop": true,  "keys": [[0, "base"], [30, "breathe_in"], [60, "base"]]},
+    "Walk":   {"loop": true,  "keys": [[0, "contact"], [4, "down"], [8, "pass"], [11, "up"],
+                                       [15, {"mirror": "contact"}], [19, {"mirror": "down"}], [23, {"mirror": "pass"}], [26, {"mirror": "up"}],
+                                       [30, "contact"]]},
+    "Attack": {"loop": false, "keys": [[0, "ready"], [8, "windup"], [12, "strike"], [17, "follow"], [28, "ready"]]}
+  }
+}

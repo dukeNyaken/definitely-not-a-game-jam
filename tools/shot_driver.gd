@@ -25,6 +25,7 @@ func _ready() -> void:
 			"out": _out = kv[1]
 			"delay": _delay = float(kv[1])
 			"every": _every = float(kv[1])
+			"variant": SkinnedActorModel.select(kv[1])
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
 	var story := _preset in ["prologue", "gift", "gates", "finale"]

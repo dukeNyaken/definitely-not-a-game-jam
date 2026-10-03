@@ -1,0 +1,66 @@
+{
+  "_comment": "Что собирается в prototype/ игры (export_prototype.py): варианты героя — тело и вещь на каждый слот (папки output/char3d); босс — общее тело, на него надеваются вещи выбранного варианта (в игре он носит то, чем пожертвовал герой). armor_legs — поножи, часть доспеха (в игре слот armor).",
+  "boss_body": "boss_body",
+  "variants": [
+    {
+      "id": "barbarian",
+      "title": "Варвар",
+      "body": "proto_hero",
+      "items": {
+        "helmet": "item_helmet",
+        "armor": "item_armor",
+        "sword": "item_barb_sword",
+        "shield": "item_barb_shield",
+        "gloves": "item_gloves",
+        "boots": "item_boots",
+        "amulet": "item_amulet",
+        "armor_legs": "item_barb_legs"
+      }
+    },
+    {
+      "id": "templar",
+      "title": "Тамплиер",
+      "body": "proto_hero",
+      "items": {
+        "helmet": "item_templar_helmet",
+        "armor": "item_templar_armor",
+        "sword": "item_templar_sword",
+        "shield": "item_templar_shield",
+        "gloves": "item_templar_gloves",
+        "boots": "item_templar_boots",
+        "amulet": "item_templar_amulet",
+        "armor_legs": "item_templar_legs"
+      }
+    },
+    {
+      "id": "marine",
+      "title": "Космодесант",
+      "body": "proto_hero",
+      "items": {
+        "helmet": "item_marine_helmet",
+        "armor": "item_marine_armor",
+        "sword": "item_marine_sword",
+        "shield": "item_marine_shield",
+        "gloves": "item_marine_gloves",
+        "boots": "item_marine_boots",
+        "amulet": "item_marine_amulet",
+        "armor_legs": "item_marine_legs"
+      }
+    },
+    {
+      "id": "knight",
+      "title": "Рыцарь",
+      "body": "knight_body",
+      "items": {
+        "helmet": "item_knight_helmet",
+        "armor": "item_knight_armor",
+        "sword": "item_knight_sword",
+        "shield": "item_knight_shield",
+        "gloves": "item_knight_gloves",
+        "boots": "item_knight_boots",
+        "amulet": "item_knight_amulet",
+        "armor_legs": "item_knight_legs"
+      }
+    }
+  ]
+}

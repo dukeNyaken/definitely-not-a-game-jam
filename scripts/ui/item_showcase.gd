@@ -2,12 +2,15 @@ class_name ItemShowcase
 extends SubViewportContainer
 ## 3D-витрина вещей: кольцо вращающихся вещей (меню) или одна вещь-артефакт (финал).
 
+var _hero: Actor
 var viewport: SubViewport
 var pivot: Node3D
 var spin_speed: float = 0.35
 ## Пикселизовать самостоятельно (если витрина лежит поверх ретро-постобработки).
 var self_pixelate: bool = true
 var _displays: Array[Node3D] = []
+var _ring_states: Array[ItemState] = []
+var _ring_radius := 0.0
 
 
 func _init() -> void:
@@ -57,14 +60,8 @@ func _add_camera(pos: Vector3, look: Vector3, size: float) -> void:
 ## Семь вещей по кольцу.
 func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	_add_camera(Vector3(0, 3.2, 6.5), Vector3(0, 0.3, 0), 7.5)
-	var n := states.size()
-	for i in n:
-		var a := TAU * i / n
-		var d := ItemVisuals.build_display(states[i])
-		d.scale = Vector3.ONE * 1.3
-		pivot.add_child(d)
-		d.position = Vector3(cos(a) * radius, 0.6, sin(a) * radius)
-		_displays.append(d)
+	_ring_states = states
+	_ring_radius = radius
 	var ring := MeshInstance3D.new()
 	ring.mesh = Vfx.ring_mesh(radius, 0.06, 64)
 	ring.material_override = Vfx.material(Color(1.0, 0.78, 0.35, 0.8), 1.6, true)
@@ -72,15 +69,7 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	# В центре — герой в исподнем: всё это ему предстоит отдать.
 	var floor_disc := LowPoly.cyl(radius + 0.6, radius + 0.8, 0.3, 24, Color(0.2, 0.17, 0.18), Vector3(0, -0.17, 0))
 	viewport.add_child(floor_disc)
-	var hero := Actor.new()
-	hero.set_physics_process(false)
-	viewport.add_child(hero)
-	hero.remove_from_group(&"actors")
-	hero.facing = Vector3(0.35, 0, 1).normalized()
-	var model := ActorModel.new()
-	hero.add_child(model)
-	model.setup(hero, ActorModel.Kind.HERO)
-	model.scale = Vector3.ONE * 1.05
+	rebuild_hero()
 	var glow := OmniLight3D.new()
 	glow.position = Vector3(0, 2.6, 1.2)
 	glow.light_color = Color(1.0, 0.8, 0.55)
@@ -94,6 +83,41 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	var fwd := (Vector3(0, 0.3, 0) - Vector3(0, 3.2, 6.5)).normalized()
 	sky.position = Vector3(0.9, -1.2, -9.0)
 	sky.look_at(sky.position + fwd, Vector3.UP)
+
+
+## Вещи по кольцу: сгенерированные вещи выбранного героя, а без собранных моделей — процедурные.
+func _rebuild_ring_items() -> void:
+	for d in _displays:
+		d.queue_free()
+	_displays.clear()
+	var generated := GeneratedItemDisplay.build()
+	var n := _ring_states.size()
+	for i in n:
+		var a := TAU * i / n
+		var d: Node3D = generated.get(_ring_states[i].def_id)
+		if d == null:
+			d = ItemVisuals.build_display(_ring_states[i])
+			d.scale = Vector3.ONE * 1.3
+		pivot.add_child(d)
+		d.position = Vector3(cos(a) * _ring_radius, 0.6, sin(a) * _ring_radius)
+		_displays.append(d)
+
+
+## Герой в центре кольца и его вещи вокруг; пересоздаются при смене варианта в меню «Герой».
+func rebuild_hero() -> void:
+	if not _ring_states.is_empty():
+		_rebuild_ring_items()
+	if _hero != null and is_instance_valid(_hero):
+		_hero.queue_free()
+	_hero = Actor.new()
+	_hero.set_physics_process(false)
+	viewport.add_child(_hero)
+	_hero.remove_from_group(&"actors")
+	_hero.facing = Vector3(0.35, 0, 1).normalized()
+	var model := SkinnedActorModel.for_hero()
+	_hero.add_child(model)
+	model.setup(_hero, ActorModel.Kind.HERO)
+	model.scale = Vector3.ONE * 1.05
 
 
 ## Одна вещь крупно.

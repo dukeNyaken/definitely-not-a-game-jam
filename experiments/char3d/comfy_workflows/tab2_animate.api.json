@@ -1,0 +1,89 @@
+{
+ "1": {
+  "class_type": "Char3DLowPoly",
+  "inputs": {
+   "character": "hero",
+   "tris": 0,
+   "tex": 0,
+   "height": 1.8
+  }
+ },
+ "2": {
+  "class_type": "Preview3DAdvanced",
+  "inputs": {
+   "model_3d": [
+    "1",
+    0
+   ],
+   "width": 1024,
+   "height": 1024
+  }
+ },
+ "3": {
+  "class_type": "PreviewAny",
+  "inputs": {
+   "source": [
+    "1",
+    2
+   ]
+  }
+ },
+ "4": {
+  "class_type": "Char3DRig",
+  "inputs": {
+   "character": [
+    "1",
+    1
+   ]
+  }
+ },
+ "5": {
+  "class_type": "Preview3DAdvanced",
+  "inputs": {
+   "model_3d": [
+    "4",
+    0
+   ],
+   "width": 1024,
+   "height": 1024
+  }
+ },
+ "6": {
+  "class_type": "PreviewAny",
+  "inputs": {
+   "source": [
+    "4",
+    2
+   ]
+  }
+ },
+ "7": {
+  "class_type": "Char3DAnimate",
+  "inputs": {
+   "character": [
+    "4",
+    1
+   ]
+  }
+ },
+ "8": {
+  "class_type": "Preview3DAdvanced",
+  "inputs": {
+   "model_3d": [
+    "7",
+    0
+   ],
+   "width": 1024,
+   "height": 1024
+  }
+ },
+ "9": {
+  "class_type": "PreviewAny",
+  "inputs": {
+   "source": [
+    "7",
+    1
+   ]
+  }
+ }
+}

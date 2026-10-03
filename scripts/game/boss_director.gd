@@ -173,7 +173,7 @@ func _spawn_boss() -> void:
 	boss.set_innate(atk)
 	boss.set_items(_phase_items(0))
 	boss.item_damage_mult = b.enemy_item_damage_mult
-	boss_model = ActorModel.new()
+	boss_model = SkinnedActorModel.for_boss()
 	boss_model.name = "Model"
 	boss.add_child(boss_model)
 	boss_model.setup(boss, ActorModel.Kind.BOSS, Color(0.16, 0.11, 0.2), Color(0.1, 0.07, 0.12))

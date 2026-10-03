@@ -25,7 +25,7 @@ static func make(p_kind: int, p_variant: StringName = &"") -> Puppet:
 func _ready() -> void:
 	super()
 	remove_from_group(&"actors")
-	model = ActorModel.new()
+	model = SkinnedActorModel.for_puppet(kind, variant)
 	model.name = "Model"
 	model.variant = variant
 	add_child(model)

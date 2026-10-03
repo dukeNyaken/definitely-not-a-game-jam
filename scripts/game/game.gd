@@ -87,7 +87,7 @@ func _spawn_hero() -> void:
 	world.add_child(hero)
 	hero.set_items(RunState.ring.items.duplicate())
 	hero.set_innate(FistAction.new())
-	hero_model = ActorModel.new()
+	hero_model = SkinnedActorModel.for_hero()
 	hero_model.name = "Model"
 	hero.add_child(hero_model)
 	hero_model.setup(hero, ActorModel.Kind.HERO)

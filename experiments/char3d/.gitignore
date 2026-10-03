@@ -1,0 +1,6 @@
+out/
+__pycache__/
+*.gpu.csv
+godot_test/models/
+# модели стенда — их кладёт to_godot.py, для игры всё нужное в assets/characters/
+godot_test/characters/
