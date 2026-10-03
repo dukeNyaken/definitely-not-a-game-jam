@@ -10,5 +10,7 @@ func apply(essence: EssenceDef, ctx: ActionContext) -> void:
 	var dir := Combat.flat_dir(ctx.aim_point - ctx.origin, ctx.direction)
 	var dist: float = essence.stat("distance", 4.0)
 	actor.start_dash(dir, dist, float(essence.stat("duration", 0.16)))
-	Vfx.streak(actor, ctx.origin, ctx.origin + dir * dist, essence.color, &"gust_lines")
+	# Хлопок воздуха на старте и широкий закрученный след ветра за персонажем.
+	Vfx.ring(actor, ctx.origin, 1.5, essence.color, 0.3)
+	Vfx.streak(actor, ctx.origin, ctx.origin + dir * dist, essence.color, &"gust_lines", 1.6)
 	play_sound(essence)

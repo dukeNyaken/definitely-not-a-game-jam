@@ -10,12 +10,12 @@ const SHEETS := {
 	## Развёртка взмаха: x — вдоль дуги от хвоста к голове, y — от кромки лезвия внутрь (натягивается на сектор).
 	&"slash_arc": {"tex": preload("res://assets/vfx/slash_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
 	## Мотивы сущностей (эффекты свойств, перешедших от отданных вещей) — варианты базовых листов:
-	## Лезвие — взмах с пилообразной кромкой и перекрестьями надрезов; Масса — светящиеся трещины в земле
-	## с фронтом обломков; Порыв — струи ветра с завитками; Взор — кольцо с раскрывающимися глазами;
+	## Лезвие — взмах с пилообразной кромкой и перекрестьями надрезов; Масса — вспышка, кратер, толстые
+	## раскалённые трещины, волна пыли и камни; Порыв — три ленты ветра, закрученные жгутом, со спиралями; Взор — кольцо с раскрывающимися глазами;
 	## Хватка — три когтистые борозды с крючками.
 	&"blade_arc": {"tex": preload("res://assets/vfx/blade_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
-	&"mass_quake": {"tex": preload("res://assets/vfx/mass_quake.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 50, 60, 70, 80, 90],
-		"radius_px": [12, 28, 42, 52, 58, 61, 62, 62], "size_px": 128},
+	&"mass_quake": {"tex": preload("res://assets/vfx/mass_quake.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 60, 70, 80, 90, 100],
+		"radius_px": [10, 24, 38, 50, 58, 62, 62, 62], "size_px": 128},
 	&"gust_lines": {"tex": preload("res://assets/vfx/gust_lines.png"), "grid": Vector2i(3, 2), "ms": [40, 50, 60, 70, 80]},
 	&"gaze_ring": {"tex": preload("res://assets/vfx/gaze_ring.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 60, 70, 70, 70, 80],
 		"radius_px": [10, 22, 34, 44, 52, 58, 61, 62], "size_px": 128},
@@ -213,9 +213,10 @@ static func eruption(owner: Node, ground: Vector3, height: float, tint: Color, d
 		fx.visible = false
 
 
-## Поле гейзеров на круге radius: большой столб в центре и несколько поменьше вразнобой.
-static func eruption_field(owner: Node, center: Vector3, radius: float, tint: Color, count: int = 4) -> void:
-	eruption(owner, center, radius * 1.6, tint)
+## Поле гейзеров на круге radius: большой столб в центре (with_center) и несколько поменьше вразнобой.
+static func eruption_field(owner: Node, center: Vector3, radius: float, tint: Color, count: int = 4, with_center: bool = true) -> void:
+	if with_center:
+		eruption(owner, center, radius * 1.6, tint)
 	for i in count:
 		var a := TAU * (i + randf() * 0.6) / count
 		var at := center + Vector3(cos(a), 0, sin(a)) * radius * randf_range(0.4, 0.75)

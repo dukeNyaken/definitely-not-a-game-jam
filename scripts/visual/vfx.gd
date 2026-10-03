@@ -184,10 +184,10 @@ static func beam(owner: Node, a: Vector3, b: Vector3, color: Color, width: float
 
 ## След рывка: линии скорости тянутся за персонажем от точки старта, после рывка хвосты втягиваются к нему.
 ## Если owner не в рывке (сцена, тест) — след сразу на весь путь from → to.
-## sheet — лист следа (мотив сущности, например &"gust_lines").
-static func streak(owner: Node3D, from: Vector3, to: Vector3, color: Color, sheet: StringName = &"speed_lines") -> void:
+## sheet — лист следа (мотив сущности, например &"gust_lines"), width — ширина ленты, м.
+static func streak(owner: Node3D, from: Vector3, to: Vector3, color: Color, sheet: StringName = &"speed_lines", width: float = 1.0) -> void:
 	var lift := Vector3(0, 0.45, 0)
 	if owner is Actor and (owner as Actor).is_dashing():
-		DashTrail.follow(owner as Actor, from + lift, color, sheet)
+		DashTrail.follow(owner as Actor, from + lift, color, sheet, width)
 		return
-	_ribbon(owner, sheet, from + lift, to + lift, 1.0, color, {"energy": 1.6, "pull": 0.2})
+	_ribbon(owner, sheet, from + lift, to + lift, width, color, {"energy": 1.6, "pull": 0.2})

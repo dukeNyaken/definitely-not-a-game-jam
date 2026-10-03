@@ -13,5 +13,7 @@ func apply(essence: EssenceDef, ctx: ActionContext) -> void:
 		var away := Combat.flat_dir(t.global_position - ctx.origin, ctx.direction)
 		t.force_move(away * push, float(essence.stat("push_time", 0.2)))
 		Combat.deal(ctx, t, essence.stat("damage", 5.0) * ctx.damage_mult, {"stun": essence.stat("stun", 0.5), "blockable": false})
-	Vfx.ring(actor, ctx.origin, radius, essence.color, 0.4, 0.6, &"mass_quake")
+	# Удар по земле: трещины с волной пыли и камнями, по кругу — столбы пыли (не на самом персонаже).
+	Vfx.ring(actor, ctx.origin, radius, essence.color, 0.45, 0.6, &"mass_quake")
+	FlipbookFx.eruption_field(actor, ctx.origin, radius * 0.75, essence.color.darkened(0.15), 4, false)
 	play_sound(essence)
