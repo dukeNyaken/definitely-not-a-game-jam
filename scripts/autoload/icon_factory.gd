@@ -74,7 +74,7 @@ func _render_all() -> void:
 		var frame: Array = FRAMING[id]
 		var cam := Camera3D.new()
 		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-		cam.size = float(GeneratedItemDisplay.FIT.get(id, GeneratedItemDisplay.FIT_DEFAULT)) + 0.4 if generated else frame[0]
+		cam.size = GeneratedItemDisplay.preview_size(id) if generated else frame[0]
 		vp.add_child(cam)
 		cam.position = Vector3(0, 0, 4)
 		cam.current = true

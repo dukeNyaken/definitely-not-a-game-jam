@@ -1,4 +1,102 @@
 extends GutTest
+
+func _features(node: Node, type: StringName = &"") -> Array:
+	var found := []
+	if node.has_meta(&"appearance_feature") and (type == &"" or node.get_meta(&"appearance_feature") == type):
+		found.append(node)
+	for child in node.get_children():
+		found.append_array(_features(child, type))
+	return found
+
+
+func test_relic_horns_have_distinct_tiers_and_correct_locations_on_every_character() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for variant in SkinnedActorModel.variants():
+		SkinnedActorModel.select(variant["id"])
+		for tier in [1, 2, 3]:
+			for slot in [&"helmet", &"shield", &"gloves", &"boots"]:
+				var state := ItemState.create(slot)
+				state.appearance = tier
+				var display := ItemVisuals.build_display(state)
+				if tier == 1:
+					assert_eq(_features(display).size(), 0)
+				elif slot == &"helmet" or slot == &"shield":
+					var horns := _features(display, &"head_horn" if slot == &"helmet" else &"shield_horn")
+					assert_eq(horns.size(), 1 if tier == 2 else 2)
+					if tier == 2 and slot == &"helmet":
+						assert_almost_eq((horns[0].get_meta(&"attachment_point") as Vector3).x, 0.0, 0.025, "один рог по центральной оси")
+				elif slot == &"gloves":
+					assert_eq(_features(display, &"phalanx_horn").size(), 6)
+					assert_eq(_features(display, &"wrist_horn").size(), 0 if tier == 2 else 4, "запястья только на III")
+				elif slot == &"boots":
+					var toes := _features(display, &"toe_horn")
+					assert_eq(toes.size(), 2 if tier == 2 else 4)
+					for horn in toes:
+						var point: Vector3 = horn.get_meta(&"attachment_point")
+						assert_gt(point.z, 0.05, "шипы на носках, а не пятках")
+						assert_lt(point.y, 0.16, "шипы ниже щиколоток")
+				display.free()
+
+
+func test_generated_relics_follow_skin_bindings_and_hide_with_sacrificed_items() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for variant in SkinnedActorModel.variants():
+		for kind in [ActorModel.Kind.HERO, ActorModel.Kind.BOSS]:
+			var model := _model(variant["id"], kind, SLOTS)
+			for state in model.actor.items:
+				state.appearance = 3
+			model.refresh_items()
+			model._collect_meshes()
+			for flame: MeshInstance3D in model.find_children("RelicFlame", "MeshInstance3D", true, false):
+				assert_eq((flame.material_override as ShaderMaterial).shader, ItemAppearance.FLAME, "контур героя не заменяет материал пламени")
+			for slot in SLOTS:
+				assert_gt(model._appearances.get(slot, []).size(), 0)
+				for attachment: BoneAttachment3D in model._appearances[slot]:
+					assert_gte(attachment.bone_idx, 0, "крепление на существующей кости")
+					var feature: Node3D = attachment.get_child(0)
+					assert_true(feature.has_meta(&"attachment_point"))
+			model.hide_all_items()
+			for nodes in model._appearances.values():
+				for attachment in nodes:
+					assert_false(attachment.visible)
+			model.reveal_item(&"helmet")
+			for attachment in model._appearances[&"helmet"]:
+				assert_true(attachment.visible)
+			model.actor.set_items([])
+			assert_eq(model._appearances.size(), 0, "жертва убирает и рога, и пламя")
+
+
+func test_relic_attachments_follow_animated_hands_and_feet() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for variant in SkinnedActorModel.variants():
+		var model := _model(variant["id"], ActorModel.Kind.HERO, SLOTS)
+		for state in model.actor.items:
+			state.appearance = 3
+		model.refresh_items()
+		model.set_process(false)
+		model._tree.active = false
+		var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
+		player.play(model._cfg["locomotion"][1])
+		var previous := {}
+		for time in [0.15, 0.55]:
+			player.seek(time, true)
+			await get_tree().process_frame
+			await get_tree().process_frame
+			for slot in [&"gloves", &"boots"]:
+				for attachment: BoneAttachment3D in model._appearances[slot]:
+					var skeleton := attachment.get_parent() as Skeleton3D
+					var feature := attachment.get_child(0) as Node3D
+					var expected := skeleton.global_transform * skeleton.get_bone_global_pose(attachment.bone_idx) * feature.position
+					assert_lt(feature.global_position.distance_to(expected), 0.001, "рог следует анимации кости")
+					if previous.has(feature):
+						assert_gt(feature.global_position.distance_to(previous[feature]), 0.005, "деталь двигается с кистью или стопой")
+					previous[feature] = feature.global_position
 ## Сгенерированные герои и босс (assets/characters/, SkinnedActorModel): в каждом варианте есть все
 ## семь вещей, надеть/снять переключает вещь и часть тела под ней, ходьба выбирается по скорости.
 ## Без собранных моделей тесты пропускаются — игра тогда на процедурной модели.
@@ -78,11 +176,10 @@ func test_mastery_trim_survives_generated_geometry_and_updates_on_upgrade() -> v
 				m.refresh_items()
 				for slot in SLOTS:
 					var trims := 0
-					for part in m._item_nodes[slot]:
-						for child in part.get_children():
-							if child.has_meta(&"mastery_trim"):
-								trims += 1
-								assert_true(child.is_visible_in_tree(), "%s/%d/%s/%d: украшение видно" % [v["id"], kind, slot, tier])
+					for child in m._appearances.get(slot, []):
+						if child.has_meta(&"mastery_trim"):
+							trims += 1
+							assert_true(child.is_visible_in_tree(), "%s/%d/%s/%d: украшение видно" % [v["id"], kind, slot, tier])
 					if tier == 1:
 						assert_eq(trims, 0, "возврат к исходному облику убирает украшения")
 					else:
@@ -107,7 +204,7 @@ func test_generated_menu_items_show_selected_mastery_appearance() -> void:
 			var trim := display.find_child("AppearanceTrim", true, false)
 			assert_not_null(trim, "%s/%s: выбранный облик на сгенерированной вещи" % [v["id"], slot])
 			if trim != null:
-				assert_eq(trim.get_child_count(), 4)
+				assert_gt(_features(display).size(), 0, "новая геометрия на исходной вещи")
 				assert_almost_eq((display.scale * trim.scale).x, 1.0, 0.001, "украшения сохраняют размер на маленьких исходных сетках")
 
 
@@ -235,7 +332,7 @@ func test_single_mastery_previews_use_character_meshes_for_all_three_forms() -> 
 				if tier == 1:
 					assert_null(trim)
 				else:
-					assert_eq(trim.get_child_count(), 2 if tier == 2 else 4)
+					assert_gt(_features(display).size(), 0, "улучшение имеет настоящую геометрию")
 				display.free()
 		source.free()
 
@@ -274,6 +371,9 @@ func test_amulet_preview_has_readable_height_for_every_character() -> void:
 			var box := GeneratedItemDisplay._bounds(meshes, display)
 			assert_gt(box.size.y, 0.5, "%s/%d: виден медальон, а не полоска" % [variant["id"], tier])
 			assert_gt(box.size.y / box.size.x, 0.65)
+			for feature in _features(display):
+				var p := GeneratedItemDisplay._local_transform(feature, display).origin * display.scale
+				assert_lt(p.length(), 1.0, "украшения плоского амулета остаются внутри витрины")
 			display.free()
 
 
@@ -290,6 +390,26 @@ func test_flat_amulet_stays_facing_camera_after_switching_from_rotating_item() -
 	showcase.show_single(ItemState.create(&"shield"))
 	showcase._process(1.0)
 	assert_false(showcase._flat_preview, "остальные вещи сохраняют вращение")
+
+
+func test_switching_relic_tiers_keeps_showcase_camera_size() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	var showcase := ItemShowcase.new()
+	add_child_autofree(showcase)
+	for variant in SkinnedActorModel.variants():
+		SkinnedActorModel.select(variant["id"])
+		for slot in SLOTS:
+			var size := 0.0
+			for tier in [1, 2, 3]:
+				var state := ItemState.create(slot)
+				state.appearance = tier
+				showcase.show_single(state)
+				var camera := showcase.viewport.get_camera_3d()
+				if tier == 1:
+					size = camera.size
+				assert_almost_eq(camera.size, size, 0.001, "переключение облика сохраняет масштаб")
 
 
 func test_locomotion_speeds_increase() -> void:

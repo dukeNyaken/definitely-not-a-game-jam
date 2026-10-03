@@ -789,7 +789,7 @@ func _apply_rim() -> void:
 
 func _collect(n: Node) -> void:
 	for ch in n.get_children():
-		if ch is FlipbookFx:
+		if ch is FlipbookFx or ch.has_meta(&"appearance_fx"):
 			continue
 		if ch is MeshInstance3D:
 			_meshes.append(ch)
@@ -804,7 +804,7 @@ func refresh_items() -> void:
 	_item_nodes.clear()
 	for state in actor.items:
 		var nodes := []
-		for part in ItemVisuals.build(state):
+		for part in _build_item_parts(state):
 			var socket: Node3D = sockets.get(part["socket"])
 			if socket == null:
 				socket = sockets[&"chest"]
@@ -815,6 +815,10 @@ func refresh_items() -> void:
 	_connect_actions()
 	_rebuild_crown()
 	_collect_meshes.call_deferred()
+
+
+func _build_item_parts(state: ItemState) -> Array:
+	return ItemVisuals.build(state)
 
 
 ## Корона босса: по осколку на каждую надетую вещь, цвета их сущностей.

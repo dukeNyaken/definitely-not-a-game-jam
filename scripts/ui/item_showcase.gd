@@ -139,8 +139,8 @@ func show_single(state: ItemState) -> void:
 	var d := ItemVisuals.build_display(state)
 	d.scale = Vector3.ONE * 1.6
 	if d.has_meta(&"hero_variant"):
-		# Одно кадрирование для всех трёх обликов, с местом для кристаллов реликвии.
-		viewport.get_camera_3d().size = 1.6 * (float(GeneratedItemDisplay.FIT.get(state.def_id, GeneratedItemDisplay.FIT_DEFAULT)) + 0.4)
+		# Все три облика в общей рамке, включая новые рога и пламя.
+		viewport.get_camera_3d().size = 1.6 * GeneratedItemDisplay.preview_size(state.def_id)
 	pivot.add_child(d)
 	_displays.append(d)
 	spin_speed = 0.7
