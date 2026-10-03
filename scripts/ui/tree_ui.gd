@@ -48,11 +48,11 @@ func _ready() -> void:
 	_diagram = PropertyDiagram.new()
 	graph_frame.add_child(_diagram)
 	var detail_frame := PanelContainer.new()
-	detail_frame.custom_minimum_size = Vector2(350, 0)
+	detail_frame.custom_minimum_size = Vector2(370, 0)
 	detail_frame.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.07, 0.05, 0.075), Color(0.25, 0.2, 0.25), 1, 8, 16))
 	row.add_child(detail_frame)
 	_details = VBoxContainer.new()
-	_details.add_theme_constant_override(&"separation", 10)
+	_details.add_theme_constant_override(&"separation", 8)
 	detail_frame.add_child(_details)
 	_diagram.node_selected.connect(_inspect_node)
 	var footer := HBoxContainer.new()
@@ -111,7 +111,9 @@ func _inspect_node(index: int) -> void:
 		var essence := Db.essence(prop.essence_id)
 		_details.add_child(_wrapped(Db.item(prop.source_item_id).display_name, 30, essence.color))
 		_details.add_child(_wrapped("Носитель: %s · Урон +%d%%" % [_host.def().display_name, roundi((ActionContext.item_mult(_host) - 1) * 100)], 17, UiKit.MUTED))
-		_details.add_child(UiKit.label("%s · %d XP · стоп" % [Db.item(prop.source_item_id).display_name, int(Mastery.xp.get(prop.source_item_id, 0))], 17, UiKit.MUTED))
+		_details.add_child(UiKit.label("%d XP" % int(Mastery.xp.get(prop.source_item_id, 0)), 17, UiKit.MUTED))
+		_details.add_child(_wrapped(prop.display_name(), 19, UiKit.GOLD))
+		_details.add_child(_wrapped(BattleSkillInfo.effect_summary(prop), 17, UiKit.TEXT))
 		if not bool(_diagram.nodes[index]["linked"]):
 			_details.add_child(_wrapped("Нет связи с родным навыком", 17, UiKit.DANGER.lightened(0.2)))
 		metrics = BattleSkillInfo.effect(prop, _host)
@@ -129,6 +131,8 @@ func _inspect_node(index: int) -> void:
 		tile.add_child(content)
 		content.add_child(_wrapped(str(entry["value"]), 24, UiKit.TEXT))
 		content.add_child(_wrapped(str(entry["label"]), 14, UiKit.MUTED))
+	if prop == null and not _host.properties.is_empty():
+		_add_inherited_skills()
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_details.add_child(spacer)
@@ -139,6 +143,32 @@ func _inspect_node(index: int) -> void:
 			var comp := actor.component(_host.def_id)
 			if comp != null and not comp.is_passive():
 				_details.add_child(UiKit.label("Навык готов" if comp.cooldown_left <= 0 else "Готов через %s с" % BattleSkillInfo.number(comp.cooldown_left), 17, UiKit.GOLD))
+
+
+func _add_inherited_skills() -> void:
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override(&"separation", 4)
+	_details.add_child(list)
+	list.add_child(UiKit.label("Слияния · урон +%d%%" % roundi((ActionContext.item_mult(_host) - 1) * 100), 17, UiKit.GOLD))
+	for node in _diagram.nodes:
+		var prop: Property = node["property"]
+		if node["state"] != _host or prop == null:
+			continue
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override(&"separation", 6)
+		list.add_child(row)
+		var order := UiKit.label(str(node["order"]) if bool(node["linked"]) else "!", 16, UiKit.GOLD)
+		order.custom_minimum_size.x = 18
+		row.add_child(order)
+		var icon := TextureRect.new()
+		icon.texture = IconFactory.icon(prop.source_item_id)
+		icon.custom_minimum_size = Vector2(24, 24)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(icon)
+		var description := _wrapped(BattleSkillInfo.effect_summary(prop), 16, UiKit.TEXT)
+		description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(description)
 
 
 func _input(event: InputEvent) -> void:

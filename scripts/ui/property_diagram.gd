@@ -139,7 +139,7 @@ func _layout() -> void:
 
 func _color(index: int) -> Color:
 	var prop: Property = nodes[index]["property"]
-	return (nodes[index]["state"] as ItemState).def().essence.color if prop == null else Db.essence(prop.essence_id).color
+	return (nodes[index]["state"] as ItemState).def().essence.color if prop == null else Color(0.55, 0.55, 0.55)
 
 
 func _label(index: int) -> String:
