@@ -92,6 +92,9 @@ func enemy_scale(s: int = -1) -> float:
 
 
 func sacrifice(index: int) -> Dictionary:
+	if index < 0 or index >= ring.items.size():
+		push_error("RunState.sacrifice: индекс %d вне кольца из %d вещей" % [index, ring.items.size()])
+		return {}
 	var victim_id := ring.items[index].def_id
 	var res := ring.sacrifice(index)
 	snapshots.append(res["victim_snapshot"])
@@ -107,6 +110,9 @@ func sacrifice(index: int) -> Dictionary:
 
 
 func swap(index: int) -> void:
+	if index < 0 or index >= ring.items.size():
+		push_error("RunState.swap: индекс %d вне кольца из %d вещей" % [index, ring.items.size()])
+		return
 	ring.swap_neighbors(index)
 	shrine_used[stage] = true
 	ring_changed.emit()

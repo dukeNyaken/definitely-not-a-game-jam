@@ -6,7 +6,7 @@ signal unlocked(item_id: StringName, level: int)
 signal progress_reset
 
 const SAVE_PATH := "user://item_mastery.cfg"
-var rules: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/item_mastery.json"))
+var rules: Dictionary = {}
 var xp: Dictionary = {}
 var choices: Dictionary = {}
 var run_xp: Dictionary = {}
@@ -17,14 +17,39 @@ var save_error: bool = false
 
 
 func _ready() -> void:
+	_load_rules()
 	memory_only = OS.get_environment("GODOT_META_MEMORY") == "1" or "--meta-memory" in OS.get_cmdline_user_args()
 	if not memory_only:
 		load_progress()
 
 
+## Правила из item_mastery.json. Битый или неподходящий файл не должен ронять мета-прогрессию:
+## тогда rules остаётся пустым, уровень всегда 1, формы сбрасываются на базовые.
+func _load_rules() -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/item_mastery.json"))
+	if parsed is Dictionary and _rules_valid(parsed):
+		rules = parsed
+	else:
+		push_error("item_mastery.json повреждён или не подходит — мета-прогрессия работает на базовых значениях")
+
+
+func _rules_valid(r: Dictionary) -> bool:
+	var thresholds: Array = r.get("thresholds", [])
+	if thresholds.size() != 3:
+		return false
+	for i in range(1, thresholds.size()):
+		if int(thresholds[i]) <= int(thresholds[i - 1]):
+			return false
+	var items: Dictionary = r.get("items", {})
+	for id in Db.ITEM_IDS:
+		if not items.has(id):
+			return false
+	return true
+
+
 func level(id: StringName) -> int:
 	var total := int(xp.get(id, 0))
-	var thresholds: Array = rules["thresholds"]
+	var thresholds: Array = rules.get("thresholds", [])
 	for i in range(thresholds.size() - 1, -1, -1):
 		if total >= int(thresholds[i]):
 			return i + 1
@@ -47,7 +72,12 @@ func begin_run() -> void:
 
 
 func form(id: StringName, tier: int) -> Dictionary:
-	return rules["items"][String(id)][clampi(tier, 1, 3) - 1]
+	var forms: Array = rules.get("items", {}).get(String(id), [])
+	if not forms.is_empty():
+		return forms[clampi(tier, 1, mini(forms.size(), 3)) - 1]
+	# Деградированный режим (битый item_mastery.json): форма не меняет вещь.
+	var base := Db.item(id)
+	return {"name": base.display_name, "effect": "", "stats": {}}
 
 
 func choose(id: StringName, tier: int) -> void:
@@ -59,8 +89,14 @@ func choose(id: StringName, tier: int) -> void:
 
 
 func reward(id: StringName, stage: int, elite: bool = false) -> int:
-	var base := int(rules["rewards"].get(String(id), 0))
-	return roundi(base * (1.0 + float(rules["stage_bonus"]) * maxi(stage - 1, 0)) * (float(rules["elite_multiplier"]) if elite else 1.0))
+	var base := int(rules.get("rewards", {}).get(String(id), 0))
+	return roundi(base * (1.0 + float(rules.get("stage_bonus", 0.0)) * maxi(stage - 1, 0)) * (float(rules.get("elite_multiplier", 1.0)) if elite else 1.0))
+
+
+## Максимум XP: последний порог правил, а без правил — без капа.
+func xp_cap() -> int:
+	var thresholds: Array = rules.get("thresholds", [])
+	return int(thresholds.back()) if not thresholds.is_empty() else 2147483647
 
 
 func award(hero: Actor, amount: int) -> void:
@@ -74,7 +110,7 @@ func award(hero: Actor, amount: int) -> void:
 			continue
 		seen[id] = true
 		var previous := level(id)
-		xp[id] = mini(int(xp.get(id, 0)) + amount, int(rules["thresholds"].back()))
+		xp[id] = mini(int(xp.get(id, 0)) + amount, xp_cap())
 		run_xp[id] = int(run_xp.get(id, 0)) + amount
 		var current := level(id)
 		if current > previous:
@@ -100,9 +136,10 @@ func award(hero: Actor, amount: int) -> void:
 
 func progress_text(id: StringName) -> String:
 	var lv := level(id)
-	if lv == 3:
-		return "Ур. 3 · МАКС"
-	return "Ур. %d · %d / %d XP" % [lv, int(xp.get(id, 0)), int(rules["thresholds"][lv])]
+	var thresholds: Array = rules.get("thresholds", [])
+	if lv == 3 or thresholds.is_empty():
+		return "Ур. %d · МАКС" % lv
+	return "Ур. %d · %d / %d XP" % [lv, int(xp.get(id, 0)), int(thresholds[lv])]
 
 
 ## Отладочный сброс: новый пустой профиль, включая резервную копию.
@@ -158,7 +195,7 @@ func load_progress(path: String = SAVE_PATH) -> void:
 	for id in Db.ITEM_IDS:
 		var value: Variant = cfg.get_value("xp", String(id), 0)
 		if value is int:
-			xp[id] = clampi(value, 0, int(rules["thresholds"].back()))
+			xp[id] = clampi(value, 0, xp_cap())
 		var choice: Variant = cfg.get_value("appearance", String(id), level(id))
 		if choice is int:
 			choices[id] = clampi(choice, 1, level(id))

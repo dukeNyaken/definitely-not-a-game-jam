@@ -282,6 +282,7 @@ func _physics_process(delta: float) -> void:
 		State.SHRINE:
 			_shrine_timer -= delta
 			if _shrine_timer <= 0.0 and _ui_lock == 0:
+				shrine_done(false)
 				start_wave(wave + 1)
 
 

@@ -478,8 +478,8 @@ func _animate(delta: float) -> void:
 	# скольжение 1.4 м/с). Смесь остаётся только на переходе, пока точка доезжает.
 	var target_pos := 0.0
 	var scale := 1.0
-	if speed > _cfg["loco_min_speed"]:
-		var best := 1
+	if speed > _cfg["loco_min_speed"] and _speeds.size() >= 2:
+		var best := 0
 		for i in range(1, _speeds.size()):
 			if absf(log(speed / _speeds[i])) < absf(log(speed / _speeds[best])):
 				best = i
