@@ -155,7 +155,7 @@ func test_main_menu_meta_collection_and_content_buttons_fit_together() -> void:
 			assert_true(Rect2(0, 0, 1600, 860).encloses(child.get_global_rect()), "%s помещается выше подписи внизу" % child.text)
 	assert_has(captions, "Катсцены")
 	assert_has(captions, "Облики и опыт вещей")
-	assert_has(captions, Render.cutscenes_text())
+	assert_does_not_have(captions, Render.cutscenes_text(), "переключатель сцен — в меню «Катсцены», а не здесь")
 
 
 func test_result_layout_stays_still_when_switching_all_items_and_forms() -> void:

@@ -93,7 +93,9 @@
       "offer": "res://assets/characters/anims/npc_faithful_offer.tres",
       "wring": "res://assets/characters/anims/npc_faithful_wring.tres",
       "downcast": "res://assets/characters/anims/npc_faithful_downcast.tres",
-      "huddle": "res://assets/characters/anims/npc_faithful_huddle.tres"
+      "huddle": "res://assets/characters/anims/npc_faithful_huddle.tres",
+      "lantern_high": "res://assets/characters/anims/npc_faithful_lantern_high.tres",
+      "sing": "res://assets/characters/anims/npc_faithful_sing.tres"
     },
     "poses": {
       "lantern": {
@@ -110,6 +112,12 @@
       },
       "huddle": {
         "anim": "npc/huddle"
+      },
+      "lantern_high": {
+        "anim": "npc/lantern_high"
+      },
+      "sing": {
+        "anim": "npc/sing"
       }
     },
     "sockets": {

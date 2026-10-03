@@ -121,6 +121,25 @@ func run() -> void:
 				var shoulder := point("RightUpperArm")
 				reach("Right", Vector3(shoulder.x - 0.06, shoulder.y - 0.3, 0.57), Vector3(shoulder.x - 0.18, shoulder.y - 0.35, 0.25))
 				save_pose(id, "frail_offer" if id == "father" else "offer")
+				if id == "faithful":
+					# Песня Ильвы. Кисть держит фонарь так же, как в стойке покоя (basis), — он висит отвесно,
+					# как бы высоко ни была рука.
+					# lantern_high — фонарь поднят над головой, голова запрокинута.
+					neutral()
+					turn_world("Head", Vector3.RIGHT, -9.0)
+					var sl := point("LeftUpperArm")
+					reach("Left", Vector3(sl.x + 0.2, sl.y + 0.42, 0.22), Vector3(sl.x + 0.45, sl.y + 0.05, -0.05))
+					set_world("LeftHand", basis)
+					save_song_pose(registry[id], id, "lantern_high")
+					# sing — фонарь у груди, правая рука раскрыта в сторону, голова поднята.
+					neutral()
+					turn_world("Head", Vector3.RIGHT, -8.0)
+					sl = point("LeftUpperArm")
+					reach("Left", Vector3(sl.x + 0.14, sl.y - 0.4, 0.34), Vector3(sl.x + 0.28, sl.y - 0.42, 0.05))
+					set_world("LeftHand", basis)
+					var sr := point("RightUpperArm")
+					reach("Right", Vector3(sr.x - 0.34, sr.y - 0.3, 0.3), Vector3(sr.x - 0.3, sr.y - 0.5, -0.1))
+					save_song_pose(registry[id], id, "sing")
 			model.free()
 		var file := FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify(registry, "  ", false) + "\n")
@@ -204,6 +223,12 @@ func frame(fwd: Vector3, up: Vector3) -> Basis:
 	var f := fwd.normalized()
 	var u := (up - f * up.dot(f)).normalized()
 	return Basis(f, u, f.cross(u))
+
+## Поза одной сцены: сохранить и записать в реестр (общие позы пишет цикл выше).
+func save_song_pose(entry: Dictionary, id: String, name: String) -> void:
+	save_pose(id, name)
+	entry["animations"][name] = "res://assets/characters/anims/npc_%s_%s.tres" % [id, name]
+	entry.get_or_add("poses", {})[name] = {"anim": "npc/" + name}
 
 func save_pose(id: String, name: String) -> void:
 	var anim := Animation.new()

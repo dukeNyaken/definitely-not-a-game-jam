@@ -391,7 +391,9 @@ func test_song_beats_follow_the_measured_grid() -> void:
 
 
 func test_song_poses_lift_the_lantern() -> void:
+	# поза процедурной модели; у сгенерированной Ильвы она запечена (ниже и в test_skinned_model)
 	var p := Puppet.make(ActorModel.Kind.FAITHFUL)
+	p.procedural = true
 	add_child_autofree(p)
 	p.model._animate(0.016)
 	var rest: float = p.hand_position(&"l_hand").y
@@ -401,6 +403,29 @@ func test_song_poses_lift_the_lantern() -> void:
 	p.set_pose(&"sing")
 	p.model._animate(0.016)
 	assert_gt(p.model.head.rotation.x, 0.0, "поёт — голова поднята")
+
+
+## У сгенерированной Ильвы позы песни запечены под её тело (experiments/char3d/npc_poses.gd):
+## в lantern_high кисть с фонарём — выше головы.
+func test_generated_ilva_lifts_the_lantern_too() -> void:
+	var p := Puppet.make(ActorModel.Kind.FAITHFUL)
+	add_child_autofree(p)
+	if not p.model is SkinnedActorModel:
+		pass_test("у Ильвы процедурная модель — позы проверены выше")
+		return
+	var m := p.model as SkinnedActorModel
+	var clip: Animation = load("res://assets/characters/anims/npc_faithful_lantern_high.tres")
+	var skeleton: Skeleton3D = m.find_children("*", "Skeleton3D", true, false)[0]
+	for t in clip.get_track_count():
+		if clip.track_get_type(t) == Animation.TYPE_ROTATION_3D:
+			var bone := skeleton.find_bone(String(clip.track_get_path(t)).get_slice(":", 1))
+			if bone >= 0:
+				skeleton.set_bone_pose_rotation(bone, clip.rotation_track_interpolate(t, 0.0))
+	skeleton.force_update_all_bone_transforms()
+	var hand := skeleton.get_bone_global_pose(skeleton.find_bone("LeftHand")).origin.y
+	var head := skeleton.get_bone_global_pose(skeleton.find_bone("Head")).origin.y
+	assert_gt(hand, head, "кисть с фонарём выше головы")
+	assert_eq(m._cfg["poses"]["sing"]["anim"], "npc/sing")
 
 
 ## Камера ведёт идущих: фокус догоняет движущуюся точку.
