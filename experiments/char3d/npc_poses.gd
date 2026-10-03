@@ -32,6 +32,9 @@ func run() -> void:
 				var bone: String = {"l_hand": "LeftHand", "r_hand": "RightHand", "chest": "UpperChest"}[socket_name]
 				var basis := sk.get_bone_global_pose(sk.find_bone(bone)).basis.orthonormalized()
 				var frame := Basis(Vector3.UP, PI)
+				if id == "captain":
+					# щит висит на предплечье сбоку, лицом наружу (влево), как у героя, а не перед грудью
+					frame = frame * Basis(Vector3.UP, PI / 2)
 				var rot := (basis.inverse() * frame).get_euler() * 180.0 / PI
 				sockets[socket_name] = {"rot": [rot.x, rot.y, rot.z]}
 				if socket_name == "chest":

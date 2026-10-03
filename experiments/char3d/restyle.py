@@ -49,6 +49,17 @@ RESTYLE = {
                   "no cast shadow, no text.",
         "back": " Show the back of the jester cap and bells, the back of the quartered doublet and hose; no face visible.",
     },
+    # Щит героя-рыцаря: предмет, подменяется в heroes/knight.glb и boss/knight.glb (swap_item.py)
+    "knight_shield": {
+        "base": None,
+        "refs": ["shield.png"],
+        "prompt": "Recreate the shield from image 1 as one isolated early PlayStation 2 low polygon game prop with hand painted "
+                  "texture: heater kite shield, polished steel face, brass trim along the edges with round brass rivets, an inset "
+                  "brass escutcheon with three embossed lions in the upper middle, pointed bottom, gently curved top edge. "
+                  "Straight FRONT orthographic view, centered, filling two thirds of the frame height. Flat uniform medium gray "
+                  "background, soft even neutral illumination, NO cast shadow, no checkerboard, no text, nothing else.",
+        "back": " Show the plain steel back of the shield with brass rim, two leather arm straps and a grip; no lions.",
+    },
 }
 
 
@@ -60,8 +71,10 @@ def main(stage, ids):
             folder.mkdir(exist_ok=True)
             front, back = folder / "front.png", folder / "back.png"
             if stage == "images":
-                graph = img_edit.graph(pn.upload(pn.OUT / r["base"] / "front.png"), r["prompt"], 20264001, "char3d/restyle_" + name)
-                for i, ref in enumerate(r["refs"]):
+                # без основы (предмет) картинка 1 — сам концепт
+                first = pn.OUT / r["base"] / "front.png" if r["base"] else REFS / r["refs"][0]
+                graph = img_edit.graph(pn.upload(first), r["prompt"], 20264001, "char3d/restyle_" + name)
+                for i, ref in enumerate(r["refs"] if r["base"] else []):
                     node = str(20 + i)
                     graph[node] = {"class_type": "LoadImage", "inputs": {"image": pn.upload(REFS / ref)}}
                     graph["5"]["inputs"]["images.image_%d" % (i + 2)] = [node, 0]
