@@ -1,7 +1,8 @@
 extends Node
 ## Звуки и музыка. Файлы лежат в res://assets/audio/<имя>.mp3|.ogg|.wav; отсутствующие тихо пропускаются.
 ## Музыка «на плёнке»: у алтаря трек битвы зажёвывает (tape_switch), после алтаря лента снова
-## раскручивается с того же места (tape_resume).
+## раскручивается с того же места (tape_resume). Битва — плейлист (play_playlist): треки в случайном
+## порядке, каждый до конца; остальная музыка зациклена.
 
 const SFX_DIR := "res://assets/audio/"
 const EXTENSIONS := ["mp3", "ogg", "wav"]
@@ -27,6 +28,9 @@ var _music_pos: Dictionary = {}
 var _tape_held: StringName = &""
 ## Твины каждого музыкального плеера: перед повторным запуском плеера старые гасятся.
 var _music_tweens: Dictionary = {}
+## Плейлист и оставшиеся в текущем круге треки (перемешаны, без повтора подряд).
+var _playlist: Array[StringName] = []
+var _bag: Array[StringName] = []
 var _last_played: Dictionary = {}
 
 
@@ -41,6 +45,8 @@ func _ready() -> void:
 	_music_b = AudioStreamPlayer.new()
 	add_child(_music_a)
 	add_child(_music_b)
+	_music_a.finished.connect(_on_music_finished.bind(_music_a))
+	_music_b.finished.connect(_on_music_finished.bind(_music_b))
 
 
 func _stream(sfx_name: StringName) -> AudioStream:
@@ -94,6 +100,18 @@ func stop_music(fade: float = 1.0) -> void:
 		_fade_out(p, fade)
 
 
+## Плейлист: если его трек зажевало у алтаря — лента раскручивается с того же места; если трек
+## плейлиста уже играет — он и продолжается; иначе — случайный трек с начала.
+func play_playlist(tracks: Array[StringName], fade: float = 1.2) -> void:
+	if tracks != _playlist:
+		_playlist = tracks.duplicate()
+		_bag.clear()
+	if _tape_held in _playlist:
+		tape_resume()
+	elif not _music_current in _playlist:
+		play_music(_next_in_playlist(), fade)
+
+
 ## Плёнку зажёвывает: текущий трек дёргается и замедляется до остановки (место запоминается),
 ## затем играет track — с того места, где плёнка остановила его в прошлый раз.
 func tape_switch(track: StringName) -> void:
@@ -138,7 +156,7 @@ func _start_music(track: StringName, from: float, fade: float, delay: float = 0.
 	var s := _stream(track)
 	if s == null:
 		return null
-	_ensure_loop(s)
+	_set_loop(s, not track in _playlist)
 	var p := _music_b if _music_active == _music_a else _music_a
 	_kill_tweens(p)
 	p.stop()
@@ -201,16 +219,38 @@ func _kill_tweens(p: AudioStreamPlayer) -> void:
 	_music_tweens[p] = []
 
 
-## Петли размечены при импорте; на всякий случай включаем и здесь.
-func _ensure_loop(s: AudioStream) -> void:
-	if s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED:
+func _next_in_playlist() -> StringName:
+	if _bag.is_empty():
+		_bag = _playlist.duplicate()
+		_bag.shuffle()
+		# Новый круг не начинается с только что отыгравшего трека.
+		if _bag.size() > 1 and _bag[0] == _music_current:
+			_bag.append(_bag.pop_front())
+	return _bag.pop_front()
+
+
+## Трек плейлиста доиграл — сразу следующий случайный (зацикленные треки сюда не попадают).
+func _on_music_finished(p: AudioStreamPlayer) -> void:
+	if p != _music_active or not _music_current in _playlist:
+		return
+	_music_pos.erase(_music_current)
+	_music_current = _next_in_playlist()
+	_music_active = _start_music(_music_current, 0.0, 0.05)
+
+
+## Петли размечены при импорте; на всякий случай выставляем и здесь (треки плейлиста — без петли).
+func _set_loop(s: AudioStream, on: bool) -> void:
+	if s is AudioStreamWAV:
 		var w := s as AudioStreamWAV
-		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		w.loop_end = int(w.get_length() * w.mix_rate)
+		if not on:
+			w.loop_mode = AudioStreamWAV.LOOP_DISABLED
+		elif w.loop_mode == AudioStreamWAV.LOOP_DISABLED:
+			w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			w.loop_end = int(w.get_length() * w.mix_rate)
 	elif s is AudioStreamMP3:
-		(s as AudioStreamMP3).loop = true
+		(s as AudioStreamMP3).loop = on
 	elif s is AudioStreamOggVorbis:
-		(s as AudioStreamOggVorbis).loop = true
+		(s as AudioStreamOggVorbis).loop = on
 
 
 func set_music_volume(db: float) -> void:

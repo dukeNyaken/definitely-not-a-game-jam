@@ -67,7 +67,7 @@ static func _body(cs: Cutscene, game: Game) -> void:
 	CutsceneFx.pillar(world, c, GOLD, 7.0, 0.95, 2.2)
 	Vfx.ring(hero, c, 3.2, GOLD, 1.0, 0.3)
 	cs.flash(GOLD, 0.8, 0.35)
-	Audio.play(&"altar_open", -4.0)
+	Audio.play(&"altar_open", -8.0)
 	game.arena.set_indoor(true)
 	cs.mood(&"legend_cold", 1.2)
 	var stage := c + up * STAGE_DEPTH

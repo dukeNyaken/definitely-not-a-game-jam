@@ -9,10 +9,9 @@ signal banner(title: String, subtitle: String)
 enum State { INTRO, WAVES, WAVE_PAUSE, SHRINE, CLEARED, ALTAR, SACRIFICE, TRANSITION, BOSS_INTRO, BOSS, OVER, CUTSCENE }
 
 const ELITE_WAVE := 3
-## Музыка битвы по этапам 1–6: «Ferrum et Sanguis», «Sacrificium», «Circulus» (хор считает вещи 7→4),
-## «Ultima Res» (3→1).
-const BATTLE_MUSIC: Array[StringName] = [&"music_battle_1", &"music_battle_1", &"music_battle_2",
-	&"music_battle_3", &"music_battle_4", &"music_battle_4"]
+## Музыка битвы: «Ferrum et Sanguis», «Sacrificium», «Circulus», «Ultima Res» — в случайном порядке,
+## каждый трек до конца, к этапам не привязаны (у босса свой трек).
+const BATTLE_MUSIC: Array[StringName] = [&"music_battle_1", &"music_battle_2", &"music_battle_3", &"music_battle_4"]
 
 var state: int = State.INTRO
 var world: Node3D
@@ -180,11 +179,8 @@ func start_stage(s: int) -> void:
 		await PrologueScene.play(cutscene, self)
 	set_state(State.INTRO)
 	banner.emit("Этап %d" % s, "%s — %s" % [threat.display_name, threat.description])
-	# После алтаря зажёванная лента раскручивается дальше; если трек этапа другой — с его начала.
-	if Audio.tape_held():
-		Audio.tape_resume(battle_music(s))
-	else:
-		Audio.play_music(battle_music(s))
+	# После алтаря зажёванная лента битвы раскручивается с того же места.
+	Audio.play_playlist(BATTLE_MUSIC)
 	if s == 1:
 		hud.show_controls_hint()
 
@@ -459,10 +455,6 @@ func altar_closed() -> void:
 	if state == State.ALTAR:
 		set_state(State.CLEARED)
 		Audio.tape_resume()
-
-
-static func battle_music(s: int) -> StringName:
-	return BATTLE_MUSIC[clampi(s - 1, 0, BATTLE_MUSIC.size() - 1)]
 
 
 ## Подтверждённая жертва ring[index].

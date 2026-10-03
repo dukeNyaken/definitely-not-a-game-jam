@@ -80,7 +80,7 @@ func _ready() -> void:
 	if not RunState.seen_ring_tutorial:
 		RunState.seen_ring_tutorial = true
 		_show_tutorial()
-	Audio.play(&"altar_open")
+	Audio.play(&"altar_open", -6.0)
 
 
 func _show_tutorial() -> void:

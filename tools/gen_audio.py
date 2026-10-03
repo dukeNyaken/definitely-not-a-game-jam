@@ -349,10 +349,11 @@ def sfx():
     write("sacrifice", reverb(mix((drone, 0, 0.6), (swell, 0, 0.35), (chord, 0, 1.0), (thud(80, 0.6, 30), 1.15, 0.8)), 0.35, tail=1.6))
     conf = lowpass(mix((osc(110, 1.3, "saw", freq_end=220), 0), (osc(165, 1.3, "saw", freq_end=330), 0)), 300, 3000)
     write("sacrifice_confirm", env_swell(conf, 0.92), 0.6)
-    pad = [(lowpass(osc(note_freq(n) * (1 + d), 1.8, "saw"), 1200), 0, 0.25) for n in [50, 57, 62, 65] for d in (-0.003, 0.003)]
-    pad_s = mix(*pad)
-    env_adsr(pad_s, 0.5, 0.3, 0.7, 0.8)
-    write("altar_open", reverb(pad_s, 0.4, tail=1.5), 0.6)
+    # Алтарь открылся: вдох и низкий колокол в тон алтарного трека (до минор). Пэда нет — не спорит
+    # с музыкой, которая вступает следом; удар колокола приходится на её начало.
+    breath = env_swell(bandpass(noise(0.6, 41), 300, 1800), 0.9)
+    toll = mix((bell(note_freq(48), 2.2, 1.3), 0, 0.8), (bell(note_freq(60), 1.6, 2.0), 0, 0.25))
+    write("altar_open", reverb(mix((breath, 0, 0.25), (toll, 0.5, 1.0)), 0.35, tail=1.2), 0.5)
     write("hold_tick", env_exp(osc(1400, 0.04), 90), 0.35)
     write("shrine_appear", reverb(mix(*[(bell(note_freq(n), 1.4, 2.5), k * 0.08, 0.4) for k, n in enumerate([76, 79, 83, 88])]), 0.4))
     write("shrine_swap", reverb(mix((bell(note_freq(79), 0.8, 3), 0, 0.5), (bell(note_freq(84), 0.8, 3), 0.12, 0.5),
@@ -486,7 +487,7 @@ def music_calm():
         for k in range(2):
             n = chord[(bar + k * 2) % 4] + 24
             song.place(("bell", n), lambda n=n: bell(note_freq(n), 2.5, 1.6), bar * 4 + k * 2 + 0.5, 0.18)
-    write("music_calm", song.render(0.45, 0.88), 0.6)
+    write("music_calm", song.render(0.45, 0.88), 0.636)
 
 
 if __name__ == "__main__":
