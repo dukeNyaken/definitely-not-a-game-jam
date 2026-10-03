@@ -16,5 +16,5 @@ func apply(essence: EssenceDef, ctx: ActionContext) -> void:
 		if dist > pull_to:
 			t.force_move(-to.normalized() * (dist - pull_to), float(essence.stat("pull_time", 0.22)))
 		Vfx.beam(actor, ctx.origin + Vector3(0, 0.9, 0), t.global_position + Vector3(0, 0.9, 0), essence.color, 0.08, 0.3)
-	Vfx.slash(actor, ctx.origin, ctx.direction, radius, arc, essence.color, 0.3)
+	Vfx.slash(actor, ctx.origin, ctx.direction, radius, arc, essence.color, 0.3, false, &"grip_arc")
 	play_sound(essence)

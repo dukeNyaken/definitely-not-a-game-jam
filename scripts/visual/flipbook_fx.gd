@@ -11,11 +11,15 @@ const SHEETS := {
 	&"slash_arc": {"tex": preload("res://assets/vfx/slash_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
 	## Мотивы сущностей (эффекты свойств, перешедших от отданных вещей) — варианты базовых листов:
 	## Лезвие — взмах с пилообразной кромкой и перекрестьями надрезов; Масса — светящиеся трещины в земле
-	## с фронтом обломков; Порыв — струи ветра с завитками.
+	## с фронтом обломков; Порыв — струи ветра с завитками; Взор — кольцо с раскрывающимися глазами;
+	## Хватка — три когтистые борозды с крючками.
 	&"blade_arc": {"tex": preload("res://assets/vfx/blade_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
 	&"mass_quake": {"tex": preload("res://assets/vfx/mass_quake.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 50, 60, 70, 80, 90],
 		"radius_px": [12, 28, 42, 52, 58, 61, 62, 62], "size_px": 128},
 	&"gust_lines": {"tex": preload("res://assets/vfx/gust_lines.png"), "grid": Vector2i(3, 2), "ms": [40, 50, 60, 70, 80]},
+	&"gaze_ring": {"tex": preload("res://assets/vfx/gaze_ring.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 60, 70, 70, 70, 80],
+		"radius_px": [10, 22, 34, 44, 52, 58, 61, 62], "size_px": 128},
+	&"grip_arc": {"tex": preload("res://assets/vfx/grip_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
 	## Кольцо волны сверху; radius_px — радиус фронта в каждом кадре (лист 128 px).
 	&"shock_ring": {"tex": preload("res://assets/vfx/shock_ring.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 50, 60, 60, 70, 80],
 		"radius_px": [10, 24, 36, 45, 52, 57, 60, 62], "size_px": 128},

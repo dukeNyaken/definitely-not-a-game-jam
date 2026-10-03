@@ -11,7 +11,7 @@ var _done: Dictionary = {}
 ## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
 ## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом;
 ## ritual — круг алтаря, порталы врагов, поток огоньков жертвы; summon — призывные круги обычного врага и элиты;
-## motifs — эффекты сущностей с мотивами: Лезвие, Масса, Порыв.
+## motifs — эффекты сущностей с мотивами: Лезвие, Масса, Порыв; motifs2 — Взор и Хватка.
 var scenario := "hits"
 
 
@@ -84,6 +84,9 @@ func _process(delta: float) -> void:
 		return
 	if scenario == "motifs":
 		_motifs()
+		return
+	if scenario == "motifs2":
+		_motifs2()
 		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
@@ -213,3 +216,12 @@ func _motifs() -> void:
 	if _once("gust", 2.2):
 		hero.aim_point = hero.global_position + Vector3(-4, 0, 1.2)
 		_essence(&"gust", &"boots")
+
+
+func _motifs2() -> void:
+	if _once("gaze", 1.0):
+		_essence(&"gaze", &"helmet")
+	if _once("grip", 1.7):
+		hero.aim_point = dummies[0].global_position
+		hero.facing = Combat.flat_dir(hero.aim_point - hero.global_position)
+		_essence(&"grip", &"gloves")
