@@ -10,7 +10,7 @@ var _done: Dictionary = {}
 ## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
 ## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
 ## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом;
-## ritual — круг алтаря, порталы врагов, поток огоньков жертвы.
+## ritual — круг алтаря, порталы врагов, поток огоньков жертвы; summon — призывные круги обычного врага и элиты.
 var scenario := "hits"
 
 
@@ -77,6 +77,9 @@ func _process(delta: float) -> void:
 		return
 	if scenario == "ritual":
 		_ritual()
+		return
+	if scenario == "summon":
+		_summon()
 		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
@@ -165,3 +168,29 @@ func _ritual() -> void:
 	if _once("gift", 1.0):
 		var from := Vector3(-3.4, 1.2, 1.4)
 		SacrificeFx.play(self, hero_model, from, &"helmet", Db.essence(&"gaze").color)
+
+
+func _summon() -> void:
+	if _once("circles", 1.0):
+		var elite_items: Array[ItemState] = [ItemState.create(&"shield"), ItemState.create(&"helmet")]
+		for spec in [[Vector3(-3.2, 0, 1.6), {"items": []}], [Vector3(2.6, 0, 0.8), {"items": elite_items}]]:
+			var portal := SpawnPortal.new()
+			portal.delay = 1.0
+			portal.payload = spec[1]
+			add_child(portal)
+			portal.global_position = spec[0]
+			portal.opened.connect(_summoned)
+
+
+func _summoned(p: SpawnPortal) -> void:
+	var items: Array[ItemState] = []
+	items.assign(p.payload.get("items", []))
+	var e := EnemyFactory.create(Db.enemy(&"infantry"), 1, items)
+	(e.get_node("AI") as AIController).active = false
+	add_child(e)
+	e.global_position = p.global_position
+	e.facing = Combat.flat_dir(hero.global_position - p.global_position)
+	var model := e.get_node("Model") as Node3D
+	var full := model.scale
+	model.scale = full * 0.1
+	model.create_tween().tween_property(model, "scale", full, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

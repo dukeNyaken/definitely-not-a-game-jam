@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c2j6hlywbvccy"
-path="res://.godot/imported/spawn_portal.png-e0891c142b9b50e625edc51bfd2569e5.ctex"
+uid="uid://b5tchuyiof7pf"
+path="res://.godot/imported/summon_major.png-e47ffdd84bd1e8605cd37cedaac10bc5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/vfx/spawn_portal.png"
-dest_files=["res://.godot/imported/spawn_portal.png-e0891c142b9b50e625edc51bfd2569e5.ctex"]
+source_file="res://assets/vfx/summon_major.png"
+dest_files=["res://.godot/imported/summon_major.png-e47ffdd84bd1e8605cd37cedaac10bc5.ctex"]
 
 [params]
 
