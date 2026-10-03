@@ -139,7 +139,12 @@ func test_single_mastery_previews_use_character_meshes_for_all_three_forms() -> 
 				var originals := display.find_children("item_*", "MeshInstance3D", true, false)
 				assert_gt(originals.size(), 0)
 				for mesh in originals:
-					assert_same(mesh.mesh, meshes[mesh.name], "модель вещи принадлежит выбранному персонажу")
+					var original: Mesh = meshes[mesh.name]
+					var arrays: Array = mesh.mesh.surface_get_arrays(0)
+					assert_eq(arrays[Mesh.ARRAY_VERTEX], original.surface_get_arrays(0)[Mesh.ARRAY_VERTEX], "геометрия выбранного персонажа сохранена")
+					assert_eq(arrays[Mesh.ARRAY_TEX_UV], original.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV], "текстура выбранного персонажа сохранена")
+					assert_null(arrays[Mesh.ARRAY_BONES], "витрина не зависит от скелета героя в другом viewport")
+					assert_null(arrays[Mesh.ARRAY_WEIGHTS])
 				var trim := display.find_child("AppearanceTrim", true, false)
 				if tier == 1:
 					assert_null(trim)
@@ -167,6 +172,38 @@ func test_generated_artifact_preserves_absorbed_property_effects() -> void:
 		assert_eq(properties, [0, 1], "у артефакта остались украшения обеих поглощённых сил")
 		assert_eq(state.properties.size(), 2, "показ модели не меняет дерево свойств")
 		display.free()
+
+
+func test_amulet_preview_has_readable_height_for_every_character() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for variant in SkinnedActorModel.variants():
+		SkinnedActorModel.select(variant["id"])
+		for tier in [1, 2, 3]:
+			var state := ItemState.create(&"amulet")
+			state.appearance = tier
+			var display := ItemVisuals.build_display(state)
+			var meshes := display.find_children("item_*", "MeshInstance3D", true, false)
+			var box := GeneratedItemDisplay._bounds(meshes, display)
+			assert_gt(box.size.y, 0.5, "%s/%d: виден медальон, а не полоска" % [variant["id"], tier])
+			assert_gt(box.size.y / box.size.x, 0.65)
+			display.free()
+
+
+func test_flat_amulet_stays_facing_camera_after_switching_from_rotating_item() -> void:
+	var showcase := ItemShowcase.new()
+	add_child_autofree(showcase)
+	showcase.show_single(ItemState.create(&"sword"))
+	showcase.pivot.rotation.y = PI / 2
+	showcase.show_single(ItemState.create(&"amulet"))
+	assert_almost_eq(showcase.pivot.rotation.y, 0.0, 0.001)
+	for step in 80:
+		showcase._process(0.5)
+		assert_lt(absf(showcase.pivot.rotation.y), 0.36, "амулет не поворачивается невидимым ребром")
+	showcase.show_single(ItemState.create(&"shield"))
+	showcase._process(1.0)
+	assert_false(showcase._flat_preview, "остальные вещи сохраняют вращение")
 
 
 func test_locomotion_speeds_increase() -> void:

@@ -13,6 +13,7 @@ const FIT_DEFAULT := 0.9
 const PAIR_GAP := 0.25
 ## Вещи, которые ставятся длинной стороной вверх: меч в руке смотрит клинком вперёд.
 const UPRIGHT := [&"sword"]
+static var _static_meshes: Dictionary = {}
 
 
 ## Слот -> Node3D с вещью; начало координат — середина вещи (витрина её вращает).
@@ -28,7 +29,7 @@ static func build(states: Array[ItemState] = [], only_slot: StringName = &"") ->
 			continue
 		var copy := MeshInstance3D.new()
 		copy.name = mi.name
-		copy.mesh = mi.mesh    # без скина сетка рисуется в позе покоя
+		copy.mesh = _static_mesh(mi.mesh)
 		var src := mi.get_active_material(0) as BaseMaterial3D
 		copy.material_override = LowPoly.mat_textured(src.albedo_texture if src else null)
 		parts.get_or_add(slot, []).append(copy)
@@ -40,6 +41,21 @@ static func build(states: Array[ItemState] = [], only_slot: StringName = &"") ->
 		if (state.appearance > 1 or not state.properties.is_empty()) and out.has(state.def_id):
 			_decorate(out[state.def_id], parts[state.def_id], state)
 	return out
+
+
+## Скелетные атрибуты нельзя оставлять на копии без Skeleton3D: при рендере героя
+## в другом viewport она может получить его деформацию и исчезнуть из кадра.
+static func _static_mesh(source: Mesh) -> ArrayMesh:
+	if _static_meshes.has(source):
+		return _static_meshes[source]
+	var mesh := ArrayMesh.new()
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		arrays[Mesh.ARRAY_BONES] = null
+		arrays[Mesh.ARRAY_WEIGHTS] = null
+		mesh.add_surface_from_arrays(source.surface_get_primitive_type(surface), arrays)
+	_static_meshes[source] = mesh
+	return mesh
 
 
 ## Внешняя оболочка сохраняет нормализацию glb при задании масштаба в витрине или сцене.
@@ -120,6 +136,13 @@ static func _display(slot: StringName, meshes: Array) -> Node3D:
 		for m: MeshInstance3D in meshes:
 			m.position = -box.get_center()
 			body.add_child(m)
+	if slot == &"amulet":
+		# Посадка на тело может сжать медальон в полоску (комплект рыцаря).
+		# В витрине восстанавливаем круглые пропорции, не меняя сетку на персонаже.
+		var box := _bounds(meshes, body)
+		if box.size.y < box.size.x * 0.35:
+			var restore := box.size.x / maxf(box.size.y, 0.0001)
+			body.scale = Vector3(1.0, restore, restore)
 	if slot in UPRIGHT:
 		var box := _bounds(meshes, body)
 		if box.size.z >= box.size.x and box.size.z >= box.size.y:
