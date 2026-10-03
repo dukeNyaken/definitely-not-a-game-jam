@@ -1,0 +1,208 @@
+{
+  "_comment": "Что рисуем. Фон — ровный светло-серый: prep.py вырезает фигуру по расстоянию до цвета фона, поэтому он должен быть один и без градиента. Тело — в облегающем, чтобы амуниция надевалась поверх, а не вырезалась из одной сетки.",
+  "negative": "blurry, low quality, cropped, cut off feet, cut off head, extra limbs, extra fingers, deformed, text, watermark, logo, frame, border, shadow on background, gradient background, multiple people, perspective distortion, dynamic pose, motion blur, armor, weapon, cape, loose clothing",
+  "hero_body": {
+    "kind": "body",
+    "frame": "portrait",
+    "prompt": "full body front view of a lean adult man standing in a symmetric A-pose, arms straight and angled down about 45 degrees away from the torso, palms facing the thighs, feet shoulder width apart, looking straight at the camera, wearing a plain dark grey skin-tight long-sleeve bodysuit and simple dark boots, short dark hair, pale skin, gaunt grim face, whole figure visible from the top of the head to the soles of the feet with empty space around, plain flat uniform light grey background, even soft studio lighting, orthographic 3D character turnaround reference, game asset, sharp focus"
+  },
+  "helmet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin",
+    "prompt": "a single dark iron medieval great helm with a narrow horizontal eye slit and small breathing holes, battered and scratched, straight front view facing the camera, symmetric, centered, isolated object, whole helmet visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "edits": {
+    "_why": "Правки картинки Qwen-Image 2.1: на вход картинка, на выход она же по инструкции. back — вид со спины для текстуры: bake.py проецирует его на заднюю половину модели, поэтому поза, масштаб и рамка должны совпасть со входом.",
+    "back": "Show exactly the same subject from directly behind (back view, rotated 180 degrees). Keep the identical pose, limb angles, proportions, clothing, colors, scale and position in the frame. Keep the same plain flat uniform light grey background and the same even studio lighting. Orthographic, no perspective change."
+  },
+  "sword": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects",
+    "prompt": "a single straight medieval longsword standing perfectly vertical, blade pointing straight up, hilt and pommel at the bottom, crossguard horizontal, dark worn steel blade, leather wrapped grip, straight front view, symmetric, centered, isolated object, whole sword visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "armor": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, mannequin torso, stand",
+    "prompt": "a single dark iron plate cuirass breastplate armor with small pauldrons, empty, hollow, nobody wearing it, straight front view, symmetric, centered, isolated object, whole armor visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "shield": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair",
+    "prompt": "a single round wooden shield with a dark iron rim and central iron boss, worn and scratched, front face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "gloves": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, two gloves",
+    "prompt": "a single dark iron plate gauntlet glove for the left hand, empty, fingers pointing straight down, cuff at the top, back of the hand toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "boots": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, two boots, legs",
+    "prompt": "a single dark leather and iron armored boot, empty, toe pointing toward the camera, shin guard on top, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "amulet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, chain, necklace cord",
+    "prompt": "a single round dark bronze amulet pendant medallion with a dull red gemstone in the center, flat disc, face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "game_hero": {
+    "kind": "body",
+    "frame": "portrait",
+    "prompt": "full body front view of a stocky muscular barbarian warrior with heroic proportions, very broad shoulders, wide chest, thick muscular arms and legs, large hands and feet, short thick neck, shaved bald head, short dark beard, a red scar across the forehead, bare chest, dark ragged loincloth over tight dark linen trousers, cloth wraps on the wrists and shins, simple leather sandals, standing in a symmetric A-pose, arms straight and angled down about 45 degrees away from the torso, palms facing the thighs, feet shoulder width apart, looking straight at the camera, grim face, whole figure visible from the top of the head to the soles of the feet with empty space around, plain flat uniform light grey background, even soft studio lighting, orthographic 3D character turnaround reference, game asset, sharp focus"
+  },
+  "barb_sword": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single gigantic brutal two-handed greatsword standing perfectly vertical, blade pointing straight up, hilt at the bottom, massive very wide thick crude dark iron blade with notches and rust, heavy simple crossguard, long leather wrapped grip, huge pommel, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "barb_shield": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, barrel, cylinder, round, curved, log, perspective",
+    "prompt": "a single flat rectangular wooden tower shield seen exactly from the front like a flat door, about twice as tall as it is wide, thick vertical dark wooden planks, black riveted iron bands across, heavy iron rim and a central iron boss, flat front face toward the camera, orthographic, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_helmet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single medieval templar great helm with a flat top, narrow cross-shaped eye slit and breathing holes, polished steel, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_armor": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single crusader templar chest armor: chainmail hauberk torso with a dark crimson cloth surcoat over it bearing a large white cross on the chest, empty, hollow, nobody wearing it, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_sword": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single straight knightly crusader longsword standing perfectly vertical, blade pointing straight up, hilt at the bottom, cruciform crossguard, polished steel blade, round pommel, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_shield": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single knightly heater shield, dark crimson with a large white cross, steel rim, front face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_gloves": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, two gloves",
+    "prompt": "a single chainmail and steel plate gauntlet glove for the left hand, empty, fingers pointing straight down, cuff at the top, back of the hand toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_boots": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, two boots, legs",
+    "prompt": "a single knightly chainmail chausse boot with steel sabaton, empty, toe pointing toward the camera, shin guard on top, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_amulet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, chain, necklace cord",
+    "prompt": "a single silver amulet pendant shaped like a cross inside a circle, flat, face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_helmet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single bulky futuristic sci-fi power armor helmet with a heavy armored faceplate, grille mouth vent and two glowing red round eye lenses, dark gunmetal and deep blue armor plates, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_armor": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single bulky futuristic sci-fi power armor chest plate with a winged emblem on the chest and two enormous rounded shoulder pauldrons, dark gunmetal and deep blue armor plates, empty, hollow, nobody wearing it, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_sword": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single heavy futuristic sci-fi power sword standing perfectly vertical, blade pointing straight up, hilt at the bottom, thick angular blade with glowing blue energy edges, mechanical tech crossguard, ribbed grip, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_shield": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single tall rectangular futuristic sci-fi armored storm shield, thick dark gunmetal and deep blue plates, glowing blue emitter strip, much taller than wide, front face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_gloves": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, two gloves",
+    "prompt": "a single bulky futuristic sci-fi power armor gauntlet for the left hand, empty, fingers pointing straight down, cuff at the top, back of the hand toward the camera, dark gunmetal and deep blue plates, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_boots": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, two boots, legs",
+    "prompt": "a single bulky futuristic sci-fi power armor boot with thick armored shin plate, empty, toe pointing toward the camera, dark gunmetal and deep blue plates, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_amulet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, chain, necklace cord",
+    "prompt": "a single futuristic tech medallion with a glowing red crystal core in a mechanical bronze frame, flat disc, face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_helmet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single plain medieval steel close helm with a visor and narrow eye slit, simple and functional, slightly worn, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_armor": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single plain medieval knight armor: simple steel breastplate with fauld and plain rounded pauldrons over a chainmail shirt, functional, unadorned, slightly worn, empty, hollow, nobody wearing it, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_sword": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single plain straight medieval arming sword standing perfectly vertical, blade pointing straight up, hilt at the bottom, simple straight crossguard, steel blade, leather grip, practical and light, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_shield": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand",
+    "prompt": "a single triangular heater shield, worn faded blue-grey paint with a simple pale cross, wooden with a steel rim, front face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_gloves": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, two gloves",
+    "prompt": "a single plain medieval steel plate gauntlet for the left hand, empty, fingers pointing straight down, cuff at the top, back of the hand toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_boots": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, two boots, legs",
+    "prompt": "a single plain medieval steel sabaton boot with greave, empty, toe pointing toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_amulet": {
+    "kind": "item",
+    "frame": "square",
+    "negative_extra": "person, head, face, body, mannequin, hands, multiple objects, pair, stand, display stand, chain, necklace cord",
+    "prompt": "a single small plain iron amulet pendant with a simple engraved sigil, flat disc, face toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_body": {
+    "kind": "body",
+    "frame": "portrait",
+    "prompt": "full body front view of an ordinary average build man in his thirties, regular lean proportions, not muscular, not fat, short brown hair, stubble, tired serious face, wearing a plain padded linen gambeson tunic and simple dark trousers and plain leather shoes, standing in a symmetric A-pose, arms straight and angled down about 45 degrees away from the torso, palms facing the thighs, feet shoulder width apart, looking straight at the camera, whole figure visible from the top of the head to the soles of the feet with empty space around, plain flat uniform light grey background, even soft studio lighting, orthographic 3D character turnaround reference, game asset, sharp focus"
+  },
+  "boss_body": {
+    "kind": "body",
+    "frame": "portrait",
+    "prompt": "full body front view of a huge intimidating man in his sixties, massive broad powerful build, thick neck, heavy strong arms, a normal human not a monster, cruel stern evil face with deep wrinkles and scars, bald head, long grey beard, bare chest with grey chest hair, dark leather trousers, heavy leather boots, standing in a symmetric A-pose, arms straight and angled down about 45 degrees away from the torso, palms facing the thighs, feet shoulder width apart, looking straight at the camera, whole figure visible from the top of the head to the soles of the feet with empty space around, plain flat uniform light grey background, even soft studio lighting, orthographic 3D character turnaround reference, game asset, sharp focus"
+  }
+}

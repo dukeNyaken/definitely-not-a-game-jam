@@ -1,0 +1,156 @@
+{
+  "_comment": "Как вещь садится на тело (dress.py). Слоты — 7 вещей игры, кости — имена Mixamo (rig.py). Вещь из Hunyuan смотрит лицом в -Y, как и тело.",
+  "_scale": "Все размеры в метрах даны для тела ростом ref_height и умножаются на рост / ref_height; *_frac — доли роста. Поэтому одна и та же вещь садится и на героя 2.1 м, и на босса (тело 2.45 м, в игре x1.7 ~ 4.2 м) — ничего не надо подгонять руками.",
+  "ref_height": 2.1,
+  "_fit": "wrap — облегает область тела (вершины с весом >= 0.5 у костей region): равномерный масштаб по ширине/глубине области x scale, по высоте — anchor (top/center/bottom) + lift. frame=bone — область меряется вдоль кости, вещь поворачивается низом по кости (перчатка пальцами к пальцам). hold — в кисть: длина length_frac роста, хват на grip от низа, клинок вперёд, плашмя к бокам. strap — на предплечье снаружи: высота height_frac роста, длинная сторона вдоль предплечья, лицо наружу, вынос — толщина предплечья + gap. chest — на грудь под шеей: размер size_frac, drop ниже основания шеи.",
+  "_skin": "rigid — вся вещь на одной кости (не гнётся, как на PS1); transfer — веса с ближайших мест тела (гнётся вместе с ним).",
+  "_push": "push — зазор, м: вершины вещи внутри тела или ближе зазора выталкиваются наружу по нормали тела (после расширения widen — оно сохраняет толщину стенки).",
+  "_hide": "hide — части тела под вещью вырезаются в сетку hide_<слот> и прячутся, пока вещь надета (ноги больше не торчат из сапог, тело не просвечивает сквозь броню). Грань прячется, если луч из каждой её вершины наружу по нормали упирается в вещь ближе hide_ray (м). hide_bones — дополнительно прячутся грани целиком на этих костях (вся стопа под сапогом, вся кисть под перчаткой): сапог из Hunyuan короче стопы в сандалии, и пальцы торчали.",
+  "_tuning": "2026-10-03, proto_hero (коренастый, грудь 0.51x0.45 м): кираса при scale 1.1 упиралась в расширение x1.60 и выходила 1.29 м в ширину — scale 0.9. Перчатки при anchor top (манжета к запястью) висели ниже кисти — anchor bottom, кончики пальцев к кончикам.",
+  "slots": {
+    "helmet": {
+      "bone": "Head",
+      "fit": "wrap",
+      "region": [
+        "Head"
+      ],
+      "scale": 1.22,
+      "anchor": "top",
+      "lift": 0.035,
+      "skin": "rigid",
+      "push": 0.012,
+      "hide": true,
+      "hide_ray": 0.12
+    },
+    "armor": {
+      "bone": "Spine2",
+      "fit": "wrap",
+      "region": [
+        "Spine1",
+        "Spine2",
+        "LeftShoulder",
+        "RightShoulder"
+      ],
+      "scale": 0.9,
+      "anchor": "top",
+      "lift": 0.02,
+      "skin": "transfer",
+      "push": 0.015,
+      "hide": true,
+      "hide_ray": 0.15
+    },
+    "gloves": {
+      "bone": "LeftHand",
+      "pair": true,
+      "fit": "wrap",
+      "frame": "bone",
+      "region": [
+        "LeftHand"
+      ],
+      "scale": 1.3,
+      "anchor": "bottom",
+      "lift": -0.015,
+      "skin": "rigid",
+      "push": 0.008,
+      "hide": true,
+      "hide_ray": 0.08,
+      "hide_bones": [
+        "LeftHand",
+        "RightHand"
+      ]
+    },
+    "boots": {
+      "bone": "LeftFoot",
+      "pair": true,
+      "fit": "wrap",
+      "region": [
+        "LeftFoot",
+        "LeftToeBase"
+      ],
+      "extend_up": 0.14,
+      "scale": 1.5,
+      "anchor": "bottom",
+      "lift": 0.0,
+      "skin": "transfer",
+      "push": 0.01,
+      "hide": true,
+      "hide_ray": 0.1,
+      "scale_by": "depth",
+      "align_front": 0.02,
+      "widen_max": 2.2,
+      "widen_max_y": 1.3,
+      "hide_bones": [
+        "LeftFoot",
+        "LeftToeBase",
+        "RightFoot",
+        "RightToeBase"
+      ]
+    },
+    "sword": {
+      "bone": "RightHand",
+      "fit": "hold",
+      "length_frac": 0.5,
+      "grip": 0.1,
+      "skin": "rigid"
+    },
+    "shield": {
+      "bone": "LeftForeArm",
+      "fit": "strap",
+      "height_frac": 0.4,
+      "gap": 0.03,
+      "skin": "rigid",
+      "flatten": 0.08
+    },
+    "amulet": {
+      "bone": "Spine2",
+      "fit": "chest",
+      "size_frac": 0.05,
+      "drop": 0.12,
+      "skin": "rigid",
+      "flatten": 0.15
+    }
+  },
+  "_variants": "Поправки комплекта поверх slots: dress.py ... variant=<имя>.",
+  "variants": {
+    "barbarian": {
+      "sword": {
+        "length_frac": 0.75,
+        "grip": 0.08
+      },
+      "shield": {
+        "height_frac": 0.5
+      }
+    },
+    "templar": {
+      "sword": {
+        "length_frac": 0.5
+      },
+      "shield": {
+        "height_frac": 0.42
+      }
+    },
+    "marine": {
+      "sword": {
+        "length_frac": 0.6
+      },
+      "shield": {
+        "height_frac": 0.55
+      },
+      "armor": {
+        "scale": 1.0
+      }
+    },
+    "knight": {
+      "sword": {
+        "length_frac": 0.46
+      },
+      "shield": {
+        "height_frac": 0.38
+      }
+    }
+  },
+  "_flatten": "flatten — толщина плоской вещи как доля её высоты: Hunyuan по одному виду спереди часто «надувает» плоское (щит варвара вышел бревном 0.60x0.62x1.96 м); вещь сжимается по глубине до этой доли.",
+  "_scale_by": "scale_by (width/depth) — по какому размеру области тела масштабировать вещь; без него — по большему. Сапоги — по длине стопы.",
+  "_align_front": "align_front — зазор, м: перед вещи (min Y) ставится на столько впереди самого переднего места области (вершины с весом > 0.05) — сапог закрывает носок.",
+  "_widen_max": "widen_max — предел послойного расширения (по умолчанию 1.6). Сапог из Hunyuan узкий, а ширина и длина теперь расширяются раздельно, поэтому сапогам можно больше, длина от этого не растёт. widen_max_y — свой предел по длине (сапог при x2.2 по длине вырастал до 0.69 м и заострялся)."
+}

@@ -1,0 +1,54 @@
+{
+ "1": {
+  "class_type": "Char3DDress",
+  "inputs": {
+   "character": "hero",
+   "helmet": "item_helmet",
+   "armor": "item_armor",
+   "gloves": "(нет)",
+   "boots": "(нет)",
+   "sword": "item_sword",
+   "shield": "(нет)",
+   "amulet": "(нет)"
+  }
+ },
+ "2": {
+  "class_type": "Preview3DAdvanced",
+  "inputs": {
+   "model_3d": [
+    "1",
+    0
+   ],
+   "width": 1024,
+   "height": 1024
+  }
+ },
+ "3": {
+  "class_type": "PreviewAny",
+  "inputs": {
+   "source": [
+    "1",
+    2
+   ]
+  }
+ },
+ "4": {
+  "class_type": "Char3DToGodot",
+  "inputs": {
+   "character": [
+    "1",
+    1
+   ],
+   "project": "C:/Godot/definitely-not-a-game-jam/experiments/char3d/godot_test"
+  }
+ },
+ "5": {
+  "class_type": "PreviewAny",
+  "inputs": {
+   "source": [
+    "4",
+    0
+   ]
+  }
+ }
+}

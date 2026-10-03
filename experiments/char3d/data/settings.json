@@ -1,0 +1,97 @@
+{
+  "tools": {
+    "_why": "Пути к программам и проекту Godot, куда узел «в Godot» кладёт персонажей, — здесь одном месте; узлы ComfyUI и скрипты берут их отсюда. godot_project — пока проверочный стенд: в саму игру эксперименты не идут.",
+    "blender": "Z:/SteamLibrary/steamapps/common/Blender/blender.exe",
+    "godot": "C:/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_win64_console.exe",
+    "godot_project": "C:/Godot/definitely-not-a-game-jam/experiments/char3d/godot_test"
+  },
+  "_comment": "Числа конвейера. Откуда каждое — в _why рядом.",
+  "text2img": {
+    "engine": "qwen",
+    "seed": 20261002,
+    "variants": 4,
+    "wan": {
+      "_why": "Wan 2.2 TI2V 5B, один кадр видео = картинка. steps/cfg/shift — значения шаблона ComfyUI для этой модели.",
+      "unet": "wan2.2_ti2v_5B_fp16.safetensors",
+      "text_encoder": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "vae": "wan2.2_vae.safetensors",
+      "steps": 30,
+      "cfg": 5.0,
+      "shift": 8.0,
+      "sampler": "uni_pc",
+      "scheduler": "simple",
+      "frames": {
+        "portrait": [
+          704,
+          1280
+        ],
+        "square": [
+          960,
+          960
+        ]
+      }
+    },
+    "qwen": {
+      "_why": "Qwen-Image 2.1 (лицензия Qwen Research — только некоммерческое). Значения шаблона ComfyUI image_qwen_image_2_1_t2i: 25 шагов, cfg 1 (при cfg 1 негатив игнорируется — так советует и автор энкодера), euler/simple. DiT в GGUF Q8 грузит узел ComfyUI-GGUF.",
+      "unet": "qwen_image_2.1-Q8_0.gguf",
+      "text_encoder": "qwen3vl_8b_fp8_heretic.safetensors",
+      "vae": "qwen_image_2.1_vae_bf16.safetensors",
+      "steps": 25,
+      "cfg": 1.0,
+      "sampler": "euler",
+      "scheduler": "simple",
+      "frames": {
+        "portrait": [
+          768,
+          1344
+        ],
+        "square": [
+          1024,
+          1024
+        ]
+      }
+    }
+  },
+  "prep": {
+    "_why": "bg_tolerance — расстояние в RGB (0..441) до цвета фона, ниже которого точка считается фоном; margin — доля поля вокруг фигуры в квадратном кадре для Hunyuan (в его примерах фигура занимает ~85% кадра). fill_erode — сколько точек края фигуры не брать в заливку фона: край сглажен и смешан с фоном (у Wan 1-2 точки). enclosed_bg_frac — замкнутое пятно цвета фона крупнее этой доли кадра считается фоном (просвет между ногами); мельче — остаётся фигурой (серые места на костюме). bg_loose_tolerance / bg_smooth_grad — мягкий фон: точка до 75 от цвета фона входит в фон, если яркость вокруг меняется плавно (градиент < 4 на точку после размытия 1.5); тень на полу и затенённый фон у тела плавные, край фигуры — резкий. Мягкий фон берётся только для тени: темнее фона и разброс каналов < bg_shade_chroma (почти серое) — иначе съедалась светлая рубаха рыцаря.",
+    "bg_tolerance": 28,
+    "margin": 0.08,
+    "size": 1024,
+    "fill_erode": 2,
+    "enclosed_bg_frac": 0.002,
+    "bg_loose_tolerance": 75,
+    "bg_smooth_grad": 4.0,
+    "bg_shade_chroma": 22
+  },
+  "img2mesh": {
+    "_why": "Значения примера ComfyUI для Hunyuan3D 2.1. octree 256 — сетка 256^3, этого с запасом для 2000 треугольников на выходе.",
+    "checkpoint": "hunyuan_3d_v2.1.safetensors",
+    "latent_resolution": 4096,
+    "steps": 30,
+    "cfg": 5.0,
+    "shift": 1.0,
+    "sampler": "euler",
+    "scheduler": "normal",
+    "seed": 20261002,
+    "octree_resolution": 256,
+    "num_chunks": 8000,
+    "threshold": 0.6
+  },
+  "lowpoly": {
+    "_why": "Бюджет PS1: персонаж 300-2000 треугольников, текстура 64-256 точек (задание). height — рост в метрах, чтобы все персонажи и вещи были в одном масштабе с игрой (там герой ~1.8 м). bake_margin — точек растяжки цвета за край UV-острова, иначе на швах при nearest-фильтре видна чёрная кайма. remesh_voxel_frac — воксель пересборки как доля наибольшего размера модели: у сырой сетки Hunyuan (surface nets) ~3000 неманифолдных рёбер, и decimate без пересборки застревает на ~8700 треугольниках; 0.004 (~7 мм на 1.8 м) ещё не слепляет пальцы с бедром. head_from — доля роста, выше которой грани считаются головой (подбородок у взрослого ~0.85 роста); head_texel_scale — во сколько раз острова головы крупнее в развёртке: при равной плотности лицо превращается в кашу, при 3 голова съела ~70% атласа и тело пошло крупными квадратами; 2 — см. долю головы в отчёте bake.py. Текстура тела 256 (верх бюджета) — главный герой, его видно крупнее всех. Под игру definitely-not-a-game-jam: герой там ~2.1 м (actor_model.gd: таз 0.92 + корпус 0.76 + шея и голова ~0.45), на экране PS1 (270 строк, орто-камера 13 м, наклон 35°) он ~36 точек в высоту — текстура 128 и ~900 треугольников уже с запасом.",
+    "body": {
+      "tris": 900,
+      "tex": 128,
+      "height": 2.1,
+      "head_from": 0.85,
+      "head_texel_scale": 2.0
+    },
+    "item": {
+      "tris": 300,
+      "tex": 64
+    },
+    "bake_margin": 2,
+    "uv_island_margin": 0.02,
+    "remesh_voxel_frac": 0.004
+  }
+}
