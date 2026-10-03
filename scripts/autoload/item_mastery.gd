@@ -158,8 +158,8 @@ func progress_text(id: StringName) -> String:
 	var lv := level(id)
 	var thresholds: Array = rules.get("thresholds", [])
 	if lv == 3 or thresholds.is_empty():
-		return "Ур. %d · МАКС" % lv
-	return "Ур. %d · %d / %d XP" % [lv, int(xp.get(id, 0)), int(thresholds[lv])]
+		return "Ур. %s · МАКС" % UiKit.roman(lv)
+	return "Ур. %s · %d / %d XP" % [UiKit.roman(lv), int(xp.get(id, 0)), int(thresholds[lv])]
 
 
 ## Отладочный сброс: новый пустой профиль, включая резервную копию.

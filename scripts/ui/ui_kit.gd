@@ -24,6 +24,15 @@ static func item_color(id: StringName) -> Color:
 	return Color(1.0, 0.3, 0.65) if id == &"sword" else Db.item(id).essence.color
 
 
+static func roman(value: int) -> String:
+	var result := ""
+	for entry in [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]:
+		while value >= int(entry[0]):
+			result += str(entry[1])
+			value -= int(entry[0])
+	return result
+
+
 static func title_font() -> Font:
 	if _title_font == null:
 		_title_font = load("res://assets/fonts/CormorantSC-Bold.ttf")
