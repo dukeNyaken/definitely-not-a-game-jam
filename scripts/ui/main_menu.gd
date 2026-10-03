@@ -92,14 +92,7 @@ func _ready() -> void:
 	_render_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(_render_button)
 	_update_render_button()
-	var story_btn := UiKit.button(Render.cutscenes_text(), func(): pass)
-	story_btn.pressed.connect(func():
-		Render.set_cutscenes(not Render.cutscenes)
-		story_btn.text = Render.cutscenes_text()
-	)
-	story_btn.custom_minimum_size = Vector2(360, 50)
-	story_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	v.add_child(story_btn)
+	# Переключатель «показывать ли сцены в забеге» — внутри этого раздела, рядом с самими сценами.
 	var scenes := UiKit.button("Катсцены", func(): get_tree().change_scene_to_file("res://scenes/cutscene_gallery.tscn"))
 	scenes.custom_minimum_size = Vector2(360, 50)
 	scenes.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

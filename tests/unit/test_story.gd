@@ -113,8 +113,16 @@ func test_sigvard_jokes_about_gum_only_where_it_shows() -> void:
 	assert_string_contains(Story.brother_gum(3), "только самое нужное")
 
 
+## Песня начинается со слов, которые Ильва говорит в сцене своего дара, и кончается словами финала.
+func test_song_grows_from_ilva_lines() -> void:
+	assert_string_contains(Story.IVA_LINES[Story.SONG_AFTER_GIFT - 1], "клясться не умею")
+	assert_eq(Story.SONG["go"], Story.FINALE["lets_go"], "«Пойдём?» вернётся в финале теми же словами")
+	assert_eq(Story.SONG["go_2"], Story.FINALE["lets_go_2"])
+	assert_ne(str(Story.SONG["quote"]), "")
+
+
 func test_chapters() -> void:
-	for key in ["prologue", "rule", "hearth", "temptation", "gates", "epilogue"]:
+	for key in ["prologue", "rule", "song", "hearth", "temptation", "gates", "epilogue"]:
 		assert_ne(str(Story.chapter(key)[0]), "", key)
 	assert_eq(Story.gift_chapter(1, &"sword"), ["Дар первый", "Меч · Торстейн"])
 	assert_eq(Story.gift_chapter(6, &"amulet")[1], "Оберег · Сольвейг")

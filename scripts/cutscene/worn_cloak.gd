@@ -9,6 +9,8 @@ extends Node3D
 const BACK := 0.1
 
 var wearer: Puppet
+## Длина плаща: 1 — до пят стоящего. Сидящему — короче, иначе плащ уйдёт в землю и в то, на чём он сидит.
+var drop: float = 1.0
 
 
 static func make(color: Color) -> WornCloak:
@@ -44,4 +46,5 @@ func _follow() -> void:
 		return
 	global_position = shoulders(wearer)
 	global_rotation = Vector3(0.0, wearer.model.global_rotation.y, 0.0)
-	scale = Vector3.ONE * wearer.model.scale.y
+	var k := wearer.model.scale.y
+	scale = Vector3(k, k * drop, k)

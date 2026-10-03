@@ -276,6 +276,38 @@ func test_cloak_follows_the_shoulders_of_its_wearer() -> void:
 	cloak.put_on(b)
 	assert_almost_eq(cloak.global_position.x, 3.0, 0.3)
 	assert_almost_eq(cloak.scale.y, b.model.scale.y, 0.001, "плащ садится по росту")
+	cloak.drop = 0.5
+	cloak._follow()
+	assert_almost_eq(cloak.scale.y, b.model.scale.y * 0.5, 0.001, "сидящему — короче")
+	assert_almost_eq(cloak.scale.x, b.model.scale.y, 0.001)
+
+
+## Части ели стоят край в край: ни одна не входит в другую (иначе в PS1 линия пересечения рябит).
+func test_fir_parts_are_stacked_edge_to_edge() -> void:
+	var fir := SetPieces.fir(3.36)
+	add_child_autofree(fir)
+	var top := 0.0
+	var top_radius := INF
+	for i in fir.get_child_count():
+		var mi := fir.get_child(i) as MeshInstance3D
+		var box := mi.mesh.get_aabb()
+		var from := mi.position.y + box.position.y
+		assert_almost_eq(from, top, 0.001, "часть %d начинается там, где кончилась прежняя" % i)
+		if i >= 2 and i % 2 == 0:
+			assert_almost_eq(_ring_radius(mi.mesh, box.position.y), top_radius, 0.001, "снежный верх — край в край с зелёным низом")
+		top = from + box.size.y
+		top_radius = _ring_radius(mi.mesh, box.end.y)
+	assert_almost_eq(top, 3.36, 0.01, "высота ели — заданная")
+	assert_almost_eq(top_radius, 0.0, 0.001, "макушка острая")
+
+
+## Радиус сетки на высоте y: самая дальняя от оси вершина на этой высоте.
+func _ring_radius(mesh: Mesh, y: float) -> float:
+	var out := 0.0
+	for v in mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+		if absf(v.y - y) < 0.001:
+			out = maxf(out, Vector2(v.x, v.z).length())
+	return out
 
 
 ## Замёрзший: стоит, сжавшись, руки крест-накрест на груди. Поза — только у процедурных моделей.
@@ -299,13 +331,123 @@ func test_huddle_pose_hunches_and_crosses_the_arms() -> void:
 	assert_not_null(refugee.model.find_child("Bundle", true, false), "узелок сцена правила убирает сама")
 
 
+# --- Песня Ильвы ---------------------------------------------------------------
+
+func _song_line(words: Array) -> Dictionary:
+	var out := []
+	for w in words:
+		out.append({"text": w[0], "start_seconds": w[1], "end_seconds": w[2]})
+	return {"display_text": "строка", "start_seconds": 10.0, "end_seconds": 14.0, "words": out}
+
+
+## Словам, которых разметка не нашла, время даётся по соседям — строка закрашивается без провалов.
+func test_song_words_without_timing_take_it_from_neighbours() -> void:
+	var data := {"alignment": {"lines": [
+		_song_line([["Мне", null, null], ["клятвы", 11.0, 12.0], ["не", null, null], ["очень", null, null], ["нужны.", 13.0, 14.0]]),
+		{"display_text": "без времени", "start_seconds": null, "end_seconds": null, "words": []},
+	]}}
+	var lines := SongTrack.parse(data)
+	assert_eq(lines.size(), 1, "строка без времени пропущена")
+	var w: Array = lines[0]["words"]
+	assert_almost_eq(float(w[0]["start"]), 10.0, 0.001, "первое слово — от начала строки")
+	assert_almost_eq(float(w[0]["end"]), 11.0, 0.001)
+	assert_almost_eq(float(w[2]["end"]), 12.5, 0.001, "два слова делят промежуток поровну")
+	assert_almost_eq(float(w[3]["start"]), 12.5, 0.001)
+	assert_almost_eq(float(w[3]["end"]), 13.0, 0.001)
+
+
+func test_song_line_is_coloured_as_it_is_sung() -> void:
+	var lines := SongTrack.parse({"alignment": {"lines": [_song_line([["Я", 10.0, 11.0], ["просто", 11.0, 12.0], ["иду", 12.0, 14.0]])]}})
+	var code := SongTrack.bbcode(lines[0], 11.5)
+	assert_string_contains(code, "[color=#%s]Я[/color]" % SongTrack.SUNG)
+	assert_string_contains(code, "[color=#%s]просто[/color]" % SongTrack.NOW)
+	assert_string_contains(code, "[color=#%s]иду[/color]" % SongTrack.AHEAD)
+
+
+func test_song_track_reads_the_real_markup() -> void:
+	var song := SongTrack.load_track(IlvaSongScene.SYNC, IlvaSongScene.AUDIO)
+	add_child_autofree(song)
+	assert_gt(song.lines.size(), 30, "строки песни прочитаны")
+	assert_almost_eq(song.duration, 159.68, 0.5)
+	for l in song.lines:
+		assert_lt(float(l["start"]), float(l["end"]), l["text"])
+		for w in l["words"]:
+			assert_not_null(w["start"], "%s: у слова «%s» есть время" % [l["text"], w["text"]])
+	# Слова вслух («Пойдём?») показывает сцена, а не строка песни.
+	song.lyrics_until = IlvaSongScene.SPOKEN_FROM
+	assert_eq(song.line_index(IlvaSongScene.GO_AT + 0.5), -1)
+	assert_eq(song.lines[song.line_index(16.5)]["text"], "Мы росли, где фьорд замерзает к зиме,")
+	assert_eq(song.line_index(5.0), -1, "во вступлении слов нет")
+
+
+func test_song_beats_follow_the_measured_grid() -> void:
+	var song := SongTrack.new()
+	add_child_autofree(song)
+	song.beat_period = 0.5
+	song.beat_phase = 0.25
+	assert_eq(song.beats(1.0, 2.3), [1.25, 1.75, 2.25] as Array[float])
+	assert_eq(song.beats(0.0, 2.3, 2, 0), [0.25, 1.25, 2.25] as Array[float], "каждая вторая доля")
+	assert_eq(song.beats(0.0, 2.3, 2, 1), [0.75, 1.75] as Array[float])
+
+
+func test_song_poses_lift_the_lantern() -> void:
+	var p := Puppet.make(ActorModel.Kind.FAITHFUL)
+	add_child_autofree(p)
+	p.model._animate(0.016)
+	var rest: float = p.hand_position(&"l_hand").y
+	p.set_pose(&"lantern_high")
+	p.model._animate(0.016)
+	assert_gt(p.hand_position(&"l_hand").y, rest + 0.5, "фонарь поднят над головой")
+	p.set_pose(&"sing")
+	p.model._animate(0.016)
+	assert_gt(p.model.head.rotation.x, 0.0, "поёт — голова поднята")
+
+
+## Камера ведёт идущих: фокус догоняет движущуюся точку.
+func test_camera_tracks_a_moving_point() -> void:
+	var rig := CameraRig.new()
+	add_child_autofree(rig)
+	# Лямбда запоминает локальные переменные по значению — точку держим в узле.
+	var target := Node3D.new()
+	add_child_autofree(target)
+	target.position = Vector3(8, 0, 0)
+	rig.cine_track(func(): return target.position, 6.0, 0.0)
+	assert_eq(rig._focus, Vector3(8, 0, 0), "без наезда — сразу на точке")
+	target.position = Vector3(12, 0, 0)
+	rig._process(0.1)
+	assert_gt(rig._focus.x, 8.0)
+	assert_lt(rig._focus.x, 12.0, "догоняет плавно")
+	rig.cine_to(Vector3.ZERO, 6.0, 0.0)
+	rig._process(0.1)
+	assert_eq(rig._focus, Vector3.ZERO, "обычный кадр отменяет ведение")
+
+
+func test_winter_ground_is_dense_enough_for_vertex_light() -> void:
+	var g := SetPieces.snow_ground(Vector2(24, 12))
+	add_child_autofree(g)
+	assert_gte((g.mesh as PlaneMesh).subdivide_width, 16, "в PS1 свет считается по вершинам")
+	# Земля не дрожит — иначе тени под ногами и тропа рябят; общий материал из кэша при этом не тронут.
+	var mat := g.material_override as ShaderMaterial
+	assert_eq(mat.get_shader_parameter(&"snap_vertices"), false)
+	var shared := LowPoly.mat(SetPieces.SNOW, 0.95, 0.0, 0.1)
+	assert_ne(mat, shared, "материал земли — своя копия")
+	assert_ne(shared.get_shader_parameter(&"snap_vertices"), false, "остальной снег дрожит, как всё в PS1")
+	var drift := SetPieces.snow_drift()
+	add_child_autofree(drift)
+	assert_eq(((drift.get_child(0) as MeshInstance3D).material_override as ShaderMaterial).get_shader_parameter(&"snap_vertices"), false)
+	var hut := SetPieces.burning_hut()
+	add_child_autofree(hut)
+	assert_eq((hut.get_meta(&"fire_points") as Array).size(), 4)
+
+
 func test_set_pieces_build() -> void:
 	var hall := SetPieces.throne_hall()
 	add_child_autofree(hall)
 	assert_eq((hall.get_meta(&"braziers") as Array).size(), 2)
 	assert_not_null(hall.find_child("Throne", true, false))
 	for make in [SetPieces.weapon_rack, SetPieces.training_post, SetPieces.candle_stand, SetPieces.letter, SetPieces.bread, SetPieces.flask,
-			SetPieces.hearth, SetPieces.night_window, SetPieces.spinning_wheel, SetPieces.chest, SetPieces.purse, SetPieces.cloak]:
+			SetPieces.hearth, SetPieces.night_window, SetPieces.spinning_wheel, SetPieces.chest, SetPieces.purse, SetPieces.cloak,
+			SetPieces.fir, SetPieces.snow_drift, SetPieces.campfire, SetPieces.log_seat, SetPieces.stump, SetPieces.cairn, SetPieces.longship]:
 		var n: Node3D = make.call()
 		assert_gt(n.get_child_count(), 0)
 		n.free()

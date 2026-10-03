@@ -79,6 +79,8 @@ static func _build() -> void:
 	_entries.append(_rule())
 	for n in range(1, gifts + 1):
 		_entries.append(_gift(n))
+		if n == Story.SONG_AFTER_GIFT:
+			_entries.append(_song())
 		if n == Story.HEARTH_AFTER_GIFT:
 			_entries.append(_hearth())
 		if n == Story.TEMPTATION_AFTER_GIFT:
@@ -148,6 +150,28 @@ static func _gift(n: int) -> Dictionary:
 		choices.append([id, _cap(Story.ITEM_NAMES[id])])
 	e["options"] = [{"key": "item", "label": "Вещь", "choices": choices, "default": DEMO_ORDER[n - 1]}] as Array[Dictionary]
 	e["seconds"] = 40
+	return e
+
+
+## Песня Ильвы — музыкальная сцена после второго дара.
+static func _song() -> Dictionary:
+	var ch := Story.chapter("song")
+	var n := Story.SONG_AFTER_GIFT
+	var e := _entry("song", &"song", GROUP_AFTER % n, ch[0], ch[1])
+	e["n"] = n
+	e["when"] = "После дара №%d, сразу за сценой дара: Ильва говорит «Я клясться не умею — я просто иду рядом», и начинается песня." % n
+	e["about"] = "Музыкальная сцена. Ночь, привал у костра: Солдат спит, Ильва поёт о том, чего не скажет ему вслух. Воспоминания встают светящимися тенями: дети бегут по льду фьорда мимо вмёрзших ладей; юноша отдаёт плащ мальчишке у горящего дома; Солдат отдаёт оберег Сольвейг, а Ильва стоит в стороне. В припевах они идут рядом по зимней дороге, и тропа загорается под ногами на каждую долю такта. В мосте песни — её предчувствие: тёмные тени уходят к высокой фигуре, а она выходит из тьмы с фонарём. Под утро: «Пойдём?» — «Пойдём»."
+	e["logic"] = [
+		"Сцена идёт по часам песни: кадры сменяются на строках, свет и тропа — на долях такта. Слова закрашиваются под пение.",
+		"Песня начинается со слов, которые Ильва только что сказала в сцене дара, и собирает её реплики: фляга, хлеб, «не спорь».",
+		"Она стоит перед домом Сольвейг нарочно: та же ночь, две женщины. Сольвейг боится его щедрости — Ильва любит его за неё.",
+		"Мост песни — предчувствие, а не показ финала: тени без лиц, ворот дворца в кадре нет. «Пусть мир тебя предал весь» здесь значит «даже если».",
+		"Ильва укрывает спящего пледом — как он когда-то отдал свой плащ: теперь хоть кто-то защитит его самого.",
+		"«Пойдём?» — «Пойдём» вернутся в финале теми же словами.",
+	] as Array[String]
+	e["cast"] = [&"faithful", &"hero"] as Array[StringName]
+	e["quote"] = [&"faithful", Story.SONG["quote"]]
+	e["seconds"] = 160
 	return e
 
 
@@ -346,7 +370,7 @@ static func given_before(e: Dictionary, opts: Dictionary) -> Array[StringName]:
 		&"hearth":
 			var kept: bool = opts["amulet"] == "kept"
 			return _given(e["n"], &"" if kept else &"amulet", &"amulet" if kept else &"")
-		&"temptation":
+		&"temptation", &"song":
 			return _given(e["n"])
 		&"palace":
 			if e["n"] != Story.RING_LINE_INDEX:

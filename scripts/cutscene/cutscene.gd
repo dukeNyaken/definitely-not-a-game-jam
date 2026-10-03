@@ -88,6 +88,7 @@ func end(release_camera: bool = true) -> void:
 	ui.hide_line()
 	ui.hide_center()
 	ui.hide_chapter()
+	ui.hide_lyric()
 	ui.clear_tags()
 	ui.bars(false)
 	ui.skip_progress(0.0)
@@ -125,6 +126,7 @@ func skip() -> void:
 	ui.hide_line(0.1)
 	ui.hide_center(0.1)
 	ui.hide_chapter(0.1)
+	ui.hide_lyric(0.1)
 	Audio.play(&"ui_click", -6.0)
 	skip_requested.emit()
 

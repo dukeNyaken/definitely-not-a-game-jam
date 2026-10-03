@@ -20,6 +20,9 @@ var _shake: float = 0.0
 var _sway_t: float = 0.0
 var _focus: Vector3
 var _cine_tween: Tween
+var _yaw_tween: Tween
+## Кинорежим: камера ведёт то, что возвращает эта функция (идущих героев), пока не задан новый кадр.
+var _track: Callable
 
 
 func _ready() -> void:
@@ -51,6 +54,7 @@ func shake(amount: float) -> void:
 ## Плавный наезд на точку: фокус и размер кадра (меньше — крупнее). dur 0 — мгновенно.
 func cine_to(pos: Vector3, zoom: float, dur: float) -> void:
 	cinematic = true
+	_track = Callable()
 	_kill_cine()
 	if dur <= 0.0:
 		_focus = pos
@@ -61,15 +65,35 @@ func cine_to(pos: Vector3, zoom: float, dur: float) -> void:
 	_cine_tween.tween_property(camera, "size", zoom, dur)
 
 
+## Камера ведёт движущуюся точку (f возвращает Vector3) и плавно меняет размер кадра.
+## Наезд на месте — cine_to; он же отменяет ведение.
+func cine_track(f: Callable, zoom: float, dur: float) -> void:
+	cinematic = true
+	_kill_cine()
+	_track = f
+	if dur <= 0.0:
+		_focus = f.call()
+		camera.size = zoom
+		return
+	_cine_tween = _new_cine_tween()
+	_cine_tween.tween_property(camera, "size", zoom, dur)
+
+
 ## Облёт камеры вокруг фокуса: поворот по горизонтали от обычного угла.
+## Новый облёт отменяет прежний: иначе недоигранный тянул бы камеру назад.
 func cine_yaw(offset_degrees: float, dur: float) -> void:
-	var tw := create_tween().set_ignore_time_scale(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(self, "rotation_degrees:y", yaw_degrees + offset_degrees, maxf(dur, 0.01))
+	if _yaw_tween != null and _yaw_tween.is_valid():
+		_yaw_tween.kill()
+	_yaw_tween = create_tween().set_ignore_time_scale(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_yaw_tween.tween_property(self, "rotation_degrees:y", yaw_degrees + offset_degrees, maxf(dur, 0.01))
 
 
 ## Конец сцены: размер и поворот возвращаются, камера снова следует за целью.
 func cine_release(dur: float = 0.8) -> void:
 	_kill_cine()
+	_track = Callable()
+	if _yaw_tween != null and _yaw_tween.is_valid():
+		_yaw_tween.kill()
 	cinematic = false
 	_cine_tween = _new_cine_tween()
 	_cine_tween.tween_property(camera, "size", size, maxf(dur, 0.01))
@@ -89,6 +113,8 @@ func _kill_cine() -> void:
 func _process(delta: float) -> void:
 	if cinematic:
 		_sway_t += delta
+		if _track.is_valid():
+			_focus = _focus.lerp(_track.call(), minf(1.0, delta * 5.0))
 		global_position = _focus + _sway_offset() + _shake_offset(delta)
 		return
 	if target == null or not is_instance_valid(target):

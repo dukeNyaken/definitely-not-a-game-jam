@@ -489,7 +489,7 @@ func do_sacrifice(index: int) -> void:
 	get_tree().create_timer(2.4, false).timeout.connect(_next_stage)
 
 
-## after_gift — после сцены дара: в затемнении — дом Сольвейг (после второго дара) или её разговор
+## after_gift — после сцены дара: в затемнении — песня Ильвы и дом Сольвейг (после второго дара) или её разговор
 ## с Сигвардом (после третьего), затем тронный зал и голос Сигварда из дворца.
 func _next_stage(after_gift: bool = false) -> void:
 	set_state(State.TRANSITION)
@@ -497,6 +497,8 @@ func _next_stage(after_gift: bool = false) -> void:
 	await get_tree().create_timer(0.55, false).timeout
 	var n := RunState.sacrifices_count()
 	if after_gift and Cutscene.enabled():
+		if n == Story.SONG_AFTER_GIFT:
+			await IlvaSongScene.play(cutscene, self)
 		if n == Story.HEARTH_AFTER_GIFT:
 			await HearthScene.play(cutscene, self)
 		elif n == Story.TEMPTATION_AFTER_GIFT:

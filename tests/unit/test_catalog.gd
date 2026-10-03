@@ -63,13 +63,33 @@ func test_timeline_follows_the_run() -> void:
 	for n in range(1, gifts + 1):
 		assert_lt(keys.find("gift_%d" % n), keys.find("palace_%d" % n), "дар %d — раньше голоса из дворца" % n)
 	# Дом Сольвейг и её разговор с Сигвардом — между даром и голосом из дворца.
+	# Песня Ильвы — сразу за своим даром; дом Сольвейг — после песни, если они идут за одним даром.
+	var song := keys.find("song")
+	assert_eq(keys[song - 1], "gift_%d" % Story.SONG_AFTER_GIFT, "песня — сразу за сценой дара")
+	assert_lt(song, keys.find("gates"), "песня — задолго до развязки")
+	assert_lte(Story.SONG_AFTER_GIFT, gifts / 2, "песня — в первой половине пути")
 	for pair in [["hearth", Story.HEARTH_AFTER_GIFT], ["temptation", Story.TEMPTATION_AFTER_GIFT]]:
 		var at := keys.find(pair[0])
-		assert_eq(keys[at - 1], "gift_%d" % pair[1], pair[0])
+		var before := "song" if pair[1] == Story.SONG_AFTER_GIFT else "gift_%d" % pair[1]
+		assert_eq(keys[at - 1], before, pair[0])
 		assert_eq(keys[at + 1], "palace_%d" % pair[1], pair[0])
 	assert_lt(keys.find("gates"), keys.find("finale"))
 	assert_eq(CutsceneCatalog.playable().size(), keys.size() - 1, "отдельно не показать только реплики в бою")
 	assert_false(CutsceneCatalog.find("barks")["playable"])
+
+
+## Переключатель «идут ли сцены в забеге» живёт в самом меню «Катсцены» и показывает настройку.
+func test_gallery_shows_the_story_setting() -> void:
+	Render.cutscenes = true
+	var gallery: Control = load(Theater.GALLERY_SCENE).instantiate()
+	add_child_autofree(gallery)
+	assert_string_contains(gallery._story_button.text, "вкл")
+	assert_string_contains(gallery._subtitle.text, "идут")
+	Render.cutscenes = false
+	gallery._update_story()
+	assert_string_contains(gallery._story_button.text, "выкл")
+	assert_string_contains(gallery._subtitle.text, "выключены")
+	assert_string_contains(gallery._subtitle.text, "%d сцен" % CutsceneCatalog.entries().size())
 
 
 func test_options_have_a_default_among_choices() -> void:

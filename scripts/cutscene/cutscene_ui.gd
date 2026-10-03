@@ -57,6 +57,8 @@ var _line_float: Floater
 var _line_box: VBoxContainer
 var _line_name: Label
 var _line_text: RichTextLabel
+var _lyric_box: VBoxContainer
+var _lyric_text: RichTextLabel
 var _center_float: Floater
 var _center_box: VBoxContainer
 var _center_name: Label
@@ -96,6 +98,7 @@ func _ready() -> void:
 	UiKit.full_rect(_black)
 	_build_bars()
 	_build_line()
+	_build_lyric()
 	_build_center()
 	_build_chapter()
 	_build_bark()
@@ -201,6 +204,23 @@ func _build_line() -> void:
 	_line_text = _text_label(25)
 	_line_box.add_child(_line_text)
 	_line_box.modulate.a = 0.0
+
+
+## Строка песни: в нижней полосе, наклонным шрифтом; слова закрашиваются под пение (SongTrack).
+func _build_lyric() -> void:
+	_lyric_box = VBoxContainer.new()
+	_lyric_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_lyric_box.offset_left = -560
+	_lyric_box.offset_right = 560
+	_lyric_box.offset_top = -BAR_H + 8
+	_lyric_box.offset_bottom = -24
+	_lyric_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_lyric_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_lyric_box)
+	_lyric_text = _text_label(29)
+	_lyric_text.add_theme_font_override(&"normal_font", _thought_font)
+	_lyric_box.add_child(_lyric_text)
+	_lyric_box.modulate.a = 0.0
 
 
 func _build_center() -> void:
@@ -368,6 +388,20 @@ func show_line(speaker: String, color: Color, text: String, thought: bool = fals
 func hide_line(dur: float = 0.25) -> void:
 	_fade_to(_line_box, &"line", 0.0, dur)
 	_fade_to(_line_bg, &"line_bg", 0.0, dur + 0.2)
+
+
+## Строка песни (BBCode с цветами слов). Вызывается каждый кадр, пока строка звучит.
+func show_lyric(bbcode: String) -> void:
+	_lyric_text.text = "[center]%s[/center]" % bbcode
+	if not _lyric_box.has_meta(&"on"):
+		_lyric_box.set_meta(&"on", true)
+		_fade_to(_lyric_box, &"lyric", 1.0, 0.25)
+
+
+func hide_lyric(dur: float = 0.35) -> void:
+	if _lyric_box.has_meta(&"on"):
+		_lyric_box.remove_meta(&"on")
+		_fade_to(_lyric_box, &"lyric", 0.0, dur)
 
 
 ## Летопись: крупный текст по центру, необязательный заголовок над ним.

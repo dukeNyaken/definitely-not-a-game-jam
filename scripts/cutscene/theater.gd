@@ -89,6 +89,9 @@ func run(p_game: Game) -> void:
 			cs.ui.black(0.0, 0.9)
 			game.do_sacrifice(RunState.ring.index_of(opts["item"]))
 			return
+		&"song":
+			_between_stages()
+			await IlvaSongScene.play(cs, game)
 		&"hearth":
 			_between_stages()
 			await HearthScene.play(cs, game)

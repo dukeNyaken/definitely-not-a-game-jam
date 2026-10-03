@@ -3,10 +3,14 @@ extends Control
 ## выбранная сцена: когда она идёт, что в ней происходит, от чего зависит и кто в ней участвует,
 ## её варианты (какая вещь отдана, у кого оберег и перстень) и просмотр — одной сцены или подряд
 ## до конца истории. Показ ведёт Theater: сцена идёт в настоящей игре и возвращает сюда.
+## В шапке — переключатель, идут ли сцены в забеге (сам просмотр отсюда работает всегда).
 
 const MENU_SCENE := "res://scenes/main_menu.tscn"
 const LIST_WIDTH := 470.0
 const CAST_SIZE := Vector2(420, 236)
+const SUBTITLE := "Вся история по порядку забега — %d сцен. %s"
+const STORY_ON := "В забеге они идут."
+const STORY_OFF := "В забеге они выключены, здесь — идут."
 const HINT := "W / S или стрелки — выбор сцены  ·  Enter — смотреть  ·  Esc — назад        В сцене: ЛКМ, Пробел или Enter — следующая реплика  ·  удерживать Пробел — пропустить  ·  удерживать Esc — вернуться сюда"
 
 ## Варианты, выбранные зрителем: ключ сцены -> { ключ варианта: значение }. Переживают просмотр.
@@ -18,6 +22,8 @@ var _index: int = 0
 var _rows: Array[Button] = []
 var _scroll: ScrollContainer
 var _detail: VBoxContainer
+var _subtitle: Label
+var _story_button: Button
 
 
 func _ready() -> void:
@@ -87,13 +93,30 @@ func _build_header() -> Control:
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	titles.add_theme_constant_override(&"separation", -6)
 	titles.add_child(UiKit.outlined(UiKit.label("Катсцены", 48, UiKit.GOLD), 8))
-	titles.add_child(UiKit.label("Вся история по порядку забега — %d сцен. Любую можно посмотреть отдельно или подряд до конца." % _entries.size(), 18, UiKit.MUTED))
+	# Строка обрезается, а не растягивает шапку: иначе длинный текст вытолкнул бы кнопки за край экрана.
+	_subtitle = UiKit.label("", 18, UiKit.MUTED)
+	_subtitle.clip_text = true
+	_subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	titles.add_child(_subtitle)
 	row.add_child(titles)
-	for b in [UiKit.button("Смотреть всю историю", _play_from.bind(0)), UiKit.button("Назад", _back)]:
+	_story_button = UiKit.button("", _toggle_story)
+	for b in [_story_button, UiKit.button("Смотреть всю историю", _play_from.bind(0)), UiKit.button("Назад", _back)]:
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		b.custom_minimum_size = Vector2(0, 50)
 		row.add_child(b)
+	_update_story()
 	return row
+
+
+## Идут ли сюжетные сцены в забеге. Та же настройка, что в паузе; просмотр из этого меню от неё не зависит.
+func _toggle_story() -> void:
+	Render.set_cutscenes(not Render.cutscenes)
+	_update_story()
+
+
+func _update_story() -> void:
+	_story_button.text = "Сцены в забеге: %s" % ("вкл" if Render.cutscenes else "выкл")
+	_subtitle.text = SUBTITLE % [_entries.size(), STORY_ON if Render.cutscenes else STORY_OFF]
 
 
 ## Лента сцен: заголовки этапов и строки сцен по порядку забега.

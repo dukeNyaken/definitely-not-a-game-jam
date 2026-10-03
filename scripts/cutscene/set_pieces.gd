@@ -14,6 +14,9 @@ const IRON := Color(0.38, 0.38, 0.42)
 const PURPLE := Color(0.3, 0.1, 0.36)
 const GOLD := Color(0.95, 0.76, 0.32)
 const FIRE := Color(1.0, 0.5, 0.18)
+const SNOW := Color(0.8, 0.86, 0.96)
+const ICE := Color(0.56, 0.74, 0.9)
+const FIR := Color(0.13, 0.27, 0.21)
 
 
 ## Стойка с деревянными мечами.
@@ -337,6 +340,156 @@ static func cloak(color: Color = Color(0.5, 0.12, 0.12)) -> Node3D:
 	r.add_child(back)
 	for x in [-0.25, 0.25]:
 		r.add_child(LowPoly.box(Vector3(0.15, 0.46, 0.05), color.darkened(0.15), Vector3(x, -0.3, -0.17), 0.95, 0.0, 0.0, &"cloth"))
+	return r
+
+
+# --- Зима: песня Ильвы (IlvaSongScene) ---------------------------------------
+
+## Земля и всё, что лежит на ней вплотную, в PS1 не дрожит. Дрожание сдвигает треугольники по экрану,
+## а глубина у них остаётся прежней — и то, что лежит в паре сантиметров над землёй (тени под ногами,
+## тропа, плиты света), то проваливается под неё, то выходит наружу: кадр рябит. Так же сделан пол арены.
+## Материал копируется: общий, из кэша LowPoly, остаётся дрожащим для остальных.
+static func steady(mi: MeshInstance3D) -> MeshInstance3D:
+	var m := LowPoly.unique(mi.material_override as ShaderMaterial)
+	m.set_shader_parameter(&"snap_vertices", false)
+	mi.material_override = m
+	return mi
+
+
+## Снежное поле (или лёд): одна сетка с частыми вершинами. В PS1 свет считается по вершинам,
+## и на редкой сетке пятна света от костра и фонаря не было бы.
+static func snow_ground(size: Vector2, color: Color = SNOW, emission: float = 0.1) -> MeshInstance3D:
+	var plane := PlaneMesh.new()
+	plane.size = size
+	plane.subdivide_width = int(size.x / 1.2)
+	plane.subdivide_depth = int(size.y / 1.2)
+	var mi := MeshInstance3D.new()
+	mi.name = "SnowGround"
+	mi.mesh = plane
+	mi.material_override = LowPoly.mat(color, 0.95, 0.0, emission)
+	return steady(mi)
+
+
+## Ель под снегом: три яруса, у каждого зелёный низ и снежный верх.
+## Части стоят друг на друге точно, край в край, и не входят одна в другую: в PS1 вершины дрожат,
+## и там, где сетки пересекаются или лежат почти вплотную, кадр рябит.
+static func fir(height: float = 3.2) -> Node3D:
+	var r := LowPoly.pivot("Fir")
+	var k := height / 3.36
+	r.add_child(LowPoly.cyl(0.09 * k, 0.12 * k, 0.6 * k, 5, DARK_WOOD, Vector3(0, 0.3 * k, 0), 0.9, 0.0, 0.0, &"wood"))
+	var y := 0.6 * k
+	for i in 3:
+		var rad := (1.05 - i * 0.28) * k
+		var h := (1.0 - i * 0.08) * k
+		var mid := rad * 0.5
+		# Верх яруса уже низа следующего: его срез остаётся внутри следующего яруса и не виден.
+		var top := 0.0 if i == 2 else rad * 0.22
+		r.add_child(LowPoly.cyl(mid, rad, h * 0.6, 6, FIR.lightened(i * 0.05), Vector3(0, y + h * 0.3, 0), 0.95, 0.0, 0.12))
+		r.add_child(LowPoly.cyl(top, mid, h * 0.4, 6, SNOW, Vector3(0, y + h * 0.8, 0), 0.95, 0.0, 0.2))
+		y += h
+	return r
+
+
+## Сугроб.
+static func snow_drift(radius: float = 1.0) -> Node3D:
+	var r := LowPoly.pivot("SnowDrift")
+	var m := LowPoly.sphere(radius, 9, 5, SNOW, Vector3.ZERO, 0.95, 0.0, 0.2)
+	m.scale = Vector3(1.0, 0.2, 0.72)
+	r.add_child(steady(m))
+	return r
+
+
+## Костёр: камни по кругу, поленья шалашом, угли. Огонь и свет ставит сцена.
+static func campfire() -> Node3D:
+	var r := LowPoly.pivot("Campfire")
+	for k in 7:
+		var a := TAU * k / 7.0
+		r.add_child(LowPoly.box(Vector3(0.22, 0.14, 0.18), STONE.darkened(0.12 * (k % 2)), Vector3(cos(a) * 0.48, 0.07, sin(a) * 0.48), 0.95, 0.0, 0.0, &"stone"))
+	for k in 3:
+		var stick := LowPoly.cyl(0.05, 0.065, 0.72, 5, DARK_WOOD, Vector3(0, 0.22, 0), 0.9, 0.0, 0.0, &"wood")
+		stick.rotation = Vector3(0.95, TAU * k / 3.0, 0)
+		r.add_child(stick)
+	r.add_child(LowPoly.sphere(0.2, 6, 4, FIRE, Vector3(0, 0.1, 0), 0.6, 0.0, 2.5))
+	return r
+
+
+## Бревно у костра: на нём сидят.
+static func log_seat() -> Node3D:
+	var r := LowPoly.pivot("LogSeat")
+	# Утоплено в снег: лежа на земле вплотную, бревно касалось бы её по линии и рябило.
+	var trunk := LowPoly.cyl(0.24, 0.27, 1.8, 7, LOG, Vector3(0, 0.17, 0), 0.9, 0.0, 0.0, &"wood")
+	trunk.rotation.z = PI / 2
+	r.add_child(trunk)
+	return r
+
+
+## Пень у костра: на нём сидят. Узкий — под сидящим его почти не видно, и вещи сидящего
+## (щит на руке, плед на плечах) висят вокруг пня, а не проходят сквозь него, как сквозь бревно.
+static func stump() -> Node3D:
+	var r := LowPoly.pivot("Stump")
+	r.add_child(LowPoly.cyl(0.24, 0.28, 0.44, 7, LOG, Vector3(0, 0.22, 0), 0.9, 0.0, 0.0, &"wood"))
+	return r
+
+
+## Вешка у дороги: камни под снежной шапкой.
+static func cairn() -> Node3D:
+	var r := LowPoly.pivot("Cairn")
+	r.add_child(LowPoly.box(Vector3(0.42, 0.3, 0.38), STONE, Vector3(0, 0.15, 0), 0.95, 0.0, 0.0, &"stone"))
+	r.add_child(LowPoly.box(Vector3(0.3, 0.26, 0.3), STONE.darkened(0.12), Vector3(0.02, 0.43, 0), 0.95, 0.0, 0.0, &"stone"))
+	r.add_child(LowPoly.box(Vector3(0.36, 0.09, 0.36), SNOW, Vector3(0.02, 0.6, 0), 0.95, 0.0, 0.12))
+	return r
+
+
+## Ладья, вмёрзшая в лёд: корпус, штевни, резная голова на носу, мачта со свёрнутым парусом,
+## щиты по бортам, снег на палубе. Нос смотрит в +X.
+static func longship() -> Node3D:
+	var r := LowPoly.pivot("Longship")
+	# Борт в плане — миндаль: острые нос и корма, киль уже борта.
+	var top: Array = []
+	var bottom: Array = []
+	for pt in [[-3.3, 0.0], [-2.2, 0.62], [0.0, 0.8], [2.2, 0.62], [3.3, 0.0], [2.2, -0.62], [0.0, -0.8], [-2.2, -0.62]]:
+		top.append(Vector3(pt[0], 0.72, pt[1]))
+		bottom.append(Vector3(pt[0] * 0.82, 0.0, pt[1] * 0.4))
+	var faces: Array = [top, bottom]
+	for i in top.size():
+		var j := (i + 1) % top.size()
+		faces.append([bottom[i], bottom[j], top[j], top[i]])
+	var hull := MeshInstance3D.new()
+	hull.mesh = LowPoly.convex(faces)
+	hull.material_override = LowPoly.mat(DARK_WOOD.lightened(0.14), 0.9, 0.0, 0.0, &"wood")
+	r.add_child(hull)
+	# Снег на палубе лежит заметно выше борта, щиты висят с зазором от него: вплотную они рябили бы.
+	r.add_child(LowPoly.box(Vector3(4.0, 0.14, 0.86), SNOW, Vector3(0, 0.8, 0), 0.95, 0.0, 0.2))
+	for s in [-1.0, 1.0]:
+		var post := LowPoly.box(Vector3(0.18, 2.0, 0.18), DARK_WOOD.lightened(0.05), Vector3(s * 3.45, 1.45, 0), 0.9, 0.0, 0.0, &"wood")
+		post.rotation.z = -s * 0.36
+		r.add_child(post)
+	r.add_child(LowPoly.box(Vector3(0.55, 0.24, 0.22), DARK_WOOD.lightened(0.14), Vector3(4.05, 2.42, 0), 0.9, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.pyramid(Vector2(0.12, 0.12), 0.26, GOLD, Vector3(4.0, 2.66, 0), &"gold", 0.6, 0.6))
+	r.add_child(LowPoly.cyl(0.07, 0.09, 3.0, 5, WOOD, Vector3(0, 2.1, 0), 0.9, 0.0, 0.0, &"wood"))
+	for spec in [[0.05, 2.7, WOOD.darkened(0.1), 3.3], [0.15, 2.3, Color(0.82, 0.76, 0.62), 3.12]]:
+		var spar := LowPoly.cyl(spec[0], spec[0], spec[1], 6, spec[2], Vector3(0, spec[3], 0), 0.9)
+		spar.rotation.x = PI / 2
+		r.add_child(spar)
+	var paint := [Color(0.62, 0.14, 0.12), GOLD.darkened(0.15), Color(0.2, 0.3, 0.46)]
+	for k in 5:
+		for s in [-1.0, 1.0]:
+			var sx := -2.0 + k * 1.0
+			var shield := LowPoly.cyl(0.27, 0.27, 0.06, 8, paint[k % 3], Vector3(sx, 0.7, s * (0.93 - absf(sx) * 0.085)), 0.8, 0.0, 0.25)
+			shield.rotation.x = PI / 2
+			r.add_child(shield)
+	return r
+
+
+## Горящий дом: сруб, двускатная крыша, проёмы в огне. Огонь и свет ставит сцена — над точками fire_points.
+static func burning_hut() -> Node3D:
+	var r := LowPoly.pivot("BurningHut")
+	r.add_child(LowPoly.box(Vector3(3.4, 1.7, 2.6), LOG.darkened(0.4), Vector3(0, 0.85, 0), 0.95, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.prism(Vector3(3.9, 1.3, 3.0), DARK_WOOD.darkened(0.25), Vector3(0, 2.35, 0), 0.95, 0.0, 0.0, &"wood"))
+	# Проёмы выступают из стены на ладонь, а не лежат в её плоскости.
+	r.add_child(LowPoly.box(Vector3(0.8, 1.2, 0.2), FIRE, Vector3(0.3, 0.6, 1.3), 0.6, 0.0, 3.0))
+	r.add_child(LowPoly.box(Vector3(0.6, 0.5, 0.2), FIRE, Vector3(-1.0, 1.05, 1.3), 0.6, 0.0, 3.0))
+	r.set_meta(&"fire_points", [Vector3(0, 2.9, 0), Vector3(-1.2, 2.3, 0.6), Vector3(1.1, 2.4, -0.3), Vector3(0.3, 1.3, 1.45)])
 	return r
 
 

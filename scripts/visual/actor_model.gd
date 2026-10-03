@@ -43,7 +43,8 @@ var _crown: Node3D
 ## Вариант наряда (например, &"young" — Тиран во флешбэке). Задаётся до setup().
 var variant: StringName = &""
 ## Поза сюжетной сцены: &"kneel", &"slump", &"sit", &"hold", &"bow", &"offer", &"ease", &"arms_up", &"hands_back",
-## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer", &"wring", &"downcast", &"huddle". Пустая — обычная анимация;
+## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer", &"wring", &"downcast", &"huddle", &"sing", &"lantern_high".
+## Пустая — обычная анимация;
 ## rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
@@ -1145,6 +1146,18 @@ func _apply_pose(p: StringName, moving: float, arm_l_basis: Basis, arm_r_basis: 
 			arm_l_basis = Basis(Vector3.UP, -0.9) * Basis(Vector3.RIGHT, 1.25)
 		&"lantern":
 			arm_l_basis = Basis(Vector3.RIGHT, 0.45)
+		&"sing":
+			# Поёт: фонарь в левой руке, правая раскрыта в сторону и «дышит», голова поднята, корпус покачивается.
+			var beat := Time.get_ticks_msec() * 0.001
+			arm_l_basis = Basis(Vector3.RIGHT, 0.55)
+			arm_r_basis = Basis(Vector3.FORWARD, -0.75 - sin(beat * 1.9) * 0.14) * Basis(Vector3.RIGHT, 0.55 + sin(beat * 1.3) * 0.1)
+			torso.rotation.z = sin(beat * 1.9) * 0.05
+			head.rotation.x = 0.16
+		&"lantern_high":
+			# Фонарь поднят над головой: её свет — для него.
+			arm_l_basis = Basis(Vector3.FORWARD, 0.3) * Basis(Vector3.RIGHT, 2.45)
+			arm_r_basis = Basis(Vector3.FORWARD, -0.35) * Basis(Vector3.RIGHT, 0.2)
+			head.rotation.x = 0.2
 		&"sling":
 			arm_l_basis = Basis(Vector3.UP, -0.9) * Basis(Vector3.RIGHT, 1.0)
 		&"frail", &"frail_offer":
