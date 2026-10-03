@@ -72,7 +72,7 @@ func test_cutscene_props_keep_run_and_sacrifice_appearances_after_menu_choice_ch
 	RunState.snapshots = [result["victim_snapshot"]]
 	var sword: ItemState = RunState.ring.items[RunState.ring.index_of(&"sword")]
 	sword.appearance = 2
-	Mastery.xp = {&"amulet": 1000, &"sword": 1000}
+	Mastery.xp = {&"amulet": Mastery.xp_cap(), &"sword": Mastery.xp_cap()}
 	Mastery.choices = {&"amulet": 1, &"sword": 3}
 	assert_eq(Cutscene.item_state(&"amulet").appearance, 3, "оберег у очага сохраняет облик подарка")
 	assert_same(Cutscene.item_state(&"amulet"), result["victim_snapshot"])
@@ -92,7 +92,7 @@ func test_gallery_hero_uses_selected_mastery_forms_on_each_character() -> void:
 	Mastery.xp = {}
 	Mastery.choices = {}
 	for id in Db.ITEM_IDS:
-		Mastery.xp[id] = 1000
+		Mastery.xp[id] = Mastery.xp_cap()
 		Mastery.choices[id] = 3
 	for variant in SkinnedActorModel.variants():
 		SkinnedActorModel.select(variant["id"])

@@ -13,7 +13,7 @@ func before_each() -> void:
 	_choices = Mastery.choices.duplicate()
 	_memory = Mastery.memory_only
 	Mastery.memory_only = true
-	Mastery.xp = {&"sword": 1000, &"boots": 1000, &"amulet": 1000}
+	Mastery.xp = {&"sword": Mastery.xp_cap(), &"boots": Mastery.xp_cap(), &"amulet": Mastery.xp_cap()}
 	Mastery.choices.clear()
 
 

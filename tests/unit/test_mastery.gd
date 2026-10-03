@@ -110,24 +110,24 @@ func test_thresholds_upgrade_live_without_resetting_cooldown_and_snapshot() -> v
 	var hero := hero_with(&"boots")
 	var comp := hero.component(&"boots")
 	comp.start_cooldown(0.7)
-	Mastery.award(hero, 249)
+	Mastery.award(hero, int(Mastery.rules["thresholds"][1]) - 1)
 	assert_eq(Mastery.level(&"boots"), 1)
 	Mastery.award(hero, 1)
 	assert_eq(hero.items[0].appearance, 2)
 	assert_eq(comp.cooldown_left, 0.7)
 	var snapshot := hero.items[0].snapshot()
-	Mastery.award(hero, 750)
+	Mastery.award(hero, Mastery.xp_cap() - int(Mastery.rules["thresholds"][1]))
 	assert_eq(hero.items[0].appearance, 3)
 	assert_eq(snapshot.appearance, 2)
 	assert_eq(float(comp.def.stat("distance")), 5.0)
 	assert_eq(float(Db.item(&"boots").stat("distance")), 4.0)
 	Mastery.award(hero, 100)
-	assert_eq(Mastery.xp[&"boots"], 1000)
-	assert_eq(Mastery.run_xp[&"boots"], 1100)
+	assert_eq(Mastery.xp[&"boots"], Mastery.xp_cap())
+	assert_eq(Mastery.run_xp[&"boots"], Mastery.xp_cap() + 100)
 
 
 func test_new_run_keeps_unlocks_and_selected_old_appearance() -> void:
-	Mastery.award(hero_with(&"sword"), 1000)
+	Mastery.award(hero_with(&"sword"), Mastery.xp_cap())
 	Mastery.choose(&"sword", 2)
 	Mastery.choose(&"boots", 3)
 	RunState.new_run(234)
@@ -135,19 +135,19 @@ func test_new_run_keeps_unlocks_and_selected_old_appearance() -> void:
 	assert_eq(RunState.ring.get_item(&"sword").appearance, 2)
 	assert_eq(RunState.ring.get_item(&"boots").appearance, 1)
 	assert_true(Mastery.run_xp.is_empty())
-	assert_eq(Mastery.run_start_xp[&"sword"], 1000)
+	assert_eq(Mastery.run_start_xp[&"sword"], Mastery.xp_cap())
 
 
 func test_run_baseline_survives_capped_rewards_and_next_run_resets_it() -> void:
-	Mastery.xp[&"boots"] = 900
+	Mastery.xp[&"boots"] = Mastery.xp_cap() - 100
 	RunState.new_run(234)
 	var hero := hero_with(&"boots", 2)
 	Mastery.award(hero, 450)
-	assert_eq(Mastery.run_start_xp[&"boots"], 900)
-	assert_eq(Mastery.xp[&"boots"], 1000)
+	assert_eq(Mastery.run_start_xp[&"boots"], Mastery.xp_cap() - 100)
+	assert_eq(Mastery.xp[&"boots"], Mastery.xp_cap())
 	assert_eq(Mastery.run_xp[&"boots"], 450)
 	RunState.new_run(235)
-	assert_eq(Mastery.run_start_xp[&"boots"], 1000)
+	assert_eq(Mastery.run_start_xp[&"boots"], Mastery.xp_cap())
 	assert_true(Mastery.run_xp.is_empty())
 
 
@@ -162,10 +162,10 @@ func test_rewards_scale_with_enemy_stage_and_elite() -> void:
 func test_save_reload_replace_and_backup_recovery() -> void:
 	var path := "res://.godot/mastery_test.cfg"
 	Mastery.memory_only = false
-	Mastery.xp[&"sword"] = 1000
+	Mastery.xp[&"sword"] = Mastery.xp_cap()
 	Mastery.choices[&"sword"] = 2
 	assert_true(Mastery.save_progress(path))
-	Mastery.xp[&"boots"] = 250
+	Mastery.xp[&"boots"] = int(Mastery.rules["thresholds"][1])
 	assert_true(Mastery.save_progress(path))
 	Mastery.load_progress(path)
 	assert_eq(Mastery.level(&"boots"), 2)
@@ -186,14 +186,14 @@ func test_default_save_load_and_reset_are_isolated_between_build_profiles() -> v
 	Mastery.memory_only = false
 	RunState.running = false
 	Mastery.save_path = paths[0]
-	Mastery.xp[&"sword"] = 1000
+	Mastery.xp[&"sword"] = Mastery.xp_cap()
 	Mastery.choices[&"sword"] = 3
 	assert_true(Mastery.save_progress(), "создаёт вложенный каталог профиля")
 	assert_true(Mastery.save_progress())
 	Mastery.save_path = paths[1]
 	Mastery.load_progress()
 	assert_eq(Mastery.level(&"sword"), 1, "новый билд не читает опыт предыдущего")
-	Mastery.xp[&"sword"] = 250
+	Mastery.xp[&"sword"] = int(Mastery.rules["thresholds"][1])
 	Mastery.choices[&"sword"] = 2
 	assert_true(Mastery.save_progress())
 	Mastery.save_path = paths[0]
@@ -230,7 +230,7 @@ func test_reset_updates_live_hero_during_cutscene_without_touching_gift_snapshot
 	game.add_to_group(&"game")
 	RunState.running = false
 	RunState.outcome = RunState.Outcome.NONE
-	Mastery.xp[&"armor"] = 1000
+	Mastery.xp[&"armor"] = Mastery.xp_cap()
 	Mastery.reset_progress()
 	assert_eq(hero.items[0].appearance, 1)
 	assert_eq(RunState.ring.items[0].appearance, 1)
@@ -244,11 +244,11 @@ func test_reset_persists_empty_profile_including_backup_recovery() -> void:
 	var path := "res://.godot/mastery_reset_test.cfg"
 	RunState.running = false
 	Mastery.memory_only = false
-	Mastery.xp = {&"sword": 1000, &"boots": 250}
+	Mastery.xp = {&"sword": Mastery.xp_cap(), &"boots": int(Mastery.rules["thresholds"][1])}
 	Mastery.choices = {&"sword": 3, &"boots": 2}
 	assert_true(Mastery.save_progress(path))
 	assert_true(Mastery.save_progress(path))
-	Mastery.run_start_xp = {&"sword": 900}
+	Mastery.run_start_xp = {&"sword": Mastery.xp_cap() - 100}
 	Mastery.run_xp = {&"sword": 450}
 	watch_signals(Mastery)
 	assert_true(Mastery.reset_progress(path))
@@ -289,7 +289,7 @@ func test_reset_updates_live_forms_without_healing_or_losing_sacrifices() -> voi
 	boots.start_cooldown(0.7)
 	var shield := hero.component(&"shield") as ShieldAction
 	shield.press()
-	Mastery.xp = {&"armor": 1000, &"shield": 1000, &"boots": 1000}
+	Mastery.xp = {&"armor": Mastery.xp_cap(), &"shield": Mastery.xp_cap(), &"boots": Mastery.xp_cap()}
 	Mastery.choices = {&"armor": 3, &"shield": 3, &"boots": 3}
 	assert_true(Mastery.reset_progress())
 	assert_eq(hero.hp, 62.0)
@@ -334,7 +334,7 @@ func test_shield_and_boots_gain_protection() -> void:
 func test_armor_upgrade_preserves_damage_and_retaliates_without_recursion() -> void:
 	var hero := hero_with(&"armor")
 	hero.armor = 10
-	Mastery.award(hero, 1000)
+	Mastery.award(hero, Mastery.xp_cap())
 	assert_eq(hero.max_armor, 70.0)
 	assert_eq(hero.armor, 30.0)
 	var enemy := TestHelpers.dummy(self, Vector3(0, 0, -2))

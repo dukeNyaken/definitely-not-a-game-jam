@@ -47,21 +47,25 @@ func _ready() -> void:
 		Mastery.memory_only = true
 		Mastery.xp.clear()
 		Mastery.choices.clear()
-		var starts := [210, 440, 900, 1000, 10, 620, 200]
+		var second := int(Mastery.rules["thresholds"][1])
+		var cap := Mastery.xp_cap()
+		var starts := [second - 40, second + roundi((cap - second) * 0.25), cap - 100, cap, 10, second + roundi((cap - second) * 0.5), second - 50]
 		for i in Db.ITEM_IDS.size():
 			var id := Db.ITEM_IDS[i]
-			Mastery.xp[id] = 0 if _preset in ["final_empty", "mastery_empty"] else 1000 if _preset == "final_max" else starts[i]
+			Mastery.xp[id] = 0 if _preset in ["final_empty", "mastery_empty"] else Mastery.xp_cap() if _preset == "final_max" else starts[i]
 	if _preset == "mastery":
 		Mastery.memory_only = true
 		for id in Db.ITEM_IDS:
-			Mastery.xp[id] = 1000
+			Mastery.xp[id] = Mastery.xp_cap()
 			Mastery.choices[id] = 3
 	if _preset.begins_with("tree"):
 		Mastery.memory_only = true
-		var starts := [210, 440, 900, 1000, 10, 620, 200]
+		var second := int(Mastery.rules["thresholds"][1])
+		var cap := Mastery.xp_cap()
+		var starts := [second - 40, second + roundi((cap - second) * 0.25), cap - 100, cap, 10, second + roundi((cap - second) * 0.5), second - 50]
 		for i in Db.ITEM_IDS.size():
 			var id := Db.ITEM_IDS[i]
-			Mastery.xp[id] = starts[i] if _preset == "tree_mixed" else 1000
+			Mastery.xp[id] = starts[i] if _preset == "tree_mixed" else Mastery.xp_cap()
 			Mastery.choices[id] = Mastery.level(id)
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
@@ -97,7 +101,7 @@ func _ready() -> void:
 				for i in Db.ITEM_IDS.size():
 					var id := Db.ITEM_IDS[i]
 					Mastery.run_xp[id] = rewards[i]
-					Mastery.xp[id] = mini(int(Mastery.xp[id]) + rewards[i], 1000)
+					Mastery.xp[id] = mini(int(Mastery.xp[id]) + rewards[i], Mastery.xp_cap())
 					Mastery.choices[id] = Mastery.level(id)
 				for item in RunState.ring.items:
 					item.appearance = Mastery.selected(item.def_id)

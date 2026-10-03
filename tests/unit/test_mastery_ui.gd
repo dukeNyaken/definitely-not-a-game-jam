@@ -13,7 +13,7 @@ func before_each() -> void:
 	_save_error = Mastery.save_error
 	Mastery.memory_only = true
 	Mastery.save_error = false
-	Mastery.xp = {&"boots": 1000, &"sword": 250}
+	Mastery.xp = {&"boots": Mastery.xp_cap(), &"sword": int(Mastery.rules["thresholds"][1])}
 	Mastery.choices = {&"boots": 2}
 
 
@@ -48,7 +48,7 @@ func test_locked_form_can_be_previewed_but_cannot_be_equipped() -> void:
 	assert_true(control._equip.disabled)
 	control._choose_preview()
 	assert_eq(Mastery.selected(&"sword"), 2)
-	assert_eq(Mastery.xp[&"sword"], 250)
+	assert_eq(Mastery.xp[&"sword"], int(Mastery.rules["thresholds"][1]))
 
 
 func test_equip_updates_in_place_without_losing_item_or_inspected_tier() -> void:
@@ -79,17 +79,17 @@ func test_circle_click_selects_locked_tier_without_changing_equipped_form() -> v
 	assert_true(control._equip.disabled)
 	assert_eq(Mastery.selected(&"sword"), 2)
 	assert_true(wheel.earned_xp.is_empty())
-	assert_eq(wheel.displayed_xp(0), 250.0)
+	assert_eq(wheel.displayed_xp(0), float(Mastery.rules["thresholds"][1]))
 
 
 func test_external_unlock_refreshes_circle_and_inspected_form() -> void:
 	var control := collection(&"sword")
 	control._inspect_tier(3)
-	Mastery.xp[&"sword"] = 1000
+	Mastery.xp[&"sword"] = Mastery.xp_cap()
 	Mastery.choices[&"sword"] = 3
 	Mastery.changed.emit()
 	assert_true(control._equip.disabled)
-	assert_eq(control._wheel.displayed_xp(0), 1000.0)
+	assert_eq(control._wheel.displayed_xp(0), float(Mastery.xp_cap()))
 	assert_eq(control._tier_status[2].text, "Выбран")
 	Mastery.save_error = true
 	Mastery.changed.emit()
@@ -108,7 +108,7 @@ func test_result_tier_buttons_preview_locked_forms_without_unlocking_or_equippin
 	card._choose_preview()
 	assert_eq(Mastery.selected(&"sword"), 2)
 	assert_eq(Mastery.level(&"sword"), 2)
-	assert_eq(Mastery.xp[&"sword"], 250)
+	assert_eq(Mastery.xp[&"sword"], int(Mastery.rules["thresholds"][1]))
 	card._tier_buttons[0].pressed.emit()
 	assert_eq(card._preview_tier, 1)
 	assert_eq(card._form_effect.text, Db.item(&"sword").action_text)
