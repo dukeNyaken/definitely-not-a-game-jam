@@ -79,6 +79,9 @@ func _render_all() -> void:
 		cam.position = Vector3(0, 0, 4)
 		cam.current = true
 		item.rotation = Vector3.ZERO if generated else frame[1]
+		if generated and id == &"shield":
+			# На руке щит стоит боком; иконка должна показывать лицевую сторону.
+			item.rotation.y = PI / 2
 		var pivot := Node3D.new()
 		pivot.rotation = Vector3(deg_to_rad(15), deg_to_rad(-25), 0)
 		pivot.add_child(item)
