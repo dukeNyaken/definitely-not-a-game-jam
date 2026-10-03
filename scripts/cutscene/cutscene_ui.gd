@@ -10,6 +10,40 @@ const SEPIA := Color(1.0, 0.78, 0.5)
 ## Transform2D(1, slant, 0, 1, 0, 0). Сдвиг по другой оси поворачивает буквы, а не наклоняет.
 const THOUGHT_SLANT := 0.16
 const LINE_SLIDE := 10.0
+## Заставка главы появляется чуть крупнее и медленно «оседает» до своего размера.
+const CHAPTER_SCALE := 1.08
+const CHAPTER_SCALE_SMALL := 1.05
+
+
+## Слой, который сдвигается и растёт дробно. Control привязан к целым пикселям: его сдвиг меняется
+## рывками по пикселю, и на крупном тексте это видно. Node2D к пикселям не привязан.
+## Внутри — рамка размером с экран, чтобы у содержимого работали якоря.
+class Floater extends Node2D:
+	var frame: Control
+	## Точка экрана, вокруг которой слой растёт: доля экрана и добавка в пикселях.
+	var anchor := Vector2(0.5, 0.5)
+	var anchor_px := Vector2.ZERO
+	var shift := Vector2.ZERO:
+		set(v):
+			shift = v
+			fit()
+
+	func _init() -> void:
+		frame = Control.new()
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Текст между пикселями сглаживается, а не перескакивает с пикселя на пиксель.
+		frame.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		add_child(frame)
+
+	func fit() -> void:
+		var host := get_parent() as Control
+		if host == null:
+			return
+		var p := (host.size * anchor + anchor_px).round()
+		position = p + shift
+		frame.position = -p
+		frame.size = host.size
+
 
 var root: Control
 var _top: ColorRect
@@ -19,12 +53,15 @@ var _grade_mat: ShaderMaterial
 var _black: ColorRect
 var _flash: ColorRect
 var _line_bg: TextureRect
+var _line_float: Floater
 var _line_box: VBoxContainer
 var _line_name: Label
 var _line_text: RichTextLabel
+var _center_float: Floater
 var _center_box: VBoxContainer
 var _center_name: Label
 var _center_text: RichTextLabel
+var _chapter_float: Floater
 var _chapter_box: VBoxContainer
 var _chapter_title: Label
 var _chapter_sub: Label
@@ -38,7 +75,7 @@ var _skip_fill: ColorRect
 var _typed: RichTextLabel
 var _thought_font: FontVariation
 var _tweens: Dictionary = {}
-var _base_offsets: Dictionary = {}
+var _floaters: Array[Floater] = []
 ## Таблички над головами: { "node": Node3D, "box": Control, "h": float }.
 var _tags: Array[Dictionary] = []
 
@@ -65,9 +102,25 @@ func _ready() -> void:
 	_build_skip()
 	_flash = _rect(Color(1, 1, 1, 0))
 	UiKit.full_rect(_flash)
+	root.resized.connect(_fit_floaters)
 
 
 # --- Постройка --------------------------------------------------------------
+
+func _floater() -> Floater:
+	var f := Floater.new()
+	# Тема не наследуется через Node2D — отдаём её рамке сами.
+	f.frame.theme = root.theme
+	root.add_child(f)
+	_floaters.append(f)
+	f.fit()
+	return f
+
+
+func _fit_floaters() -> void:
+	for f in _floaters:
+		f.fit()
+
 
 func _rect(c: Color) -> ColorRect:
 	var r := ColorRect.new()
@@ -131,6 +184,7 @@ func _build_line() -> void:
 	_line_bg.offset_bottom = -BAR_H
 	_line_bg.modulate.a = 0.0
 	root.add_child(_line_bg)
+	_line_float = _floater()
 	_line_box = VBoxContainer.new()
 	_line_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	# Узкая колонка: длинная реплика переносится на вторую строку, а не дотягивается до подсказки пропуска справа.
@@ -141,16 +195,16 @@ func _build_line() -> void:
 	_line_box.alignment = BoxContainer.ALIGNMENT_END
 	_line_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_line_box.add_theme_constant_override(&"separation", 2)
-	root.add_child(_line_box)
+	_line_float.frame.add_child(_line_box)
 	_line_name = UiKit.outlined(UiKit.label("", 28, UiKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER), 8)
 	_line_box.add_child(_line_name)
 	_line_text = _text_label(25)
 	_line_box.add_child(_line_text)
 	_line_box.modulate.a = 0.0
-	_base_offsets[_line_box] = Vector2(_line_box.offset_top, _line_box.offset_bottom)
 
 
 func _build_center() -> void:
+	_center_float = _floater()
 	_center_box = VBoxContainer.new()
 	_center_box.set_anchors_preset(Control.PRESET_CENTER)
 	_center_box.offset_left = -600
@@ -160,24 +214,26 @@ func _build_center() -> void:
 	_center_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	_center_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_center_box.add_theme_constant_override(&"separation", 14)
-	root.add_child(_center_box)
+	_center_float.frame.add_child(_center_box)
 	_center_name = UiKit.outlined(UiKit.label("", 26, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER), 6)
 	_center_box.add_child(_center_name)
 	_center_text = _text_label(32)
 	_center_box.add_child(_center_text)
 	_center_box.modulate.a = 0.0
-	_base_offsets[_center_box] = Vector2(_center_box.offset_top, _center_box.offset_bottom)
 
 
 ## Заставка главы: золотой заголовок между двумя тонкими линиями, под ним подзаголовок.
 func _build_chapter() -> void:
+	_chapter_float = _floater()
 	_chapter_box = VBoxContainer.new()
 	_chapter_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	_chapter_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chapter_box.add_theme_constant_override(&"separation", 6)
-	root.add_child(_chapter_box)
+	_chapter_float.frame.add_child(_chapter_box)
 	_chapter_font = FontVariation.new()
 	_chapter_font.base_font = UiKit.title_font()
+	# Разрядка букв постоянная. Менять её на экране нельзя: она целая, и буквы прыгают по пикселю.
+	_chapter_font.spacing_glyph = 3
 	_chapter_box.add_child(_ornament())
 	_chapter_title = UiKit.outlined(UiKit.label("", 64, Color(1.0, 0.84, 0.5), HORIZONTAL_ALIGNMENT_CENTER), 8)
 	_chapter_title.add_theme_font_override(&"font", _chapter_font)
@@ -274,12 +330,9 @@ func _fade_to(node: CanvasItem, key: StringName, alpha: float, dur: float) -> vo
 
 
 ## Текст всплывает снизу на несколько пикселей — так реплика появляется мягче.
-func _slide_in(box: Control, key: StringName, dur: float) -> void:
-	var base: Vector2 = _base_offsets[box]
+func _slide_in(layer: Floater, key: StringName, dur: float) -> void:
 	var tw := _tw(key).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tw.tween_method(func(v: float):
-		box.offset_top = base.x + v
-		box.offset_bottom = base.y + v, LINE_SLIDE, 0.0, dur)
+	tw.tween_method(func(v: float): layer.shift = Vector2(0.0, v), LINE_SLIDE, 0.0, dur)
 
 
 # --- Управление -------------------------------------------------------------
@@ -309,7 +362,7 @@ func show_line(speaker: String, color: Color, text: String, thought: bool = fals
 	_typed = _line_text
 	_fade_to(_line_box, &"line", 1.0, 0.18)
 	_fade_to(_line_bg, &"line_bg", 1.0, 0.3)
-	_slide_in(_line_box, &"line_slide", 0.35)
+	_slide_in(_line_float, &"line_slide", 0.35)
 
 
 func hide_line(dur: float = 0.25) -> void:
@@ -327,7 +380,7 @@ func show_center(header: String, text: String, text_color: Color = UiKit.TEXT, h
 	_center_text.visible_ratio = 0.0
 	_typed = _center_text
 	_fade_to(_center_box, &"center", 1.0, 0.4)
-	_slide_in(_center_box, &"center_slide", 0.9)
+	_slide_in(_center_float, &"center_slide", 0.9)
 
 
 func hide_center(dur: float = 0.5) -> void:
@@ -352,16 +405,20 @@ func chapter(title: String, subtitle: String, small: bool, hold: float) -> void:
 		_chapter_box.offset_bottom = 110
 	_chapter_box.offset_left = -560
 	_chapter_box.offset_right = 560
+	# Заставка растёт вокруг своей середины: у компактной она под верхней полосой, у крупной — в центре кадра.
+	_chapter_float.anchor = Vector2(0.5, 0.0) if small else Vector2(0.5, 0.5)
+	_chapter_float.anchor_px = Vector2(0.0, BAR_H + 84.0) if small else Vector2.ZERO
+	_chapter_float.fit()
+	_chapter_float.scale = Vector2.ONE * (CHAPTER_SCALE_SMALL if small else CHAPTER_SCALE)
 	var line_w := 150.0 if small else 240.0
 	for l in _chapter_lines:
 		l.custom_minimum_size.x = 0.0
-	_chapter_font.spacing_glyph = 10
 	var tw := _tw(&"chapter").set_parallel(true)
 	tw.tween_property(_chapter_box, "modulate:a", 1.0, 0.7)
 	for l in _chapter_lines:
 		tw.tween_property(l, "custom_minimum_size:x", line_w, 1.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	# Буквы медленно «сходятся» всё время, пока заставка на экране.
-	tw.tween_property(_chapter_font, "spacing_glyph", 2, hold + 1.4).set_ease(Tween.EASE_OUT)
+	# Заставка медленно «оседает» всё время, пока она на экране, — дробным масштабом, без рывков.
+	tw.tween_property(_chapter_float, "scale", Vector2.ONE, hold + 1.4).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_chapter_box, "modulate:a", 0.0, 0.7).set_delay(0.7 + hold)
 
 

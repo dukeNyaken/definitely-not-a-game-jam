@@ -44,6 +44,14 @@ var variant: StringName = &""
 ## rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
+
+
+## Рука, которой модель тянется в позе p: в неё сцена кладёт то, что протягивают.
+## У процедурной модели — правая; у сгенерированной зависит от клипа (SkinnedActorModel).
+func pose_hand(_p: StringName) -> StringName:
+	return &"r_hand"
+
+
 ## Осколки короны босса по вещам: def_id → узел.
 var _crown_shards: Dictionary = {}
 var _slime_cube: Node3D

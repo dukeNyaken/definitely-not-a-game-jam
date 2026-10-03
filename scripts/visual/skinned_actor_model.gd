@@ -379,6 +379,11 @@ func _animate(delta: float) -> void:
 	_was_dashing = actor.is_dashing()
 
 
+## У клипов библиотеки рука своя: «протянуть» (Interact) — левой. Задаётся в poses.<поза>.hand.
+func pose_hand(p: StringName) -> StringName:
+	return StringName(str(_cfg["poses"].get(String(p), {}).get("hand", "r_hand")))
+
+
 ## Поза сюжетной сцены (pose, иначе rest_pose) из poses в animation.json; неизвестная — без позы.
 func _animate_pose(delta: float) -> void:
 	var p := String(pose if pose != &"" else rest_pose)

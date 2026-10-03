@@ -62,6 +62,11 @@ func hold(node: Node3D, hand: StringName = &"r_hand", scale_k: float = 0.75) -> 
 	node.scale = Vector3.ONE * scale_k
 
 
+## Рука, которой актёр протягивает вещь в позе offer: у сгенерированных моделей это левая.
+func offer_hand() -> StringName:
+	return model.pose_hand(&"offer")
+
+
 func hand_position(hand: StringName = &"r_hand") -> Vector3:
 	var s: Node3D = model.sockets.get(hand)
 	return s.global_position if s != null else global_position + Vector3(0, 1, 0)

@@ -90,8 +90,30 @@ func test_hearth_lists_what_was_given_to_strangers() -> void:
 	assert_eq(Story.list_text(["меч", "сапоги", "щит"] as Array[String]), "меч, сапоги и щит")
 
 
+func test_rule_moved_from_prologue_to_the_first_altar() -> void:
+	assert_false(Story.PROLOGUE.has("rule"), "в прологе правила больше нет")
+	assert_string_contains(Story.RULE["law"], "отданная добровольно, не ослабляет")
+	assert_string_contains(Story.RULE["light"], "осветить твой путь")
+	assert_ne(str(Story.speaker(&"chronicle")["name"]), "", "у предания есть подпись")
+	assert_false(Story.SPEAKERS.has(&"chronicle"), "предание — не персонаж: у него нет модели и роли")
+	RunState.new_run(1)
+	assert_true(RuleScene.due(), "первый алтарь забега")
+	RunState.sacrifice(0)
+	assert_false(RuleScene.due(), "после первой жертвы правило уже сказано")
+	RunState.new_run(0)
+	RunState.running = false
+
+
+func test_sigvard_jokes_about_gum_only_where_it_shows() -> void:
+	for n in [3, 6]:
+		assert_string_contains(Story.brother_gum(n), "жвачк", "дар №%d" % n)
+	for n in [1, 2, 4, 5]:
+		assert_eq(Story.brother_gum(n), "", "дар №%d — без шутки" % n)
+	assert_string_contains(Story.brother_gum(3), "только самое нужное")
+
+
 func test_chapters() -> void:
-	for key in ["prologue", "hearth", "temptation", "gates", "epilogue"]:
+	for key in ["prologue", "rule", "hearth", "temptation", "gates", "epilogue"]:
 		assert_ne(str(Story.chapter(key)[0]), "", key)
 	assert_eq(Story.gift_chapter(1, &"sword"), ["Дар первый", "Меч · Торстейн"])
 	assert_eq(Story.gift_chapter(6, &"amulet")[1], "Оберег · Сольвейг")

@@ -74,7 +74,8 @@ func _tick(delta: float) -> bool:
 		for l in _log:
 			print(l)
 		return true
-	if _t > 60.0 * (20.0 if _cutscenes else 14.0):
+	# С сюжетными сценами забег длиннее: сцены идут около десяти минут сверх боёв.
+	if _t > 60.0 * (24.0 if _cutscenes else 14.0):
 		print("TIMEOUT")
 		for l in _log:
 			print(l)

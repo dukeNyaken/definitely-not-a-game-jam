@@ -134,7 +134,9 @@ func _process(delta: float) -> void:
 				ui._on_hover(0)
 	if _every > 0.0 and _t >= _next_shot + _every:
 		_next_shot += _every
-		var path := "%s_%03d.png" % [_out.get_basename(), int(round(_next_shot))]
+		# Номер кадра — секунды; при шаге короче секунды — десятые доли, иначе кадры затирали бы друг друга.
+		var stamp := int(round(_next_shot)) if _every >= 1.0 else int(round(_next_shot * 10.0))
+		var path := "%s_%03d.png" % [_out.get_basename(), stamp]
 		get_viewport().get_texture().get_image().save_png(path)
 		print("saved ", path)
 	if _t >= _delay:

@@ -47,10 +47,13 @@ func _export() -> void:
 	for i in story.BROTHER_LINES.size():
 		lines["brother.%d" % (i + 1)] = {"speaker": "brother", "text": story.BROTHER_LINES[i]}
 	lines["brother.%d.ring" % story.RING_LINE_INDEX] = {"speaker": "brother", "text": story.BROTHER_RING_LINE}
+	for n in story.BROTHER_GUM:
+		lines["brother.%d.gum" % n] = {"speaker": "brother", "text": story.BROTHER_GUM[n]}
+	lines["speaker.chronicle.name"] = {"speaker": "", "text": story.CHRONICLE_NAME}
 	for p in story.BROTHER_BARKS:
 		lines["bark.brother.%d" % p] = {"speaker": "brother", "text": story.BROTHER_BARKS[p]}
 	lines["bark.iva"] = {"speaker": "faithful", "text": story.IVA_BARK}
-	for section in [["prologue", story.PROLOGUE], ["hearth", story.HEARTH], ["temptation", story.TEMPTATION],
+	for section in [["prologue", story.PROLOGUE], ["rule", story.RULE], ["hearth", story.HEARTH], ["temptation", story.TEMPTATION],
 			["gates", story.GATES], ["finale", story.FINALE]]:
 		var d: Dictionary = section[1]
 		for key in d:

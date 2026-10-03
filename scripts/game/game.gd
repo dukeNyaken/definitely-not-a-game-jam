@@ -419,9 +419,18 @@ func _stage_cleared() -> void:
 	if shrine != null:
 		shrine.vanish()
 		shrine = null
-	banner.emit("Этап пройден", "встаньте на алтарь")
 	Audio.play(&"stage_clear")
 	Audio.play_music(&"music_calm")
+	spawn_altar()
+	# Первый алтарь забега: правило мира — сценой, перед первым выбором жертвы.
+	if RuleScene.due() and Cutscene.enabled():
+		set_state(State.CUTSCENE)
+		await RuleScene.play(cutscene, self)
+		set_state(State.CLEARED)
+	banner.emit("Этап пройден", "встаньте на алтарь")
+
+
+func spawn_altar() -> void:
 	altar = Altar.new()
 	world.add_child(altar)
 	altar.global_position = Vector3.ZERO

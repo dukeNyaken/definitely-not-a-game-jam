@@ -143,6 +143,55 @@ func test_chapter_card_shows_and_hides() -> void:
 	assert_false(cs.ui._chapter_sub.visible, "пустой подзаголовок скрыт")
 
 
+## Заставка и реплики стоят в слое, который сдвигается дробно: без рывков по пикселю.
+func test_big_text_moves_without_pixel_steps() -> void:
+	var ui := CutsceneUi.new()
+	add_child_autofree(ui)
+	ui.chapter("Пролог", "Два сына", false, 2.0)
+	assert_gt(ui._chapter_float.scale.x, 1.0, "заставка появляется чуть крупнее")
+	assert_eq(ui._chapter_font.spacing_glyph, 3, "разрядка букв не меняется на экране — она целая, буквы прыгали бы")
+	assert_true(ui._chapter_box.get_parent() == ui._chapter_float.frame)
+	# Слой растёт вокруг середины экрана, рамка внутри совпадает с экраном.
+	assert_almost_eq(ui._chapter_float.position, (ui.root.size * 0.5).round(), Vector2(0.01, 0.01))
+	assert_almost_eq(ui._chapter_float.frame.position, -ui._chapter_float.position, Vector2(0.01, 0.01))
+	assert_eq(ui._chapter_float.frame.size, ui.root.size)
+	ui.chapter("Дар первый", "Меч · Торстейн", true, 2.0)
+	assert_almost_eq(ui._chapter_float.position.y, CutsceneUi.BAR_H + 84.0, 0.01, "компактная заставка растёт вокруг своей середины")
+	ui._line_float.shift = Vector2(0, 2.5)
+	assert_almost_eq(ui._line_float.position.y + ui._line_float.frame.position.y, 2.5, 0.001, "сдвиг реплики — дробный")
+	ui.hide_chapter(0.0)
+
+
+func test_offer_hand_follows_the_model() -> void:
+	var friend := Puppet.make(ActorModel.Kind.FRIEND)
+	add_child_autofree(friend)
+	assert_eq(friend.offer_hand(), &"r_hand", "процедурная модель протягивает правую")
+	var sig := Puppet.make(ActorModel.Kind.TYRANT)
+	add_child_autofree(sig)
+	if sig.model is SkinnedActorModel:
+		assert_eq(sig.offer_hand(), &"l_hand", "клип Interact тянется левой — вещь кладём в неё")
+	else:
+		assert_eq(sig.offer_hand(), &"r_hand")
+
+
+func test_gum_shows_only_when_the_hand_is_away_from_the_pocket() -> void:
+	var world := Node3D.new()
+	add_child_autofree(world)
+	var pocket := Node3D.new()
+	var hand := Node3D.new()
+	world.add_child(pocket)
+	world.add_child(hand)
+	var gum := GumStrand.stretch(world, pocket, hand)
+	assert_false(gum.stretched(), "рука в кармане — жвачки не видно")
+	hand.global_position = Vector3(0.3, 0.6, 0.0)
+	gum._update()
+	assert_true(gum.stretched())
+	assert_true(gum.visible)
+	gum.snap()
+	assert_false(gum.stretched(), "лопнула — больше не тянется")
+	assert_false(gum.visible)
+
+
 func test_set_pieces_build() -> void:
 	var hall := SetPieces.throne_hall()
 	add_child_autofree(hall)

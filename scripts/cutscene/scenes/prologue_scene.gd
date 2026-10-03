@@ -3,7 +3,8 @@ extends RefCounted
 ## Пролог перед первым этапом. Флешбэк на старой плёнке: двор крепости, ярл смотрит, как сыновья
 ## бьются на деревянных мечах; младший побеждает и подаёт руку — старший её отбивает. Годы спустя
 ## умирающий ярл при свече отдаёт родовой перстень младшему, старший уходит; свеча гаснет.
-## Затем правило мира, семь вещей Солдата, прощание Сольвейг и хлеб от Ильвы.
+## Затем семь вещей Солдата, прощание Сольвейг и хлеб от Ильвы.
+## Правило мира («отданное не ослабляет») звучит позже — у первого алтаря (RuleScene).
 
 const KEYS: Array[StringName] = [&"young_hero", &"young_brother", &"father", &"prologue_beloved", &"prologue_iva"]
 const RING_GLOW := Color(1.0, 0.8, 0.4)
@@ -45,7 +46,6 @@ static func _body(cs: Cutscene, game: Game) -> void:
 	cs.mood(&"scene", 0.0)
 	hero.visible = true
 	await cs.narrate(P["tyrant"])
-	await cs.narrate(P["rule"])
 	if cs.skipped:
 		return
 	await _present(cs, game, c, up, right)

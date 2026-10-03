@@ -45,6 +45,7 @@ func test_entries_are_complete() -> void:
 		var quote := CutsceneCatalog.quote_of(e, opts)
 		assert_eq(quote.size(), 2, "%s: ключевая реплика" % key)
 		assert_ne(str(quote[1]), "", "%s: текст реплики" % key)
+		assert_ne(str(Story.speaker(quote[0])["name"]), "", "%s: у реплики есть подпись" % key)
 		if e["playable"]:
 			assert_gt(int(e["seconds"]), 0, "%s: длительность" % key)
 
@@ -54,6 +55,11 @@ func test_timeline_follows_the_run() -> void:
 	var gifts := Db.balance.stage_count - 1
 	assert_eq(keys.front(), "prologue")
 	assert_eq(keys.back(), "finale")
+	# Правило мира — у первого алтаря: после пролога и до первого дара.
+	assert_eq(keys.find("rule"), 1)
+	assert_eq(keys[2], "gift_1")
+	assert_true(CutsceneCatalog.given_before(CutsceneCatalog.find("rule"), {}).is_empty(), "у первого алтаря ещё ничего не отдано")
+	assert_eq(CutsceneCatalog.stage_of(CutsceneCatalog.find("rule")), 1)
 	for n in range(1, gifts + 1):
 		assert_lt(keys.find("gift_%d" % n), keys.find("palace_%d" % n), "дар %d — раньше голоса из дворца" % n)
 	# Дом Сольвейг и её разговор с Сигвардом — между даром и голосом из дворца.

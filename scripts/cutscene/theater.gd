@@ -71,6 +71,15 @@ func run(p_game: Game) -> void:
 		&"prologue":
 			game.arena.set_tint(RunState.current_threat().floor_tint)
 			await PrologueScene.play(cs, game)
+		&"rule":
+			# Первый этап только что пройден: посреди арены поднимается алтарь.
+			_between_stages()
+			game.hero.global_position = Vector3(3.0, 0, 5.0)
+			game.rig.snap()
+			game.spawn_altar()
+			cs.ui.black(1.0, 0.0)
+			cs.ui.black(0.0, 0.9)
+			await RuleScene.play(cs, game)
 		&"gift":
 			_between_stages()
 			# Солдат стоит у алтаря; вещь уходит из его рук внутри сцены.

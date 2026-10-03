@@ -4,6 +4,10 @@ extends RefCounted
 ## После каждого дара брат говорит одну реплику и что-то делает: смотрит в окно на зарево, идёт по ковру,
 ## бросает в огонь детский деревянный меч, роняет письмо Сольвейг, смотрит на пустую руку без перстня,
 ## встаёт перед троном — и жаровни вспыхивают. Зал строится далеко от арены и убирается после сцены.
+##
+## Жвачка. У модели Сигварда за поднятой рукой от бедра тянется нить — будто он вытянул из кармана
+## налипшую жвачку. У жаровни и перед троном это видно лучше всего, поэтому там нить стала настоящей
+## розовой жвачкой (GumStrand), а Сигвард замечает её сам: Тиран собрал всё на свете — и жвачку тоже.
 
 ## Зал стоит за пределами арены: камера уезжает туда, пока экран тёмный.
 const ORIGIN := Vector3(-150, 0, -150)
@@ -72,13 +76,15 @@ static func _body(cs: Cutscene, game: Game, hall: Node3D, n: int, text: String) 
 			game.rig.cine_to(at.call(0.0, 0.8) + Vector3(0, 1.3, 0), 3.8, 4.5)
 			await cs.say(&"brother", text)
 		3:
-			# У жаровни, в руке детский деревянный меч. Потом — в огонь.
+			# У жаровни, в опущенной руке детский деревянный меч. Потом — в огонь, броском снизу.
+			# Руку он поднимает один раз за сцену — когда тянет из кармана жвачку.
 			var br: Node3D = braziers[0]
-			sig.global_position = br.global_position + hall.global_basis.x * 0.9 + hall.global_basis.z * 0.5
+			sig.global_position = br.global_position + hall.global_basis.x * 1.35 + hall.global_basis.z * 0.5
 			sig.look_toward(br.global_position)
+			var gum := await _pockets(cs, game, sig)
 			var sword := NpcLooks.wooden_sword()
-			sig.hold(sword, &"r_hand", 1.0)
-			sig.set_pose(&"offer")
+			# Меч — в руке со стороны жаровни: в опущенной дальней его закрывало бы тело.
+			sig.hold(sword, sig.offer_hand(), 1.0)
 			_open(cs, (sig.global_position + br.global_position) * 0.5 + Vector3(0, 1.2, 0), 4.4, 3.4)
 			await cs.say(&"brother", text)
 			if not cs.skipped:
@@ -86,17 +92,17 @@ static func _body(cs: Cutscene, game: Game, hall: Node3D, n: int, text: String) 
 				var from := sword.global_position
 				cs.prop(sword)
 				_to_world(sword, game.world)
-				await cs.fly(sword, from, top, 0.5, 0.4)
+				await cs.fly(sword, from, top, 0.6, 0.8)
 				sword.visible = false
 				_blaze(cs, game, lights[0], top)
-				sig.set_pose(&"")
 				await cs.wait(1.0)
+				await _gum_aside(cs, sig, gum, Story.brother_gum(n), &"offer")
 		4:
 			# Читает письмо Сольвейг. Дочитав — роняет его.
 			sig.global_position = at.call(-0.6, -0.2)
 			sig.look_toward(toward_cam)
 			var letter := SetPieces.letter()
-			sig.hold(letter, &"r_hand", 1.2)
+			sig.hold(letter, sig.offer_hand(), 1.2)
 			sig.set_pose(&"offer")
 			_open(cs, sig.global_position + Vector3(0, 1.35, 0), 4.0, 3.0)
 			await cs.say(&"brother", text)
@@ -108,7 +114,7 @@ static func _body(cs: Cutscene, game: Game, hall: Node3D, n: int, text: String) 
 			sig.global_position = at.call(0.4, 0.0)
 			sig.look_toward(toward_cam)
 			sig.set_pose(&"offer")
-			var hand_light := cs.light(sig.hand_position() + Vector3(0, 0.3, 0), CRIMSON, 0.0, 2.5)
+			var hand_light := cs.light(sig.hand_position(sig.offer_hand()) + Vector3(0, 0.3, 0), CRIMSON, 0.0, 2.5)
 			CutsceneFx.light_to(hand_light, 2.0, 2.0)
 			_open(cs, sig.global_position + Vector3(0, 1.3, 0), 4.2, 2.6)
 			await cs.say(&"brother", text)
@@ -117,6 +123,7 @@ static func _body(cs: Cutscene, game: Game, hall: Node3D, n: int, text: String) 
 			# Встаёт перед троном, раскидывает руки — и обе жаровни вспыхивают.
 			sig.global_position = at.call(0.0, -1.0)
 			sig.look_toward(toward_cam)
+			var gum := await _pockets(cs, game, sig)
 			_open(cs, at.call(0.0, -0.8) + Vector3(0, 1.6, 0), 5.6, 4.2)
 			cs.after(1.2, func():
 				sig.set_pose(&"arms_up")
@@ -126,6 +133,44 @@ static func _body(cs: Cutscene, game: Game, hall: Node3D, n: int, text: String) 
 				cs.shake(0.25))
 			await cs.say(&"brother", text)
 			await cs.wait(0.6)
+			await _gum_aside(cs, sig, gum, Story.brother_gum(n), &"arms_up")
+
+
+## Карманы Сигварда: точки на бёдрах, где кисти висят в покое. От них к кистям тянется жвачка —
+## её видно, только когда рука поднята. Пока экран тёмный, ждём несколько кадров: модель должна встать в позу покоя.
+static func _pockets(cs: Cutscene, game: Game, sig: Puppet) -> Array[GumStrand]:
+	var out: Array[GumStrand] = []
+	for i in 6:
+		if cs.skipped:
+			return out
+		await game.get_tree().process_frame
+	for hand in [&"l_hand", &"r_hand"]:
+		var pocket := LowPoly.pivot("Pocket_%s" % hand)
+		sig.model.add_child(pocket)
+		pocket.global_position = sig.hand_position(hand)
+		var gum := GumStrand.stretch(game.world, pocket, sig.model.sockets[hand])
+		cs.prop(gum)
+		out.append(gum)
+	return out
+
+
+## Сигвард замечает жвачку: рука снова тянется из кармана, нить — за ней. Он говорит о ней сам,
+## опускает руки — и нить лопается.
+static func _gum_aside(cs: Cutscene, sig: Puppet, gum: Array[GumStrand], line: String, pose: StringName) -> void:
+	if cs.skipped or gum.is_empty() or line == "":
+		return
+	sig.set_pose(pose)
+	Audio.play(&"slime_squish", -8.0)
+	cs.cam(sig.global_position + Vector3(0, 1.05, 0), 2.9, 0.9)
+	cs.orbit(0.0, 1.2)
+	await cs.wait(0.8)
+	await cs.say(&"brother", line)
+	sig.set_pose(&"")
+	await cs.wait(0.1)
+	for g in gum:
+		if is_instance_valid(g):
+			g.snap()
+	await cs.wait(0.9)
 
 
 ## Начало кадра: из темноты, с лёгким облётом и медленным наездом от zoom_from к zoom_to.

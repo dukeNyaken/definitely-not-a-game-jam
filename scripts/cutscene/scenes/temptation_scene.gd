@@ -81,7 +81,7 @@ static func _body(cs: Cutscene, game: Game, hall: Node3D) -> void:
 	# Кошель с золотом — к её ногам.
 	var purse := cs.prop(SetPieces.purse())
 	var purse_at: Vector3 = at.call(1.1, 2.6) + Vector3(0, 0.1, 0)
-	sig.hold(purse, &"r_hand", 1.5)
+	sig.hold(purse, sig.offer_hand(), 1.5)
 	sig.set_pose(&"offer")
 	cs.cam((sig.global_position + sol_spot) * 0.5 + Vector3(0, 1.0, 0), 4.4, 1.0)
 	await cs.say(&"brother", T["leave_him"])
