@@ -22,8 +22,15 @@ func _export() -> void:
 		lines["speaker.%s.role" % who] = {"speaker": who, "text": sp.get("role", "")}
 	lines["caption.light"] = {"speaker": "thought", "text": story.LIGHT_CAPTION}
 	lines["caption.interlude_header"] = {"speaker": "brother", "text": story.INTERLUDE_HEADER}
+	for key in story.CHAPTERS:
+		lines["chapter.%s.title" % key] = {"speaker": "", "text": story.CHAPTERS[key][0]}
+		lines["chapter.%s.sub" % key] = {"speaker": "", "text": story.CHAPTERS[key][1]}
+	for i in story.ORDINALS.size():
+		lines["ordinal.%d" % (i + 1)] = {"speaker": "", "text": story.ORDINALS[i]}
 	for id in story.GENITIVE:
 		lines["gen.%s" % id] = {"speaker": "", "text": story.GENITIVE[id]}
+	for id in story.ITEM_NAMES:
+		lines["item.%s" % id] = {"speaker": "", "text": story.ITEM_NAMES[id]}
 	for id in story.GIFTS:
 		var g: Dictionary = story.GIFTS[id]
 		for field in ["plea", "reply", "oath", "extra", "secret", "gate", "bark", "payoff"]:
@@ -39,6 +46,7 @@ func _export() -> void:
 		lines["iva.%d" % (i + 1)] = {"speaker": "faithful", "text": story.IVA_LINES[i]}
 	for i in story.BROTHER_LINES.size():
 		lines["brother.%d" % (i + 1)] = {"speaker": "brother", "text": story.BROTHER_LINES[i]}
+	lines["brother.%d.ring" % story.RING_LINE_INDEX] = {"speaker": "brother", "text": story.BROTHER_RING_LINE}
 	for p in story.BROTHER_BARKS:
 		lines["bark.brother.%d" % p] = {"speaker": "brother", "text": story.BROTHER_BARKS[p]}
 	lines["bark.iva"] = {"speaker": "faithful", "text": story.IVA_BARK}

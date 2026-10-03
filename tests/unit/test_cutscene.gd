@@ -118,3 +118,48 @@ func test_father_ring_on_right_gauntlet_only() -> void:
 			assert_eq(part["socket"], &"r_hand")
 		node.free()
 	assert_eq(rings, 1)
+
+
+## Мысли наклонены, а не повёрнуты: верх буквы уходит вправо (x.y), ось y не сдвинута.
+## Сдвиг y.x скашивает глифы по вертикали — буквы выглядят повёрнутыми.
+func test_thought_font_is_slanted_not_rotated() -> void:
+	var cs := _cutscene()
+	var t: Transform2D = cs.ui._thought_font.variation_transform
+	assert_gt(t.x.y, 0.0)
+	assert_eq(t.y, Vector2(0, 1))
+
+
+func test_moods_are_complete() -> void:
+	for key in Cutscene.MOODS:
+		assert_eq((Cutscene.MOODS[key] as Array).size(), 5, str(key))
+
+
+func test_chapter_card_shows_and_hides() -> void:
+	var cs := _cutscene()
+	cs.ui.chapter("Пролог", "Два сына", false, 0.1)
+	assert_eq(cs.ui._chapter_title.text, "Пролог")
+	assert_true(cs.ui._chapter_sub.visible)
+	cs.ui.chapter("Дар первый", "", true, 0.1)
+	assert_false(cs.ui._chapter_sub.visible, "пустой подзаголовок скрыт")
+
+
+func test_set_pieces_build() -> void:
+	var hall := SetPieces.throne_hall()
+	add_child_autofree(hall)
+	assert_eq((hall.get_meta(&"braziers") as Array).size(), 2)
+	assert_not_null(hall.find_child("Throne", true, false))
+	for make in [SetPieces.weapon_rack, SetPieces.training_post, SetPieces.candle_stand, SetPieces.letter, SetPieces.bread, SetPieces.flask]:
+		var n: Node3D = make.call()
+		assert_gt(n.get_child_count(), 0)
+		n.free()
+
+
+func test_flicker_light_and_fire() -> void:
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var l := CutsceneFx.light(root, Vector3.ZERO, Color.ORANGE, 2.0, 5.0, 0.2)
+	assert_true(l is CutsceneFx.FlickerLight)
+	CutsceneFx.light_to(l, 0.5, 0.0)
+	assert_eq((l as CutsceneFx.FlickerLight).base, 0.5)
+	var f := CutsceneFx.fire(root, Vector3.ZERO, 0.5)
+	assert_true(f.emitting)

@@ -447,14 +447,14 @@ func do_sacrifice(index: int) -> void:
 	get_tree().create_timer(2.4, false).timeout.connect(_next_stage)
 
 
-## after_gift — после сцены дара: в затемнении звучит голос Сигварда из дворца.
+## after_gift — после сцены дара: в затемнении — тронный зал и голос Сигварда из дворца.
 func _next_stage(after_gift: bool = false) -> void:
 	set_state(State.TRANSITION)
 	hud.fade(true, 0.5)
 	await get_tree().create_timer(0.55, false).timeout
 	var n := RunState.sacrifices_count()
 	if after_gift and Cutscene.enabled() and n >= 1 and n <= Story.BROTHER_LINES.size():
-		await cutscene.interlude(Story.BROTHER_LINES[n - 1])
+		await PalaceScene.play(cutscene, self, n)
 	start_stage(RunState.stage + 1)
 	hud.fade(false, 0.6)
 

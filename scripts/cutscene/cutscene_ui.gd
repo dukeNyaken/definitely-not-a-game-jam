@@ -1,23 +1,35 @@
 class_name CutsceneUi
 extends CanvasLayer
-## Интерфейс сюжетных сцен: кинорамка, реплики с печатью по буквам, летопись по центру,
-## реплики в бою, подсказка пропуска и тонировка кадра. Слой 12 — над HUD (10), под отладкой (50).
+## Интерфейс сюжетных сцен: кинорамка, реплики с печатью по буквам, летопись по центру, заставки глав,
+## реплики в бою, подсказка пропуска, вспышки и «плёнка» кадра (тонировка, виньетка, зерно).
+## Слой 12 — над HUD (10), под отладкой (50).
 
 const BAR_H := 104.0
 const SEPIA := Color(1.0, 0.78, 0.5)
+## Наклон мыслей: сдвиг верха буквы вправо. Матрица — как в документации FontVariation:
+## Transform2D(1, slant, 0, 1, 0, 0). Сдвиг по другой оси поворачивает буквы, а не наклоняет.
+const THOUGHT_SLANT := 0.16
+const LINE_SLIDE := 10.0
 
 var root: Control
 var _top: ColorRect
 var _bottom: ColorRect
-var _tint: ColorRect
-var _tint_mat: ShaderMaterial
+var _grade: ColorRect
+var _grade_mat: ShaderMaterial
 var _black: ColorRect
+var _flash: ColorRect
+var _line_bg: TextureRect
 var _line_box: VBoxContainer
 var _line_name: Label
 var _line_text: RichTextLabel
 var _center_box: VBoxContainer
 var _center_name: Label
 var _center_text: RichTextLabel
+var _chapter_box: VBoxContainer
+var _chapter_title: Label
+var _chapter_sub: Label
+var _chapter_lines: Array[ColorRect] = []
+var _chapter_font: FontVariation
 var _bark_box: VBoxContainer
 var _bark_name: Label
 var _bark_text: RichTextLabel
@@ -26,6 +38,7 @@ var _skip_fill: ColorRect
 var _typed: RichTextLabel
 var _thought_font: FontVariation
 var _tweens: Dictionary = {}
+var _base_offsets: Dictionary = {}
 ## Таблички над головами: { "node": Node3D, "box": Control, "h": float }.
 var _tags: Array[Dictionary] = []
 
@@ -40,15 +53,18 @@ func _ready() -> void:
 	add_child(root)
 	_thought_font = FontVariation.new()
 	_thought_font.base_font = UiKit.body_font()
-	_thought_font.variation_transform = Transform2D(Vector2(1, 0), Vector2(-0.22, 1), Vector2.ZERO)
-	_build_tint()
+	_thought_font.variation_transform = Transform2D(Vector2(1.0, THOUGHT_SLANT), Vector2(0.0, 1.0), Vector2.ZERO)
+	_build_grade()
 	_black = _rect(Color(0, 0, 0, 0))
 	UiKit.full_rect(_black)
 	_build_bars()
 	_build_line()
 	_build_center()
+	_build_chapter()
 	_build_bark()
 	_build_skip()
+	_flash = _rect(Color(1, 1, 1, 0))
+	UiKit.full_rect(_flash)
 
 
 # --- Постройка --------------------------------------------------------------
@@ -61,14 +77,15 @@ func _rect(c: Color) -> ColorRect:
 	return r
 
 
-func _build_tint() -> void:
-	_tint = _rect(Color.WHITE)
-	UiKit.full_rect(_tint)
-	_tint_mat = ShaderMaterial.new()
-	_tint_mat.shader = preload("res://shaders/cutscene_tint.gdshader")
-	_tint_mat.set_shader_parameter(&"amount", 0.0)
-	_tint.material = _tint_mat
-	_tint.visible = false
+func _build_grade() -> void:
+	_grade = _rect(Color.WHITE)
+	UiKit.full_rect(_grade)
+	_grade_mat = ShaderMaterial.new()
+	_grade_mat.shader = preload("res://shaders/cutscene_tint.gdshader")
+	for p in [&"amount", &"vignette", &"grain", &"flicker"]:
+		_grade_mat.set_shader_parameter(p, 0.0)
+	_grade.material = _grade_mat
+	_grade.visible = false
 
 
 func _build_bars() -> void:
@@ -93,6 +110,27 @@ func _text_label(size: int) -> RichTextLabel:
 
 
 func _build_line() -> void:
+	# Мягкая тень над нижней полосой: длинная реплика в две строки читается и на светлом кадре.
+	_line_bg = TextureRect.new()
+	var g := Gradient.new()
+	g.set_color(0, Color(0, 0, 0, 0))
+	g.set_color(1, Color(0, 0, 0, 0.62))
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.fill_from = Vector2(0, 0)
+	tex.fill_to = Vector2(0, 1)
+	tex.width = 4
+	tex.height = 64
+	_line_bg.texture = tex
+	_line_bg.stretch_mode = TextureRect.STRETCH_SCALE
+	_line_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_line_bg.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_line_bg.offset_left = 0
+	_line_bg.offset_right = 0
+	_line_bg.offset_top = -BAR_H - 120
+	_line_bg.offset_bottom = -BAR_H
+	_line_bg.modulate.a = 0.0
+	root.add_child(_line_bg)
 	_line_box = VBoxContainer.new()
 	_line_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_line_box.offset_left = -640
@@ -108,6 +146,7 @@ func _build_line() -> void:
 	_line_text = _text_label(25)
 	_line_box.add_child(_line_text)
 	_line_box.modulate.a = 0.0
+	_base_offsets[_line_box] = Vector2(_line_box.offset_top, _line_box.offset_bottom)
 
 
 func _build_center() -> void:
@@ -126,6 +165,49 @@ func _build_center() -> void:
 	_center_text = _text_label(32)
 	_center_box.add_child(_center_text)
 	_center_box.modulate.a = 0.0
+	_base_offsets[_center_box] = Vector2(_center_box.offset_top, _center_box.offset_bottom)
+
+
+## Заставка главы: золотой заголовок между двумя тонкими линиями, под ним подзаголовок.
+func _build_chapter() -> void:
+	_chapter_box = VBoxContainer.new()
+	_chapter_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_chapter_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chapter_box.add_theme_constant_override(&"separation", 6)
+	root.add_child(_chapter_box)
+	_chapter_font = FontVariation.new()
+	_chapter_font.base_font = UiKit.title_font()
+	_chapter_box.add_child(_ornament())
+	_chapter_title = UiKit.outlined(UiKit.label("", 64, Color(1.0, 0.84, 0.5), HORIZONTAL_ALIGNMENT_CENTER), 8)
+	_chapter_title.add_theme_font_override(&"font", _chapter_font)
+	_chapter_box.add_child(_chapter_title)
+	_chapter_sub = UiKit.outlined(UiKit.label("", 22, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER), 6)
+	_chapter_box.add_child(_chapter_sub)
+	_chapter_box.add_child(_ornament())
+	_chapter_box.modulate.a = 0.0
+
+
+func _ornament() -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 10)
+	for k in 3:
+		var r := ColorRect.new()
+		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		if k == 1:
+			# Ромб посередине.
+			r.color = Color(1.0, 0.8, 0.42, 0.95)
+			r.custom_minimum_size = Vector2(7, 7)
+			r.pivot_offset = Vector2(3.5, 3.5)
+			r.rotation = PI / 4
+		else:
+			r.color = Color(1.0, 0.8, 0.42, 0.7)
+			r.custom_minimum_size = Vector2(0, 2)
+			_chapter_lines.append(r)
+		row.add_child(r)
+	return row
 
 
 func _build_bark() -> void:
@@ -190,6 +272,15 @@ func _fade_to(node: CanvasItem, key: StringName, alpha: float, dur: float) -> vo
 	_tw(key).tween_property(node, "modulate:a", alpha, dur)
 
 
+## Текст всплывает снизу на несколько пикселей — так реплика появляется мягче.
+func _slide_in(box: Control, key: StringName, dur: float) -> void:
+	var base: Vector2 = _base_offsets[box]
+	var tw := _tw(key).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_method(func(v: float):
+		box.offset_top = base.x + v
+		box.offset_bottom = base.y + v, LINE_SLIDE, 0.0, dur)
+
+
 # --- Управление -------------------------------------------------------------
 
 ## Чёрные полосы сверху и снизу и подсказка пропуска.
@@ -216,13 +307,16 @@ func show_line(speaker: String, color: Color, text: String, thought: bool = fals
 	_line_text.visible_ratio = 0.0
 	_typed = _line_text
 	_fade_to(_line_box, &"line", 1.0, 0.18)
+	_fade_to(_line_bg, &"line_bg", 1.0, 0.3)
+	_slide_in(_line_box, &"line_slide", 0.35)
 
 
 func hide_line(dur: float = 0.25) -> void:
 	_fade_to(_line_box, &"line", 0.0, dur)
+	_fade_to(_line_bg, &"line_bg", 0.0, dur + 0.2)
 
 
-## Летопись или голос из дворца: крупный текст по центру, необязательный заголовок над ним.
+## Летопись: крупный текст по центру, необязательный заголовок над ним.
 func show_center(header: String, text: String, text_color: Color = UiKit.TEXT, header_color: Color = UiKit.MUTED) -> void:
 	_center_name.text = header
 	_center_name.visible = header != ""
@@ -232,10 +326,46 @@ func show_center(header: String, text: String, text_color: Color = UiKit.TEXT, h
 	_center_text.visible_ratio = 0.0
 	_typed = _center_text
 	_fade_to(_center_box, &"center", 1.0, 0.4)
+	_slide_in(_center_box, &"center_slide", 0.9)
 
 
 func hide_center(dur: float = 0.5) -> void:
 	_fade_to(_center_box, &"center", 0.0, dur)
+
+
+## Заставка главы. small — компактная, в верхней части кадра поверх сцены (дар);
+## иначе крупная по центру (пролог, ворота, эпилог). Видна hold секунд, потом гаснет.
+func chapter(title: String, subtitle: String, small: bool, hold: float) -> void:
+	_chapter_title.text = title
+	_chapter_sub.text = subtitle
+	_chapter_sub.visible = subtitle != ""
+	_chapter_title.add_theme_font_size_override(&"font_size", 40 if small else 68)
+	_chapter_sub.add_theme_font_size_override(&"font_size", 18 if small else 23)
+	if small:
+		_chapter_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_chapter_box.offset_top = BAR_H + 18
+		_chapter_box.offset_bottom = BAR_H + 150
+	else:
+		_chapter_box.set_anchors_preset(Control.PRESET_CENTER)
+		_chapter_box.offset_top = -110
+		_chapter_box.offset_bottom = 110
+	_chapter_box.offset_left = -560
+	_chapter_box.offset_right = 560
+	var line_w := 150.0 if small else 240.0
+	for l in _chapter_lines:
+		l.custom_minimum_size.x = 0.0
+	_chapter_font.spacing_glyph = 10
+	var tw := _tw(&"chapter").set_parallel(true)
+	tw.tween_property(_chapter_box, "modulate:a", 1.0, 0.7)
+	for l in _chapter_lines:
+		tw.tween_property(l, "custom_minimum_size:x", line_w, 1.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# Буквы медленно «сходятся» всё время, пока заставка на экране.
+	tw.tween_property(_chapter_font, "spacing_glyph", 2, hold + 1.4).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_chapter_box, "modulate:a", 0.0, 0.7).set_delay(0.7 + hold)
+
+
+func hide_chapter(dur: float = 0.3) -> void:
+	_fade_to(_chapter_box, &"chapter", 0.0, dur)
 
 
 ## Доля напечатанного текста у последней показанной реплики.
@@ -254,15 +384,42 @@ func black(alpha: float, dur: float, color: Color = Color.BLACK) -> void:
 	_tw(&"black").tween_property(_black, "color:a", alpha, dur)
 
 
-## Тонировка всего кадра: сепия флешбэка. amount 0 — выключена.
+## Вспышка во весь кадр: удар, превращение, перстень.
+func flash(color: Color = Color.WHITE, dur: float = 0.5, strength: float = 0.85) -> void:
+	_flash.color = Color(color, strength)
+	_tw(&"flash").tween_property(_flash, "color:a", 0.0, maxf(dur, 0.01)).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+
+## «Плёнка» кадра: тонировка цветом color (amount 0 — без неё), виньетка, зерно, мерцание.
+func grade(color: Color, amount: float, vignette: float, grain: float, flicker: float, dur: float) -> void:
+	_grade_mat.set_shader_parameter(&"tint", color)
+	var target := {&"amount": amount, &"vignette": vignette, &"grain": grain, &"flicker": flicker}
+	var off := amount <= 0.0 and vignette <= 0.0 and grain <= 0.0 and flicker <= 0.0
+	_grade.visible = true
+	var tw := _tw(&"grade").set_parallel(true)
+	for p in target:
+		var from: Variant = _grade_mat.get_shader_parameter(p)
+		var f := 0.0 if from == null else float(from)
+		var to: float = target[p]
+		if dur <= 0.0:
+			_grade_mat.set_shader_parameter(p, to)
+		else:
+			tw.tween_method(func(v: float): _grade_mat.set_shader_parameter(p, v), f, to, dur)
+	if dur <= 0.0:
+		tw.kill()
+		_grade.visible = not off
+	elif off:
+		tw.chain().tween_callback(func(): _grade.visible = false)
+
+
+## Тонировка без остальной «плёнки» (совместимость со старыми вызовами).
 func tint(color: Color, amount: float, dur: float) -> void:
-	_tint_mat.set_shader_parameter(&"tint", color)
-	_tint.visible = true
-	var from: float = _tint_mat.get_shader_parameter(&"amount")
-	var tw := _tw(&"tint")
-	tw.tween_method(func(v: float): _tint_mat.set_shader_parameter(&"amount", v), from, amount, maxf(dur, 0.01))
-	if amount <= 0.0:
-		tw.tween_callback(func(): _tint.visible = false)
+	grade(color, amount, _param(&"vignette"), _param(&"grain"), _param(&"flicker"), dur)
+
+
+func _param(p: StringName) -> float:
+	var v: Variant = _grade_mat.get_shader_parameter(p)
+	return 0.0 if v == null else float(v)
 
 
 func skip_progress(k: float) -> void:
