@@ -172,6 +172,13 @@ func set_frame(i: int) -> void:
 	_mat.set_shader_parameter(&"frame", float(_frame))
 
 
+## Из ручного режима — доиграть лист с кадра i.
+func play_from(i: int) -> void:
+	manual = false
+	_t = 0.0
+	set_frame(i)
+
+
 func set_fade(v: float) -> void:
 	_mat.set_shader_parameter(&"fade", v)
 

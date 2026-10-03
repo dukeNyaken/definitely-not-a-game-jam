@@ -157,9 +157,16 @@ static func _ribbon(owner: Node, id: StringName, a: Vector3, b: Vector3, width: 
 	var fx := FlipbookFx.spawn(owner, id, (a + b) * 0.5, color, 1.0, opts)
 	if fx == null:
 		return null
-	fx.rotation.y = atan2(-d.z, d.x)
-	fx.scale = Vector3(len, 1.0, width)
+	span(fx, a, b, width)
 	return fx
+
+
+## Перекладывает ленту между a и b (u = 0 у a, u = 1 у b).
+static func span(fx: Node3D, a: Vector3, b: Vector3, width: float) -> void:
+	var d := Combat.flat(b - a)
+	fx.global_position = (a + b) * 0.5
+	fx.rotation.y = atan2(-d.z, d.x)
+	fx.scale = Vector3(maxf(d.length(), 0.01), 1.0, width)
 
 
 ## Цепь от a (кто тянет) к b (кого тянут): звенья ползут к a, через duration цепь гаснет.
@@ -171,6 +178,11 @@ static func beam(owner: Node, a: Vector3, b: Vector3, color: Color, width: float
 		fx.create_tween().tween_callback(fx.fade_out.bind(0.12)).set_delay(maxf(duration - 0.12, 0.0))
 
 
-## След рывка: линии скорости от старта к точке прибытия.
+## След рывка: линии скорости тянутся за персонажем от точки старта, после рывка хвосты втягиваются к нему.
+## Если owner не в рывке (сцена, тест) — след сразу на весь путь from → to.
 static func streak(owner: Node3D, from: Vector3, to: Vector3, color: Color) -> void:
-	_ribbon(owner, &"speed_lines", from + Vector3(0, 0.45, 0), to + Vector3(0, 0.45, 0), 1.0, color, {"energy": 1.6, "pull": 0.2})
+	var lift := Vector3(0, 0.45, 0)
+	if owner is Actor and (owner as Actor).is_dashing():
+		DashTrail.follow(owner as Actor, from + lift, color)
+		return
+	_ribbon(owner, &"speed_lines", from + lift, to + lift, 1.0, color, {"energy": 1.6, "pull": 0.2})

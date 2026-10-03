@@ -8,7 +8,7 @@ var _t: float = 0.0
 var _done: Dictionary = {}
 ## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
 ## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
-## ward — купол Оплота, цепи Хватки, следы рывка.
+## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом.
 var scenario := "hits"
 
 
@@ -68,6 +68,9 @@ func _process(delta: float) -> void:
 		return
 	if scenario == "ward":
 		_ward()
+		return
+	if scenario == "dash":
+		_dash()
 		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
@@ -132,3 +135,11 @@ func _ward() -> void:
 		Vfx.streak(hero, Vector3(3.6, 0, 3.0), Vector3(-0.6, 0, 3.6), Color(0.8, 0.75, 0.6, 0.6))
 	if _once("gust", 1.04):
 		Vfx.streak(hero, Vector3(-4.2, 0, -0.5), Vector3(-2.6, 0, 2.8), Db.essence(&"gust").color)
+
+
+func _dash() -> void:
+	if _once("dash", 1.0):
+		var dir := Vector3(-1, 0, 0.35).normalized()
+		var from := hero.global_position
+		hero.start_dash(dir, 4.0, 0.18)
+		Vfx.streak(hero, from, from + dir * 4.0, Color(0.8, 0.75, 0.6, 0.6))
