@@ -118,7 +118,7 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	var panel := PanelContainer.new()
 	panel.theme = UiKit.theme()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.055, 0.045, 0.065), Db.item(id).essence.color, 1, 8, 12))
+	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.055, 0.045, 0.065), UiKit.item_color(id), 1, 8, 12))
 	var content := VBoxContainer.new()
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.add_theme_constant_override(&"separation", 6)
@@ -229,7 +229,7 @@ func _draw() -> void:
 
 func _draw_collection_sector(index: int, radius: float) -> void:
 	var id := Db.ITEM_IDS[index]
-	var color := Db.item(id).essence.color
+	var color := UiKit.item_color(id)
 	var angle := _angle(index)
 	var half := PI / Db.ITEM_IDS.size() - GAP
 	var hot := id == selected_id or id == _hover
@@ -261,7 +261,7 @@ func _draw_collection_sector(index: int, radius: float) -> void:
 
 func _draw_sector(index: int, radius: float) -> void:
 	var id := Db.ITEM_IDS[index]
-	var color := Db.item(id).essence.color
+	var color := UiKit.item_color(id)
 	var angle := _angle(index)
 	var half := PI / Db.ITEM_IDS.size() - GAP
 	var hot := id == selected_id or id == _hover

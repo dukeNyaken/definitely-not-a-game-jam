@@ -26,6 +26,7 @@ var _speeds: PackedFloat32Array = []      # родные скорости кли
 var _idle_node: AnimationNodeAnimation
 var _hero_idle: StringName = &""
 var _gen_items: Dictionary = {}           # слот -> [MeshInstance3D] из glb
+var _appearances: Dictionary = {}         # слот -> крепления нового облика на костях
 var _hidden_body: Dictionary = {}         # слот -> [MeshInstance3D] части тела под вещью
 static var _foot_fixed: Dictionary = {}   # путь модели -> библиотека UAL с поправкой стоп
 var _was_dashing := false
@@ -471,9 +472,19 @@ func _fire(name: String, scale: float) -> void:
 ## процедурная геометрия прячется, а добавки свойств остаются на своих сокетах.
 func refresh_items() -> void:
 	super.refresh_items()
+	for nodes in _appearances.values():
+		for node in nodes:
+			node.get_parent().remove_child(node)
+			node.queue_free()
+	_appearances.clear()
 	for slot in _gen_items:
 		for mi in _gen_items[slot]:
 			mi.visible = actor.has_item(slot)
+		if actor.has_item(slot):
+			var state: ItemState = actor.items[actor.items.find_custom(func(item): return item.def_id == slot)]
+			if state.appearance > 1:
+				for mi: MeshInstance3D in _gen_items[slot]:
+					_attach_appearance(mi, slot, state.appearance)
 	for slot in _hidden_body:
 		for mi in _hidden_body[slot]:
 			mi.visible = not actor.has_item(slot)
@@ -489,6 +500,48 @@ func refresh_items() -> void:
 			_idle_node.animation = _hero_idle
 		else:
 			_idle_node.animation = _cfg["armed_idle"] if actor.has_item(&"sword") else _cfg["locomotion"][0]
+
+
+func _build_item_parts(state: ItemState) -> Array:
+	return ItemVisuals.build(state, not _gen_items.has(state.def_id))
+
+
+## Каждая деталь использует кость ближайшего крепления исходной сетки.
+## Поза привязки Skin, а не изменённая rest-поза, сохраняет посадку при анимации.
+func _attach_appearance(source: MeshInstance3D, slot: StringName, tier: int) -> void:
+	var appearance := ItemAppearance.build(source, slot, tier)
+	var skeleton: Skeleton3D = source.get_node(source.skeleton)
+	var arrays := source.mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var stride := bones.size() / vertices.size()
+	for feature: Node3D in appearance.get_children():
+		var point: Vector3 = feature.get_meta(&"attachment_point")
+		var nearest := 0
+		var distance := INF
+		for i in vertices.size():
+			if point.distance_squared_to(vertices[i]) < distance:
+				nearest = i
+				distance = point.distance_squared_to(vertices[i])
+		var bind := bones[nearest * stride]
+		var weight := 0.0
+		for k in stride:
+			if weights[nearest * stride + k] > weight:
+				weight = weights[nearest * stride + k]
+				bind = bones[nearest * stride + k]
+		var attachment := BoneAttachment3D.new()
+		attachment.name = "Relic_%s_%s" % [slot, feature.name]
+		attachment.set_meta(&"mastery_trim", true)
+		attachment.bone_name = source.skin.get_bind_name(bind)
+		if attachment.bone_name.is_empty():
+			attachment.bone_idx = source.skin.get_bind_bone(bind)
+		skeleton.add_child(attachment)
+		appearance.remove_child(feature)
+		feature.transform = source.skin.get_bind_pose(bind) * feature.transform
+		attachment.add_child(feature)
+		_appearances.get_or_add(slot, []).append(attachment)
+	appearance.free()
 
 
 ## Вступление босса без сюжетных сцен: сгенерированные вещи тоже прячутся (под ними видно тело)
@@ -509,6 +562,8 @@ func reveal_item(id: StringName) -> void:
 func _show_generated(slot: StringName, on: bool) -> void:
 	for mi in _gen_items[slot]:
 		mi.visible = on
+	for node in _appearances.get(slot, []):
+		node.visible = on
 	for mi in _hidden_body.get(slot, []):
 		mi.visible = not on
 

@@ -12,17 +12,17 @@ const GOLD := Color(0.95, 0.75, 0.3)
 const ADDON_SCALE := 1.7
 
 
-static func build(state: ItemState) -> Array:
+static func build(state: ItemState, appearance: bool = true) -> Array:
 	var parts := _parts(state.def_id)
-	decorate(parts, state)
+	decorate(parts, state, appearance)
 	return parts
 
 
 ## Украшения облика и поглощённых сил одинаковы для процедурных и новых моделей.
-static func decorate(parts: Array, state: ItemState) -> void:
-	if state.appearance > 1:
+static func decorate(parts: Array, state: ItemState, appearance: bool = true) -> void:
+	if appearance and state.appearance > 1:
 		for part in parts:
-			_mastery_trim(part, state)
+			ItemAppearance.decorate_procedural(part, state)
 	var anchored := parts.filter(func(p): return not (p["anchors"] as Array).is_empty())
 	for i in state.properties.size():
 		var essence := Db.essence(state.properties[i].essence_id)
@@ -292,22 +292,3 @@ static func build_addon(essence: EssenceDef) -> Node3D:
 				_gm(spin, 0.03, 0.05, 0.05, 4, c, Vector3(cos(a) * 0.09, 0.07, sin(a) * 0.09), &"", Vector3.ZERO, 0.0, 3.0)
 			n.add_child(spin)
 	return n
-
-
-## Собственная сущность: пробуждение — золотые гнёзда, реликвия — венец кристаллов.
-## Эти украшения не имеют prop_index и не участвуют в анимации переноса свойств.
-static func _mastery_trim(part: Dictionary, state: ItemState) -> void:
-	var root: Node3D = part["node"]
-	var anchors: Array = part["anchors"]
-	var color := state.def().essence.color
-	for i in mini(anchors.size(), 2 if state.appearance == 2 else 4):
-		var trim := Node3D.new()
-		trim.name = "Mastery_%d" % i
-		trim.set_meta(&"mastery_trim", true)
-		trim.transform = anchors[i]
-		root.add_child(trim)
-		_fr(trim, Vector2(0.15, 0.12), Vector2(0.11, 0.08), 0.06, GOLD, Vector3.ZERO, &"gold", Vector2.ZERO, Vector3.ZERO, 0.8)
-		_gm(trim, 0.055, 0.12 if state.appearance == 2 else 0.22, 0.02, 5, color, Vector3(0, 0.07, 0), &"", Vector3.ZERO, 0.3, 1.8)
-		if state.appearance == 3:
-			for side in [-1.0, 1.0]:
-				_py(trim, Vector2(0.045, 0.045), 0.18, GOLD, Vector3(side * 0.08, 0.07, 0), &"gold", Vector3(0, 0, side * -0.4), 0.8, 0.5)

@@ -130,7 +130,7 @@ func _draw_item(i: int) -> void:
 	var def := state.def()
 	var p := pos_of(i)
 	var ir := icon_radius
-	var ring_col := def.essence.color
+	var ring_col := UiKit.item_color(state.def_id)
 	var hot := i == hover_index or i == highlight_victim
 	if i == highlight_pair:
 		ring_col = UiKit.GOLD

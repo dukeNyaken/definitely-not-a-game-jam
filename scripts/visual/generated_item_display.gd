@@ -14,6 +14,27 @@ const PAIR_GAP := 0.25
 ## Вещи, которые ставятся длинной стороной вверх: меч в руке смотрит клинком вперёд.
 const UPRIGHT := [&"sword"]
 static var _static_meshes: Dictionary = {}
+static var _preview_sizes: Dictionary = {}
+
+
+## Одна рамка для всех обликов: смена уровня не приближает камеру.
+## Сфера вмещает рога и пламя при любом повороте вещи.
+static func preview_size(slot: StringName) -> float:
+	var key := "%s/%s" % [SkinnedActorModel.current()["id"], slot]
+	if _preview_sizes.has(key):
+		return _preview_sizes[key]
+	var radius := 0.0
+	for tier in [1, 2, 3]:
+		var state := ItemState.create(slot)
+		state.appearance = tier
+		var display := build_single(state)
+		for mesh: MeshInstance3D in display.find_children("*", "MeshInstance3D", true, false):
+			var box := _local_transform(mesh, display) * mesh.mesh.get_aabb()
+			for i in 8:
+				radius = maxf(radius, box.get_endpoint(i).length())
+		display.free()
+	_preview_sizes[key] = maxf(float(FIT.get(slot, FIT_DEFAULT)) + 0.4, radius * 2.0 + 0.12)
+	return _preview_sizes[key]
 
 
 ## Слот -> Node3D с вещью; начало координат — середина вещи (витрина её вращает).
@@ -32,6 +53,9 @@ static func build(states: Array[ItemState] = [], only_slot: StringName = &"") ->
 		copy.mesh = _static_mesh(mi.mesh)
 		var src := mi.get_active_material(0) as BaseMaterial3D
 		copy.material_override = LowPoly.mat_textured(src.albedo_texture if src else null)
+		for state in states:
+			if state.def_id == slot and state.appearance > 1:
+				copy.add_child(ItemAppearance.build(mi, slot, state.appearance))
 		parts.get_or_add(slot, []).append(copy)
 	scene.free()
 	for slot in parts:
@@ -70,8 +94,7 @@ static func build_single(state: ItemState) -> Node3D:
 	return root
 
 
-## Те же кристаллы обликов поверх сгенерированных вещей; размер украшения не зависит
-## от исходного масштаба glb (особенно у маленького амулета).
+## Добавки поглощённых сущностей. Собственный облик уже на каждой исходной части.
 static func _decorate(root: Node3D, meshes: Array, state: ItemState) -> void:
 	var box := _bounds(meshes, root)
 	box = AABB(box.position * root.scale.x, box.size * root.scale.x)
@@ -90,7 +113,7 @@ static func _decorate(root: Node3D, meshes: Array, state: ItemState) -> void:
 			var point := box.get_center() + Vector3(box.size.x * x, box.size.y * y, box.size.z * 0.5)
 			point = _surface_point(point, faces, box.size.z)
 			anchors.append(ItemVisuals._anchor(point, Vector3.BACK))
-	ItemVisuals.decorate([{"node": trim, "anchors": anchors}], state)
+	ItemVisuals.decorate([{"node": trim, "anchors": anchors}], state, false)
 
 
 ## Передняя поверхность; если точка попала за контур клинка или щита — ближайший край.
@@ -143,6 +166,14 @@ static func _display(slot: StringName, meshes: Array) -> Node3D:
 		if box.size.y < box.size.x * 0.35:
 			var restore := box.size.x / maxf(box.size.y, 0.0001)
 			body.scale = Vector3(1.0, restore, restore)
+			# Новая геометрия уже объёмная: исправление плоской исходной сетки
+			# рыцаря не должно растянуть её рога в десятки раз.
+			for m: MeshInstance3D in meshes:
+				var center := m.mesh.get_aabb().get_center()
+				var correction := Transform3D(Basis.IDENTITY, center) * Transform3D(Basis.from_scale(Vector3(1, 1 / restore, 1 / restore)), Vector3.ZERO) * Transform3D(Basis.IDENTITY, -center)
+				for child in m.get_children():
+					if child.has_meta(&"mastery_trim"):
+						child.transform = correction * child.transform
 	if slot in UPRIGHT:
 		var box := _bounds(meshes, body)
 		if box.size.z >= box.size.x and box.size.z >= box.size.y:
