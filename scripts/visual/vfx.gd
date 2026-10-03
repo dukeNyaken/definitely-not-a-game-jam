@@ -112,14 +112,18 @@ static func slash(owner: Node3D, origin: Vector3, dir: Vector3, radius: float, a
 
 
 ## Кольцо на земле (волна, толчок, Взор): пиксельный фронт расходится до radius и рвётся на штрихи.
-## sheet — лист с radius_px (мотив сущности, например &"mass_quake"); каждый раз под случайным углом.
-static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, duration: float = 0.35, _width: float = 0.35, sheet: StringName = &"shock_ring") -> void:
+## sheet — лист с radius_px (мотив сущности, например &"mass_wave"); каждый раз под случайным углом;
+## delay_s — задержка появления (несколько волн подряд).
+static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, duration: float = 0.35, _width: float = 0.35, sheet: StringName = &"shock_ring", delay_s: float = 0.0) -> void:
 	var spec: Dictionary = FlipbookFx.SHEETS[sheet]
 	var size := radius * float(spec["size_px"]) / float(spec["radius_px"][-1])
 	var fx := FlipbookFx.spawn(owner, sheet, center + Vector3(0, 0.08, 0), color, size,
-		{"billboard": false, "duration": duration * 1.3, "energy": 1.8, "pull": 0.05})
+		{"billboard": false, "duration": duration * 1.3, "energy": spec.get("energy", 1.8), "pull": 0.05})
 	if fx != null:
 		fx.rotation.y = randf() * TAU
+		if delay_s > 0.0:
+			fx.delay = delay_s
+			fx.visible = false
 
 
 ## Сфера Оплота вокруг персонажа: пиксельный пузырь с рунами, держится duration и гаснет.

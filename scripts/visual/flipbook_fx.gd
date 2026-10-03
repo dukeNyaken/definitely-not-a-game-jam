@@ -10,12 +10,13 @@ const SHEETS := {
 	## Развёртка взмаха: x — вдоль дуги от хвоста к голове, y — от кромки лезвия внутрь (натягивается на сектор).
 	&"slash_arc": {"tex": preload("res://assets/vfx/slash_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
 	## Мотивы сущностей (эффекты свойств, перешедших от отданных вещей) — варианты базовых листов:
-	## Лезвие — взмах с пилообразной кромкой и перекрестьями надрезов; Масса — вспышка, кратер, толстые
-	## раскалённые трещины, волна пыли и камни; Порыв — три ленты ветра, закрученные жгутом, со спиралями; Взор — кольцо с раскрывающимися глазами;
+	## Лезвие — взмах с пилообразной кромкой и перекрестьями надрезов; Масса — кольцо вздыбленной земли
+	## с раскалённым швом и трещинами (цветной лист, смешивание), расходится от героя несколькими волнами;
+	## Порыв — три ленты ветра, закрученные жгутом, со спиралями; Взор — кольцо с раскрывающимися глазами;
 	## Хватка — три когтистые борозды с крючками.
 	&"blade_arc": {"tex": preload("res://assets/vfx/blade_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
-	&"mass_quake": {"tex": preload("res://assets/vfx/mass_quake.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 60, 70, 80, 90, 100],
-		"radius_px": [10, 24, 38, 50, 58, 62, 62, 62], "size_px": 128},
+	&"mass_wave": {"tex": preload("res://assets/vfx/mass_wave.png"), "grid": Vector2i(3, 3), "ms": [40, 50, 50, 60, 70, 80, 90, 110],
+		"radius_px": [9, 20, 31, 40, 47, 52, 56, 58], "size_px": 128, "additive": false, "energy": 1.25},
 	&"gust_lines": {"tex": preload("res://assets/vfx/gust_lines.png"), "grid": Vector2i(3, 2), "ms": [40, 50, 60, 70, 80]},
 	&"gaze_ring": {"tex": preload("res://assets/vfx/gaze_ring.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 60, 70, 70, 70, 80],
 		"radius_px": [10, 22, 34, 44, 52, 58, 61, 62], "size_px": 128},
@@ -117,8 +118,8 @@ static func total_ms(id: StringName) -> float:
 	return sum
 
 
-## opts: additive (true), billboard (true), loop (false), speed (1.0) или duration (с),
-## energy (1.6), pull (0.0), tile (1.0), mesh (своя сетка с UV — тогда без билборда), manual (false),
+## opts: additive (true; цветные листы — additive: false в SHEETS), billboard (true), loop (false), speed (1.0) или duration (с),
+## energy (1.6 или из SHEETS), pull (0.0), tile (1.0), mesh (своя сетка с UV — тогда без билборда), manual (false),
 ## random_start (false) — петля с случайного кадра, чтобы соседние эффекты не мигали в такт.
 static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}) -> FlipbookFx:
 	var spec: Dictionary = SHEETS[id]
@@ -148,11 +149,11 @@ static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}
 		fx._frame = randi() % fx._ms.size()
 		fx._t = randf() * float(fx._ms[fx._frame])
 	var m := ShaderMaterial.new()
-	m.shader = _shader(opts.get("additive", true), billboard)
+	m.shader = _shader(opts.get("additive", spec.get("additive", true)), billboard)
 	m.set_shader_parameter(&"sheet", spec["tex"])
 	m.set_shader_parameter(&"grid", Vector2(spec["grid"]))
 	m.set_shader_parameter(&"tint", tint)
-	m.set_shader_parameter(&"energy", opts.get("energy", 1.6))
+	m.set_shader_parameter(&"energy", opts.get("energy", spec.get("energy", 1.6)))
 	m.set_shader_parameter(&"depth_pull", opts.get("pull", 0.0))
 	m.set_shader_parameter(&"tile_x", opts.get("tile", 1.0))
 	m.set_shader_parameter(&"frame", float(fx._frame))
