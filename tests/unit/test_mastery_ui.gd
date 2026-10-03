@@ -72,7 +72,7 @@ func test_circle_click_selects_locked_tier_without_changing_equipped_form() -> v
 	var event := InputEventMouseButton.new()
 	event.pressed = true
 	event.button_index = MOUSE_BUTTON_LEFT
-	event.position = wheel.size * 0.5 + Vector2.UP * (wheel._radius() - 10)
+	event.position = wheel.size * 0.5 + Vector2.UP * (wheel._form_radius() - 10)
 	wheel._gui_input(event)
 	assert_eq(control.selected_id, &"sword")
 	assert_eq(control.preview_tier, 3)

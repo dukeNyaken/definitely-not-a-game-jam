@@ -162,6 +162,8 @@ func _setup() -> void:
 		get_tree().current_scene.ui.add_child(collection)
 		if _tier > 0:
 			collection._inspect_tier(_tier)
+		if _hover_item != "":
+			_hover_mastery(collection._wheel)
 		return
 	var g := _game()
 	if g == null:
