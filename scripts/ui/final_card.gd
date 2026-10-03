@@ -5,6 +5,15 @@ var _ui: Control
 var _wheel: MasteryWheel
 var _item_panel: VBoxContainer
 var _modal: Control
+var _preview_tier := 1
+var _preview: ItemShowcase
+var _tier_buttons: Array[Button] = []
+var _reward_label: Label
+var _progress_label: Label
+var _unlock_caption: Label
+var _form_name: Label
+var _form_effect: Label
+var _equip: Button
 
 
 func _ready() -> void:
@@ -75,6 +84,7 @@ func _ready() -> void:
 	_wheel.selected_id = _initial_item()
 	h.add_child(_wheel)
 	_wheel.item_selected.connect(_show_item)
+	_wheel.appearance_inspected.connect(func(_id: StringName, tier: int): _inspect_tier(tier))
 	var item_frame := PanelContainer.new()
 	item_frame.custom_minimum_size = Vector2(300, 0)
 	item_frame.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.07, 0.05, 0.075), Color(0.25, 0.2, 0.25), 1, 8, 18))
@@ -84,7 +94,7 @@ func _ready() -> void:
 	item_frame.add_child(_item_panel)
 	_show_item(_wheel.selected_id)
 	Mastery.changed.connect(func():
-		_show_item(_wheel.selected_id)
+		_refresh_item()
 		_update_save_status(status))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override(&"separation", 14)
@@ -92,8 +102,8 @@ func _ready() -> void:
 	var legend := VBoxContainer.new()
 	legend.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(legend)
-	legend.add_child(UiKit.label("Тусклый — прежний опыт · Яркий — за этот забег", 17, UiKit.MUTED))
-	legend.add_child(UiKit.label("Внутренняя отметка: II · %d XP     Край: III · %d XP" % [int(Mastery.rules["thresholds"][1]), int(Mastery.rules["thresholds"][2])], 16, UiKit.GOLD))
+	legend.add_child(UiKit.label("Тусклый — до забега · Яркий — полученный XP", 17, UiKit.MUTED))
+	legend.add_child(UiKit.label("От центра: I — открыт · II — %d XP · III — %d XP" % [int(Mastery.rules["thresholds"][1]), int(Mastery.rules["thresholds"][2])], 16, UiKit.GOLD))
 	buttons.add_child(UiKit.button("Ещё забег", _again))
 	buttons.add_child(UiKit.button("Главное меню", _menu))
 
@@ -125,58 +135,86 @@ func _show_item(id: StringName) -> void:
 	for child in _item_panel.get_children():
 		_item_panel.remove_child(child)
 		child.queue_free()
-	var color := Db.item(id).essence.color
-	var total := int(Mastery.xp.get(id, 0))
-	var lv := Mastery.level(id)
-	var old_lv := MasteryWheel.tier_at(float(Mastery.run_start_xp.get(id, 0)))
-	_item_panel.add_child(UiKit.label(Db.item(id).display_name, 34, color))
-	var gained := int(Mastery.run_xp.get(id, 0))
-	_item_panel.add_child(UiKit.label("+%d XP за забег" % gained, 22, UiKit.GOLD))
-	var preview := ItemShowcase.new()
-	preview.custom_minimum_size = Vector2(0, 170)
-	_item_panel.add_child(preview)
-	var state := ItemState.create(id)
-	state.appearance = Mastery.selected(id)
-	preview.show_single(state)
-	if state.appearance != lv:
-		_item_panel.add_child(UiKit.label("Выбран облик %s" % MasteryWheel.ROMAN[state.appearance - 1], 16, UiKit.MUTED))
+	_tier_buttons.clear()
+	_preview_tier = Mastery.selected(id)
+	_item_panel.add_child(UiKit.label(Db.item(id).display_name, 34, Db.item(id).essence.color))
+	_reward_label = UiKit.label("", 22, UiKit.GOLD)
+	_item_panel.add_child(_reward_label)
+	_preview = ItemShowcase.new()
+	_preview.custom_minimum_size = Vector2(0, 170)
+	_item_panel.add_child(_preview)
 	var steps := HBoxContainer.new()
 	steps.add_theme_constant_override(&"separation", 8)
 	_item_panel.add_child(steps)
 	for tier in range(1, 4):
-		var badge := PanelContainer.new()
+		var badge := UiKit.button(MasteryWheel.ROMAN[tier - 1], _inspect_tier.bind(tier))
 		badge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var border := color.darkened(0.45) if tier <= lv else Color(0.2, 0.17, 0.2)
-		if tier > old_lv and tier <= lv:
-			border = UiKit.GOLD
-		badge.add_theme_stylebox_override(&"panel", UiKit.box(Color(color, 0.12) if tier <= lv else Color(0.04, 0.03, 0.05), border, 1, 5, 8))
-		badge.add_child(UiKit.label(MasteryWheel.ROMAN[tier - 1], 24, UiKit.GOLD if tier <= lv else UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
-		badge.tooltip_text = "%s · %d XP" % [Mastery.form(id, tier)["name"], int(Mastery.rules["thresholds"][tier - 1])]
+		badge.focus_mode = Control.FOCUS_ALL
+		badge.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		badge.add_theme_font_size_override(&"font_size", 24)
 		steps.add_child(badge)
-	var cap := int(Mastery.rules["thresholds"].back())
-	_item_panel.add_child(UiKit.label("%d / %d XP%s" % [total, cap, " · МАКС" if lv == 3 else ""], 18, UiKit.TEXT))
-	var target_tier := mini(lv + 1, 3)
-	var form := Mastery.form(id, target_tier)
-	var caption := "Реликвия открыта" if lv == 3 else "До облика %s: %d XP" % [MasteryWheel.ROMAN[target_tier - 1], int(Mastery.rules["thresholds"][target_tier - 1]) - total]
-	if lv > old_lv:
-		caption = "Новый облик %s открыт" % MasteryWheel.ROMAN[lv - 1]
-		form = Mastery.form(id, lv)
-	_item_panel.add_child(_wrapped(caption, 18, UiKit.GOLD))
-	_item_panel.add_child(_wrapped(str(form["name"]), 26, UiKit.TEXT))
-	_item_panel.add_child(_wrapped(str(form["effect"]), 17, UiKit.MUTED))
+		_tier_buttons.append(badge)
+	_progress_label = UiKit.label("", 18, UiKit.TEXT)
+	_item_panel.add_child(_progress_label)
+	_unlock_caption = _wrapped("", 18, UiKit.GOLD)
+	_item_panel.add_child(_unlock_caption)
+	_form_name = _wrapped("", 26, UiKit.TEXT)
+	_item_panel.add_child(_form_name)
+	_form_effect = _wrapped("", 17, UiKit.MUTED)
+	_item_panel.add_child(_form_effect)
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_item_panel.add_child(spacer)
-	_item_panel.add_child(UiKit.button("Все облики", _open_collection))
+	_equip = UiKit.button("", _choose_preview)
+	_equip.focus_mode = Control.FOCUS_ALL
+	_item_panel.add_child(_equip)
+	_refresh_item()
 
 
-func _open_collection() -> void:
-	_close_modal()
-	get_viewport().gui_release_focus()
-	var collection := MasteryUi.new()
-	collection.selected_id = _wheel.selected_id
-	_modal = collection
-	_ui.add_child(_modal)
+func _inspect_tier(tier: int) -> void:
+	_preview_tier = clampi(tier, 1, 3)
+	_refresh_item()
+
+
+func _choose_preview() -> void:
+	var id := _wheel.selected_id
+	if _preview_tier <= Mastery.level(id) and _preview_tier != Mastery.selected(id):
+		Mastery.choose(id, _preview_tier)
+
+
+func _refresh_item() -> void:
+	var id := _wheel.selected_id
+	var total := int(Mastery.xp.get(id, 0))
+	var lv := Mastery.level(id)
+	var equipped := Mastery.selected(id)
+	var old_lv := MasteryWheel.tier_at(float(Mastery.run_start_xp.get(id, 0)))
+	var color := Db.item(id).essence.color
+	_reward_label.text = "+%d XP за забег" % int(Mastery.run_xp.get(id, 0))
+	var state := ItemState.create(id)
+	state.appearance = _preview_tier
+	_preview.show_single(state)
+	for i in _tier_buttons.size():
+		var tier := i + 1
+		var unlocked := tier <= lv
+		var border := color.darkened(0.45) if unlocked else Color(0.2, 0.17, 0.2)
+		if tier == _preview_tier:
+			border = UiKit.GOLD
+		_tier_buttons[i].add_theme_stylebox_override(&"normal", UiKit.box(Color(color, 0.12) if unlocked else Color(0.04, 0.03, 0.05), border, 2 if tier == _preview_tier else 1, 5, 8))
+		_tier_buttons[i].add_theme_stylebox_override(&"hover", UiKit.box(Color(color, 0.18), color, 2, 5, 8))
+		_tier_buttons[i].add_theme_color_override(&"font_color", UiKit.GOLD if unlocked else UiKit.MUTED)
+		_tier_buttons[i].tooltip_text = "%s · %d XP%s" % [Mastery.form(id, tier)["name"], int(Mastery.rules["thresholds"][i]), " · выбран" if tier == equipped else " · новый" if tier > old_lv and unlocked else ""]
+	var cap := int(Mastery.rules["thresholds"].back())
+	_progress_label.text = "%d / %d XP%s" % [total, cap, " · МАКС" if lv == 3 else ""]
+	var target_tier := mini(lv + 1, 3)
+	_unlock_caption.text = "Реликвия открыта" if lv == 3 else "До облика %s: %d XP" % [MasteryWheel.ROMAN[target_tier - 1], int(Mastery.rules["thresholds"][target_tier - 1]) - total]
+	if lv > old_lv:
+		_unlock_caption.text = "Новый облик %s открыт" % MasteryWheel.ROMAN[lv - 1]
+	var form := Mastery.form(id, _preview_tier)
+	_form_name.text = str(form["name"]) if _preview_tier > 1 else "%s · исходный облик" % Db.item(id).display_name
+	_form_effect.text = str(form["effect"]) if _preview_tier > 1 else Db.item(id).action_text
+	_equip.disabled = _preview_tier > lv or _preview_tier == equipped
+	_equip.text = "Облик выбран" if _preview_tier == equipped else "Ещё %d XP" % (int(Mastery.rules["thresholds"][_preview_tier - 1]) - total) if _preview_tier > lv else "Выбрать облик"
+	_equip.tooltip_text = "Выбран для следующего забега" if _preview_tier == equipped else "Облик пока закрыт" if _preview_tier > lv else "Надеть в следующем забеге"
 
 
 func _open_details() -> void:
