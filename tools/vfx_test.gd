@@ -190,7 +190,4 @@ func _summoned(p: SpawnPortal) -> void:
 	add_child(e)
 	e.global_position = p.global_position
 	e.facing = Combat.flat_dir(hero.global_position - p.global_position)
-	var model := e.get_node("Model") as Node3D
-	var full := model.scale
-	model.scale = full * 0.1
-	model.create_tween().tween_property(model, "scale", full, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	p.emerge(e)

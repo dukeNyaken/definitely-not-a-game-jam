@@ -321,10 +321,7 @@ func _on_portal_opened(portal: SpawnPortal) -> void:
 	enemy.facing = Combat.flat_dir(hero.global_position - enemy.global_position)
 	enemy.died.connect(_on_enemy_died)
 	enemy.hit_received.connect(_on_enemy_hit.bind(enemy))
-	var model := enemy.get_node("Model") as Node3D
-	var final_scale := model.scale
-	model.scale = final_scale * 0.1
-	model.create_tween().tween_property(model, "scale", final_scale, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	portal.emerge(enemy)
 	Audio.play(&"enemy_spawn", -12.0)
 
 
