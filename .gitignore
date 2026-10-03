@@ -6,6 +6,7 @@ export_presets.local.cfg
 
 # Builds
 /build/
+/builds/
 
 # macOS
 .DS_Store
