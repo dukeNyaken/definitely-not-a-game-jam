@@ -14,7 +14,9 @@
   },
   "edits": {
     "_why": "Правки картинки Qwen-Image 2.1: на вход картинка, на выход она же по инструкции. back — вид со спины для текстуры: bake.py проецирует его на заднюю половину модели, поэтому поза, масштаб и рамка должны совпасть со входом.",
-    "back": "Show exactly the same subject from directly behind (back view, rotated 180 degrees). Keep the identical pose, limb angles, proportions, clothing, colors, scale and position in the frame. Keep the same plain flat uniform light grey background and the same even studio lighting. Orthographic, no perspective change."
+    "back": "Show exactly the same subject from directly behind (back view, rotated 180 degrees). Keep the identical pose, limb angles, proportions, clothing, colors, scale and position in the frame. Keep the same plain flat uniform light grey background and the same even studio lighting. Orthographic, no perspective change.",
+    "back_leg_armor": "Rotate this leg armor 180 degrees and show its back side, seen from directly behind. From behind there is no knee cap and no front plates: show the rear of the leg armor, the back of the thigh guard with fastening straps and buckles, the open back of the knee, and the curved back of the shin guard over the calf with hinges and buckle straps. Keep the identical size, outline, height and position in the frame, the same materials, style and colors. Keep the same plain flat uniform light grey background and the same even studio lighting. Orthographic, no perspective change.",
+    "_why_back_leg_armor": "Вид сзади поножи. С общей правкой back Qwen возвращал у одиночной поножи почти тот же вид спереди — с наколенником (у всех 4 комплектов), и в игре поножи спереди и сзади выглядели одинаково. Здесь явно сказано, что видно сзади. Субъект выбирает правку ключом back (по умолчанию back)."
   },
   "sword": {
     "kind": "item",
@@ -209,24 +211,28 @@
     "kind": "item",
     "frame": "portrait",
     "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
-    "prompt": "a single barbarian leg armor piece for one leg: rough dark leather thigh guard with iron studs, a round iron knee cap and a riveted iron shin greave bound with leather straps, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+    "prompt": "a single barbarian leg armor piece for one leg: rough dark leather thigh guard with iron studs, a round iron knee cap and a riveted iron shin greave bound with leather straps, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus",
+    "back": "back_leg_armor"
   },
   "templar_legs": {
     "kind": "item",
     "frame": "portrait",
     "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
-    "prompt": "a single crusader leg armor piece for one leg: chainmail chausse covering the thigh and shin with a polished steel knee cop and a steel shin greave, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+    "prompt": "a single crusader leg armor piece for one leg: chainmail chausse covering the thigh and shin with a polished steel knee cop and a steel shin greave, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus",
+    "back": "back_leg_armor"
   },
   "marine_legs": {
     "kind": "item",
     "frame": "portrait",
     "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
-    "prompt": "a single bulky futuristic sci-fi power armor leg piece for one leg: thick thigh plate, heavy armored knee and shin guard, dark gunmetal and deep blue armor plates, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+    "prompt": "a single bulky futuristic sci-fi power armor leg piece for one leg: thick thigh plate, heavy armored knee and shin guard, dark gunmetal and deep blue armor plates, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus",
+    "back": "back_leg_armor"
   },
   "knight_legs": {
     "kind": "item",
     "frame": "portrait",
     "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
-    "prompt": "a single plain medieval steel leg harness for one leg: cuisse thigh plate, poleyn knee cop and greave shin plate, functional, unadorned, slightly worn, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+    "prompt": "a single plain medieval steel leg harness for one leg: cuisse thigh plate, poleyn knee cop and greave shin plate, functional, unadorned, slightly worn, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus",
+    "back": "back_leg_armor"
   }
 }

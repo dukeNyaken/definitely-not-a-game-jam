@@ -47,7 +47,9 @@ def tab1(subject="hero_body", name="hero2", kind="персонаж"):
     # правка «вид сзади» делит с видом спереди все загрузчики, вход — картинка спереди
     # зерно вида сзади +1: с тем же, что у вида спереди, Qwen рисует «каменный»
     # костюм и закрывает лицо (IoU силуэта 0.56-0.73), с +1 — чисто (0.86)
-    merge(g, img_edit.graph("", img_edit.EDITS["back"], seed + 1, ""), "b",
+    # правка «сзади» своя у субъекта (ключ back): у одиночной поножи общая давала тот же вид спереди
+    back_edit = img_edit.EDITS[text2img.SUBJECTS[subject].get("back", "back")]
+    merge(g, img_edit.graph("", back_edit, seed + 1, ""), "b",
           skip=("SaveImage", "LoadImage", "UnetLoaderGGUF", "CLIPLoader", "VAELoader", "QwenImage21Cache"),
           rename={"1": ["f1", 0], "2": ["f2", 0], "3": ["f3", 0], "4": ["f4", 0], "6": front})
     back = ["b9", 0]
