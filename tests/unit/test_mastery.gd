@@ -5,6 +5,7 @@ var _choices: Dictionary
 var _run_xp: Dictionary
 var _run_start_xp: Dictionary
 var _memory: bool
+var _save_path: String
 var _hero: Actor
 var _running: bool
 
@@ -15,6 +16,7 @@ func before_each() -> void:
 	_run_xp = Mastery.run_xp.duplicate()
 	_run_start_xp = Mastery.run_start_xp.duplicate()
 	_memory = Mastery.memory_only
+	_save_path = Mastery.save_path
 	_hero = Combat.hero
 	_running = RunState.running
 	Mastery.memory_only = true
@@ -31,6 +33,7 @@ func after_each() -> void:
 	Mastery.run_xp = _run_xp
 	Mastery.run_start_xp = _run_start_xp
 	Mastery.memory_only = _memory
+	Mastery.save_path = _save_path
 	Mastery.save_error = false
 	Combat.hero = _hero
 	RunState.running = _running
@@ -176,6 +179,43 @@ func test_save_reload_replace_and_backup_recovery() -> void:
 	for suffix in ["", ".bak", ".tmp"]:
 		if FileAccess.file_exists(path + suffix):
 			DirAccess.remove_absolute(path + suffix)
+
+
+func test_default_save_load_and_reset_are_isolated_between_build_profiles() -> void:
+	var paths := ["res://.godot/mastery_profiles_test/a/item_mastery.cfg", "res://.godot/mastery_profiles_test/b/item_mastery.cfg"]
+	Mastery.memory_only = false
+	RunState.running = false
+	Mastery.save_path = paths[0]
+	Mastery.xp[&"sword"] = 1000
+	Mastery.choices[&"sword"] = 3
+	assert_true(Mastery.save_progress(), "создаёт вложенный каталог профиля")
+	assert_true(Mastery.save_progress())
+	Mastery.save_path = paths[1]
+	Mastery.load_progress()
+	assert_eq(Mastery.level(&"sword"), 1, "новый билд не читает опыт предыдущего")
+	Mastery.xp[&"sword"] = 250
+	Mastery.choices[&"sword"] = 2
+	assert_true(Mastery.save_progress())
+	Mastery.save_path = paths[0]
+	Mastery.load_progress()
+	assert_eq(Mastery.level(&"sword"), 3)
+	assert_eq(Mastery.selected(&"sword"), 3)
+	assert_true(Mastery.reset_progress())
+	var file := FileAccess.open(paths[0], FileAccess.WRITE)
+	file.store_string("[meta]\nversion=0\n")
+	file.close()
+	Mastery.load_progress()
+	assert_eq(Mastery.level(&"sword"), 1, "резервная копия сброшенного билда тоже пуста")
+	Mastery.save_path = paths[1]
+	Mastery.load_progress()
+	assert_eq(Mastery.level(&"sword"), 2, "сброс одного билда не меняет другой")
+	assert_eq(Mastery.selected(&"sword"), 2)
+	for path in paths:
+		for suffix in ["", ".bak", ".tmp"]:
+			if FileAccess.file_exists(path + suffix):
+				DirAccess.remove_absolute(path + suffix)
+		DirAccess.remove_absolute(path.get_base_dir())
+	DirAccess.remove_absolute("res://.godot/mastery_profiles_test")
 
 
 func test_reset_updates_live_hero_during_cutscene_without_touching_gift_snapshot() -> void:

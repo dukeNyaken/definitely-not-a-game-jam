@@ -6,6 +6,10 @@ signal unlocked(item_id: StringName, level: int)
 signal progress_reset
 
 const SAVE_PATH := "user://item_mastery.cfg"
+const BUILD_ID_PATH := "res://build_profile.id"
+## В редакторе — прежний профиль; в экспортированной игре — профиль этого билда.
+var save_path: String = SAVE_PATH
+var _profile_valid: bool = true
 var rules: Dictionary = {}
 var xp: Dictionary = {}
 var choices: Dictionary = {}
@@ -19,8 +23,24 @@ var save_error: bool = false
 func _ready() -> void:
 	_load_rules()
 	memory_only = OS.get_environment("GODOT_META_MEMORY") == "1" or "--meta-memory" in OS.get_cmdline_user_args()
+	_select_build_profile()
 	if not memory_only:
 		load_progress()
+
+
+func _select_build_profile() -> void:
+	if FileAccess.file_exists(BUILD_ID_PATH):
+		var id := FileAccess.get_file_as_string(BUILD_ID_PATH).strip_edges()
+		if id.length() == 32 and id.is_valid_hex_number(false):
+			save_path = "user://builds/%s/item_mastery.cfg" % id
+			return
+	elif OS.has_feature("editor"):
+		return
+	# Не подхватываем старую прокачку при экспорте без включённого плагина.
+	_profile_valid = false
+	memory_only = true
+	save_error = true
+	push_error("В билде отсутствует корректный build_profile.id; включите плагин Build profile перед экспортом. Сохранение XP отключено.")
 
 
 ## Правила из item_mastery.json. Битый или неподходящий файл не должен ронять мета-прогрессию:
@@ -143,7 +163,9 @@ func progress_text(id: StringName) -> String:
 
 
 ## Отладочный сброс: новый пустой профиль, включая резервную копию.
-func reset_progress(path: String = SAVE_PATH) -> bool:
+func reset_progress(path: String = "") -> bool:
+	if path.is_empty():
+		path = save_path
 	xp.clear()
 	choices.clear()
 	run_xp.clear()
@@ -184,7 +206,9 @@ func reset_progress(path: String = SAVE_PATH) -> bool:
 	return saved
 
 
-func load_progress(path: String = SAVE_PATH) -> void:
+func load_progress(path: String = "") -> void:
+	if path.is_empty():
+		path = save_path
 	xp.clear()
 	choices.clear()
 	var cfg := ConfigFile.new()
@@ -201,15 +225,22 @@ func load_progress(path: String = SAVE_PATH) -> void:
 			choices[id] = clampi(choice, 1, level(id))
 
 
-func save_progress(path: String = SAVE_PATH) -> bool:
+func save_progress(path: String = "") -> bool:
+	if not _profile_valid:
+		save_error = true
+		return false
 	if memory_only:
 		return true
+	if path.is_empty():
+		path = save_path
 	var cfg := ConfigFile.new()
 	cfg.set_value("meta", "version", 1)
 	for id in Db.ITEM_IDS:
 		cfg.set_value("xp", String(id), int(xp.get(id, 0)))
 		cfg.set_value("appearance", String(id), selected(id))
-	var err := cfg.save(path + ".tmp")
+	var err := DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	if err == OK:
+		err = cfg.save(path + ".tmp")
 	if err == OK and FileAccess.file_exists(path):
 		err = DirAccess.copy_absolute(path, path + ".bak")
 	if err == OK:
