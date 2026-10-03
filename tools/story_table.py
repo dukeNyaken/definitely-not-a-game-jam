@@ -291,7 +291,7 @@ wb = Workbook()
 info = wb.active
 info.title = "Как заполнять"
 info.sheet_view.showGridLines = False
-info["A1"] = "Сюжет «Только самое нужное» — таблица реплик"
+info["A1"] = "Сюжет «Песнь последнего дара» — таблица реплик"
 info["A1"].font = Font(name=FONT, size=16, bold=True)
 notes = [
     "Лист «Диалоги» — все тексты сцен по порядку: что на экране → кто говорит → текст.",

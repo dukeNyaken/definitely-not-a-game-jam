@@ -64,7 +64,7 @@ func _ready() -> void:
 	v.offset_bottom = 340
 	v.add_theme_constant_override(&"separation", 10)
 	ui.add_child(v)
-	v.add_child(UiKit.outlined(UiKit.label("Только самое нужное", 64, UiKit.GOLD), 8))
+	v.add_child(UiKit.outlined(UiKit.label(ProjectSettings.get_setting("application/config/name"), 64, UiKit.GOLD), 8))
 	var line := ColorRect.new()
 	line.color = UiKit.BLOOD
 	line.custom_minimum_size = Vector2(620, 3)
