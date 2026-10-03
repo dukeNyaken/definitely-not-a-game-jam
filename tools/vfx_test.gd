@@ -10,7 +10,7 @@ var _done: Dictionary = {}
 ## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
 ## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
 ## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом;
-## ritual — круг алтаря, порталы врагов, поток огоньков жертвы.
+## ritual — круг алтаря, порталы врагов, поток огоньков жертвы; rift — стоячий разлом, из которого выходит враг.
 var scenario := "hits"
 
 
@@ -77,6 +77,9 @@ func _process(delta: float) -> void:
 		return
 	if scenario == "ritual":
 		_ritual()
+		return
+	if scenario == "rift":
+		_rift()
 		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
@@ -165,3 +168,22 @@ func _ritual() -> void:
 	if _once("gift", 1.0):
 		var from := Vector3(-3.4, 1.2, 1.4)
 		SacrificeFx.play(self, hero_model, from, &"helmet", Db.essence(&"gaze").color)
+
+
+func _rift() -> void:
+	if _once("portal", 1.0):
+		var portal := SpawnPortal.new()
+		portal.delay = 0.8
+		portal.payload = {"test": true}
+		add_child(portal)
+		portal.global_position = Vector3(2.4, 0, 0.6)
+		portal.opened.connect(func(p: SpawnPortal) -> void:
+			var e := EnemyFactory.create(Db.enemy(&"infantry"), 1)
+			(e.get_node("AI") as AIController).active = false
+			add_child(e)
+			e.global_position = p.global_position
+			e.facing = Combat.flat_dir(hero.global_position - p.global_position)
+			var model := e.get_node("Model") as Node3D
+			var full := model.scale
+			model.scale = full * 0.2
+			model.create_tween().tween_property(model, "scale", full, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
