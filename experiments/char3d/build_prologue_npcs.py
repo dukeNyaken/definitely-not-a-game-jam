@@ -25,7 +25,7 @@ def blender(script, args, log):
 
 
 def main(ids):
-    for name in ids or ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "captain", "widow", "smith", "novice"]:
+    for name in ids or ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "captain", "widow", "smith", "novice", "mother"]:
         d = OUT / name
         for script, args, result in [
             ("bake.py", [d / "raw.glb", d / "front.png", d / "lowpoly.glb", "body", d / "back.png", "tris=1500", "tex=256", "height=2.1"], "lowpoly.glb"),

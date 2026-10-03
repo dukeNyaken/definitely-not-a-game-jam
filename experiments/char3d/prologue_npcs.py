@@ -30,6 +30,7 @@ DESIGNS = {
     "widow": "Young adult Nordic woman, pale tired sad face. Dark plum gray wool shawl covering her head and hair and draped over her shoulders and upper chest, dark plum gray long sleeves, darker brown bodice, plain brown ankle length wool dress, brown shoes.",
     "smith": "Old burly Nordic blacksmith, bald head, bushy gray eyebrows, thick gray moustache and short gray beard. Big muscular BARE arms, leather bracer on his right forearm. Dark charcoal sleeveless tunic, long brown leather apron from chest to knees, wide brown leather belt, dark gray trousers, heavy dark brown boots, iron smithing hammer hanging at his right hip.",
     "novice": "Young Nordic man, healer's apprentice, light brown hair, clean shaven. Warm brown ankle length hooded wool robe with the hood UP over his head, face visible, long wide sleeves follow his straight arms down to the wrists, pale rope belt, brown leather strap diagonally across his chest, small leather satchel with green herbs at his left hip, brown shoes.",
+    "mother": "Elderly Nordic woman, Solveig's mother, kind tired lined face, gray hair mostly hidden under a white linen coif head covering with gray strands at the temples. Muted dark green gray long sleeved ankle length wool dress, faded crimson wool shawl over her shoulders and chest, cream apron at FRONT, small bunch of brass keys hanging at her right hip, brown shoes.",
     # Человекоподобные враги: тела в assets/characters/enemies, оружие — отдельными предметами.
     "infantry": "Undead foot soldier, gaunt gray green corpse skin, sunken cheeks, slack open jaw, small glowing green eyes. HUGE oversized rusty iron kettle hat helmet, twice normal size, very wide flat brim wider than his shoulders, tall conical crown with a short spike on top. Rusty gray chainmail shirt with short sleeves and chainmail leggings, tattered blood red tabard hanging front and back, brown leather belt, bare corpse forearms, worn tan leather boots.",
     "archer": "Undead skeleton crossbowman: bare off white bone skeleton with visible ribcage, spine, pelvis, thin bone arms and legs, skull with dark eye sockets and tiny red glowing eyes. Tall pointed ragged gray brown hood over the skull, tattered gray brown cloak hanging down his back, leather quiver strap.",
@@ -102,6 +103,8 @@ def main(stage, ids):
                     prompt += " Her dark shawl covers the back of her head and shoulders."
                 elif name == "smith":
                     prompt += " Show the back of his bald head, apron straps crossing his back over the charcoal tunic."
+                elif name == "mother":
+                    prompt += " Show the white coif covering the back of her head and the crimson shawl over her back, apron ties at the waist. No apron panel on back."
                 elif name == "infantry":
                     prompt += " Show the back of his huge wide brimmed kettle hat and the red tabard on his back."
                 elif name == "archer":

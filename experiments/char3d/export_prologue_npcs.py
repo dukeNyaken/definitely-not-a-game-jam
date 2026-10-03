@@ -19,7 +19,7 @@ import to_godot
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "output" / "prologue_npcs"
-IDS = ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "captain", "widow", "smith", "novice"]
+IDS = ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "captain", "widow", "smith", "novice", "mother"]
 # враги: тела в assets/characters/enemies, реестр enemies.json
 ENEMIES = ["infantry", "archer", "brute", "caster", "jester"]
 

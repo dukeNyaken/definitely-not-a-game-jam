@@ -88,6 +88,7 @@ static func npc_config(p_kind: int, p_variant: StringName) -> Dictionary:
 		Kind.WIDOW: id = "widow"
 		Kind.SMITH: id = "smith"
 		Kind.NOVICE: id = "novice"
+		Kind.MOTHER: id = "mother"
 		Kind.TYRANT:
 			if p_variant == &"young":
 				id = "young_brother"

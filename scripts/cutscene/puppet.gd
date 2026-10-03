@@ -6,6 +6,8 @@ extends Actor
 
 var kind: int = ActorModel.Kind.HERO
 var variant: StringName = &""
+## Процедурная модель даже там, где есть сгенерированная (тесты механики поз ActorModel).
+var procedural := false
 var model: ActorModel
 var _fade_tween: Tween
 
@@ -25,7 +27,7 @@ static func make(p_kind: int, p_variant: StringName = &"") -> Puppet:
 func _ready() -> void:
 	super()
 	remove_from_group(&"actors")
-	model = SkinnedActorModel.for_puppet(kind, variant)
+	model = ActorModel.new() if procedural else SkinnedActorModel.for_puppet(kind, variant)
 	model.name = "Model"
 	model.variant = variant
 	add_child(model)

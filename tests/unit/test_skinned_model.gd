@@ -131,6 +131,7 @@ func test_story_npcs_keep_props_and_support_story_poses() -> void:
 		[ActorModel.Kind.WIDOW, &"", "chest/Baby", [&"hold", &"offer"]],
 		[ActorModel.Kind.SMITH, &"", "", [&"offer", &"kneel"]],
 		[ActorModel.Kind.NOVICE, &"", "r_hand/Staff", [&"offer", &"bow"]],
+		[ActorModel.Kind.MOTHER, &"", "", [&"offer", &"kneel"]],
 	]:
 		var p := Puppet.make(spec[0], spec[1])
 		add_child_autofree(p)

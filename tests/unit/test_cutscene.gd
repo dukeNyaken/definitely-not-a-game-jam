@@ -226,8 +226,8 @@ func test_big_text_moves_without_pixel_steps() -> void:
 
 
 func test_offer_hand_follows_the_model() -> void:
-	# Гудрун своей модели не имеет: процедурная
 	var mother := Puppet.make(ActorModel.Kind.MOTHER)
+	mother.procedural = true
 	add_child_autofree(mother)
 	assert_eq(mother.offer_hand(), &"r_hand", "процедурная модель протягивает правую")
 	var sig := Puppet.make(ActorModel.Kind.TYRANT)
@@ -282,6 +282,7 @@ func test_cloak_follows_the_shoulders_of_its_wearer() -> void:
 func test_huddle_pose_hunches_and_crosses_the_arms() -> void:
 	# поза процедурной модели; у сгенерированных она запечена (test_skinned_model)
 	var p := Puppet.make(ActorModel.Kind.MOTHER)
+	p.procedural = true
 	add_child_autofree(p)
 	p.model.rest_pose = &""  # своя поза покоя у неё — руки у пояса; отсчёт — от опущенных
 	p.model._animate(0.016)
@@ -321,6 +322,7 @@ func test_cottage_has_what_the_hearth_scene_needs() -> void:
 ## Позы сомнения: руки сцеплены у пояса; у downcast ещё и опущена голова (отрицательный наклон — вниз).
 func test_doubt_poses() -> void:
 	var p := Puppet.make(ActorModel.Kind.MOTHER)
+	p.procedural = true
 	add_child_autofree(p)
 	p.set_pose(&"wring")
 	p.model._animate(0.016)

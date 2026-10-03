@@ -313,5 +313,27 @@
         "anim": "npc/huddle"
       }
     }
+  },
+  "mother": {
+    "model": "res://assets/characters/npcs/mother.glb",
+    "measure": "res://assets/characters/measure/npc_mother.json",
+    "rest_pose": "wring",
+    "animations": {
+      "idle": "res://assets/characters/anims/npc_mother_idle.tres",
+      "wring": "res://assets/characters/anims/npc_mother_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_mother_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_mother_huddle.tres"
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
+      }
+    }
   }
 }
