@@ -30,6 +30,8 @@ var _mod: LocomotionModifier
 var _twist := 0.0
 var _blend_pos := 0.0
 var _measure_path := ""
+var _pose_clips: Dictionary = {}          # слой позы ("pose_full"/"pose_upper") -> AnimationNodeAnimation
+var _pose_now := "-"                      # поза, под которую настроены слои
 
 
 
@@ -42,6 +44,17 @@ static func for_hero() -> ActorModel:
 ## Модель босса: та же логика; вещи на нём — из выбранного варианта героя.
 static func for_boss() -> ActorModel:
 	return SkinnedActorModel.new() if available() and ResourceLoader.exists(current()["boss"]) else ActorModel.new()
+
+
+## Актёр сюжетной сцены (Puppet): Солдат — сгенерированный герой; Сигвард в настоящем —
+## тело босса без вещей (вещи слетаются на него только в бою); молодой Сигвард во флешбэке
+## и остальные люди — процедурные: своих моделей у них нет.
+static func for_puppet(p_kind: int, p_variant: StringName) -> ActorModel:
+	if p_kind == Kind.HERO and available():
+		return SkinnedActorModel.new()
+	if p_kind == Kind.TYRANT and p_variant != &"young" and available() and ResourceLoader.exists(current()["boss"]):
+		return SkinnedActorModel.new()
+	return ActorModel.new()
 
 
 ## Есть ли собранный прототип: без него игра остаётся на процедурной модели.
@@ -86,10 +99,14 @@ func _build_body() -> void:
 	holder.rotation_degrees.y = _cfg["facing_yaw_deg"]
 	add_child(holder)
 	var variant := current()
-	var boss := kind == Kind.BOSS
+	var boss := kind == Kind.BOSS or kind == Kind.TYRANT
 	_measure_path = variant["boss_measure" if boss else "measure"]
 	var scene: Node3D = (load(variant["boss" if boss else "model"]) as PackedScene).instantiate()
 	holder.add_child(scene)
+	if kind == Kind.TYRANT:
+		# Сигвард в сюжетных сценах — человек ростом с брата; великаном он становится в бою
+		# (масштаб босса из boss.tres), а тело босса в glb выше тела героя (2.46 м против 2.1)
+		holder.scale = Vector3.ONE * _body_height(variant["model"]) / _body_height(variant["boss"])
 	var skeleton: Skeleton3D = scene.find_children("*", "Skeleton3D", true, false)[0]
 	for mi in scene.find_children("*", "MeshInstance3D", true, false):
 		var src := mi.get_active_material(0) as BaseMaterial3D
@@ -117,6 +134,15 @@ func _build_body() -> void:
 	_mod.name = "Locomotion"
 	skeleton.add_child(_mod)
 	_collect_meshes()
+
+
+## Рост тела модели (сетка body в позе покоя), м.
+static func _body_height(path: String) -> float:
+	var scene: Node = (load(path) as PackedScene).instantiate()
+	var body := scene.find_child("body", true, false) as MeshInstance3D
+	var h := body.mesh.get_aabb().size.y if body != null else 1.0
+	scene.free()
+	return h
 
 
 static func _slot_of(mesh_name: String) -> StringName:
@@ -202,8 +228,25 @@ func _build_tree(scene: Node3D, player: AnimationPlayer) -> void:
 	bt.connect_node(&"windup_seek", 0, &"windup_clip")
 	bt.connect_node(&"windup", 0, &"block")
 	bt.connect_node(&"windup", 1, &"windup_seek")
+	# Позы сюжетных сцен: всё тело (на колено) и только верх (протянуть руку, поклон).
+	# Клип слоя подменяется при смене позы; стоп-кадр — TimeSeek каждый кадр, как у замаха.
 	var prev := &"windup"
 	var x := 500.0
+	var first_pose: Dictionary = _cfg["poses"].values()[0]
+	for layer in ["pose_full", "pose_upper"]:
+		var blend := AnimationNodeBlend2.new()
+		if layer == "pose_upper":
+			_upper_filter(blend)
+		var clip := _anim(first_pose["anim"])
+		_pose_clips[layer] = clip
+		bt.add_node(layer, blend, Vector2(x, 0))
+		bt.add_node(layer + "_clip", clip, Vector2(x - 150, 160))
+		bt.add_node(layer + "_seek", AnimationNodeTimeSeek.new(), Vector2(x - 75, 160))
+		bt.connect_node(layer + "_seek", 0, layer + "_clip")
+		bt.connect_node(layer, 0, prev)
+		bt.connect_node(layer, 1, layer + "_seek")
+		prev = StringName(layer)
+		x += 200.0
 	for kind_name in _cfg["actions"]:
 		var act: Dictionary = _cfg["actions"][kind_name]
 		prev = _shot(bt, prev, "act_" + kind_name, _anim(act["anim"], act["from"], act["to"]), act["fade"], true, x)
@@ -307,10 +350,27 @@ func _animate(delta: float) -> void:
 	_tree["parameters/windup/blend_amount"] = 1.0 if _windup > 0.0 else move_toward(_tree["parameters/windup/blend_amount"], 0.0, delta * 8.0)
 	if _windup > 0.0:
 		_tree["parameters/windup_seek/seek_request"] = w["from"] + (w["to"] - w["from"]) * _windup
+	_animate_pose(delta)
 	if actor.is_dashing() and not _was_dashing:
 		var d: Dictionary = _cfg["dash"]
 		_fire("dash", (d["to"] - d["from"]) / maxf(actor.dash_time, 0.05))
 	_was_dashing = actor.is_dashing()
+
+
+## Поза сюжетной сцены (pose, иначе rest_pose) из poses в animation.json; неизвестная — без позы.
+func _animate_pose(delta: float) -> void:
+	var p := String(pose if pose != &"" else rest_pose)
+	var want: Dictionary = _cfg["poses"].get(p, {})
+	var layer := "" if want.is_empty() else ("pose_full" if want.get("full", false) else "pose_upper")
+	if p != _pose_now:
+		_pose_now = p
+		if layer != "":
+			_pose_clips[layer].animation = want["anim"]
+	if layer != "" and want.has("at"):
+		_tree["parameters/%s_seek/seek_request" % layer] = want["at"]
+	for l in _pose_clips:
+		var a: float = _tree["parameters/%s/blend_amount" % l]
+		_tree["parameters/%s/blend_amount" % l] = move_toward(a, 1.0 if l == layer else 0.0, delta / _cfg["pose_fade"])
 
 
 func play_swing(kind_name: StringName, duration: float = 0.2) -> void:

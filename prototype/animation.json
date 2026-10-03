@@ -178,5 +178,49 @@
     "to": 0.35
   },
   "tempo_gain": 1.12,
-  "_tempo_gain": "поправка темпа ходьбы: замер в пространстве клипа систематически занижает шаг — в игре (tools/anim_check.gd, 6 м/с) стопа на полу ехала вперёд на 0.53-1.02 м/с у всех четырёх вариантов, в среднем 0.7: 6 / (6 - 0.7) = 1.13"
+  "_tempo_gain": "поправка темпа ходьбы: замер в пространстве клипа систематически занижает шаг — в игре (tools/anim_check.gd, 6 м/с) стопа на полу ехала вперёд на 0.53-1.02 м/с у всех четырёх вариантов, в среднем 0.7: 6 / (6 - 0.7) = 1.13",
+  "_poses": "позы сюжетных сцен (ActorModel.pose / rest_pose): клип библиотеки и стоп-кадр at, с; без at клип идёт по кругу. full — всё тело (на колено, сидя), иначе только верх, ноги продолжают шаг. Кадры выбраны по листу клипов: kneel — начало Fixing_Kneeling (опустился на колено), slump — он же, где упёрся рукой в землю; bow — наклон из PickUp_Table (своего поклона в библиотеке нет); offer — пик протянутой руки Interact; hold — обе руки перед грудью Spell_Simple_Idle; arms_up — руки вверх в прыжке Jump; ease — опущенный меч, Idle без оружия. Позы NPC (frail, sling, hands_back) здесь не нужны: у NPC процедурные модели.",
+  "poses": {
+    "kneel": {
+      "anim": "ual/Fixing_Kneeling",
+      "at": 0.5,
+      "full": true
+    },
+    "slump": {
+      "anim": "ual/Fixing_Kneeling",
+      "at": 1.8,
+      "full": true
+    },
+    "sit": {
+      "anim": "ual/Sitting_Idle",
+      "full": true
+    },
+    "bow": {
+      "anim": "ual/PickUp_Table",
+      "at": 0.29
+    },
+    "offer": {
+      "anim": "ual/Interact",
+      "at": 0.7
+    },
+    "hold": {
+      "anim": "ual/Spell_Simple_Idle",
+      "at": 1.0
+    },
+    "arms_up": {
+      "anim": "ual/Jump",
+      "at": 0.7
+    },
+    "shield_up": {
+      "anim": "ual/Punch_Enter",
+      "at": 0.5
+    },
+    "lantern": {
+      "anim": "ual/Idle_Torch"
+    },
+    "ease": {
+      "anim": "ual/Idle"
+    }
+  },
+  "pose_fade": 0.25
 }
