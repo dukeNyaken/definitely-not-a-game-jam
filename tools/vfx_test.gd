@@ -7,7 +7,8 @@ var elite: Actor
 var _t: float = 0.0
 var _done: Dictionary = {}
 ## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
-## pools — лужи яда, волна Энергии, извержение зоны, удар громилы.
+## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
+## ward — купол Оплота, цепи Хватки, следы рывка.
 var scenario := "hits"
 
 
@@ -65,6 +66,9 @@ func _process(delta: float) -> void:
 	if scenario == "pools":
 		_pools(ctx)
 		return
+	if scenario == "ward":
+		_ward()
+		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
 		var g := ActionContext.make(hero, ItemState.create(&"helmet"))
@@ -116,3 +120,15 @@ func _pools(ctx: ActionContext) -> void:
 		var c := Vector3(-3.2, 0, -2.6)
 		Vfx.ring(elite, c, 2.2, Color(1, 0.5, 0.3), 0.3, 0.9)
 		FlipbookFx.eruption_field(elite, c, 2.2 * 0.7, Color(0.8, 0.6, 0.4), 3)
+
+
+func _ward() -> void:
+	if _once("dome", 1.0):
+		Vfx.dome(hero, Db.essence(&"bulwark").color, 0.6)
+	if _once("chains", 1.02):
+		for d in dummies:
+			Vfx.beam(hero, hero.global_position + Vector3(0, 0.9, 0), d.global_position + Vector3(0, 0.9, 0), Db.essence(&"grip").color, 0.1, 0.4)
+	if _once("dash", 1.0):
+		Vfx.streak(hero, Vector3(3.6, 0, 3.0), Vector3(-0.6, 0, 3.6), Color(0.8, 0.75, 0.6, 0.6))
+	if _once("gust", 1.04):
+		Vfx.streak(hero, Vector3(-4.2, 0, -0.5), Vector3(-2.6, 0, 2.8), Db.essence(&"gust").color)

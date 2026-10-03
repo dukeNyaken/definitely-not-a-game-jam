@@ -18,6 +18,12 @@ const SHEETS := {
 	&"energy_wave": {"tex": preload("res://assets/vfx/energy_wave.png"), "grid": Vector2i(3, 2), "ms": [50, 50, 50, 50, 50, 50]},
 	## Столб из земли (билборд 32×48, низ — земля): зона заклинателя, удар громилы.
 	&"zone_eruption": {"tex": preload("res://assets/vfx/zone_eruption.png"), "grid": Vector2i(3, 3), "ms": [40, 50, 60, 70, 80, 90, 100], "aspect": 32.0 / 48.0},
+	## Сфера Оплота (билборд): ромбовидная чешуя, руны, бегущий блик; петля.
+	&"ward_bubble": {"tex": preload("res://assets/vfx/ward_bubble.png"), "grid": Vector2i(2, 2), "ms": [70, 70, 70, 70]},
+	## Цепь Хватки: полоса с периодом 16 px, повторяется по длине (tile); кадры тянут звенья к u = 0.
+	&"grip_chain": {"tex": preload("res://assets/vfx/grip_chain.png"), "grid": Vector2i(2, 2), "ms": [60, 60, 60, 60]},
+	## Линии скорости рывка: головы у u = 1 (точка прибытия), хвосты втягиваются.
+	&"speed_lines": {"tex": preload("res://assets/vfx/speed_lines.png"), "grid": Vector2i(3, 2), "ms": [40, 50, 60, 70, 80]},
 }
 
 const SHADER := """
@@ -32,6 +38,8 @@ uniform float energy = 1.0;
 uniform float fade = 1.0;
 // Сдвиг к камере в метрах: вспышка не прячется в теле того, по кому попали.
 uniform float depth_pull = 0.0;
+// Повтор кадра вдоль u (цепь любой длины).
+uniform float tile_x = 1.0;
 
 void vertex() {
 	if (%s) {
@@ -45,7 +53,7 @@ void vertex() {
 
 void fragment() {
 	vec2 cell_px = vec2(textureSize(sheet, 0)) / grid;
-	vec2 local = clamp(UV, 0.5 / cell_px, 1.0 - 0.5 / cell_px);
+	vec2 local = clamp(vec2(fract(UV.x * tile_x), UV.y), 0.5 / cell_px, 1.0 - 0.5 / cell_px);
 	vec2 cell = vec2(mod(frame, grid.x), floor(frame / grid.x));
 	vec4 t = texture(sheet, (local + cell) / grid);
 	ALBEDO = t.rgb * tint.rgb * energy;
@@ -88,7 +96,7 @@ static func total_ms(id: StringName) -> float:
 
 
 ## opts: additive (true), billboard (true), loop (false), speed (1.0) или duration (с),
-## energy (1.6), pull (0.0), mesh (своя сетка с UV — тогда без билборда), manual (false),
+## energy (1.6), pull (0.0), tile (1.0), mesh (своя сетка с UV — тогда без билборда), manual (false),
 ## random_start (false) — петля с случайного кадра, чтобы соседние эффекты не мигали в такт.
 static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}) -> FlipbookFx:
 	var spec: Dictionary = SHEETS[id]
@@ -124,6 +132,7 @@ static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}
 	m.set_shader_parameter(&"tint", tint)
 	m.set_shader_parameter(&"energy", opts.get("energy", 1.6))
 	m.set_shader_parameter(&"depth_pull", opts.get("pull", 0.0))
+	m.set_shader_parameter(&"tile_x", opts.get("tile", 1.0))
 	m.set_shader_parameter(&"frame", float(fx._frame))
 	fx._mat = m
 	fx.material_override = m

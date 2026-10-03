@@ -118,22 +118,19 @@ static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, du
 		{"billboard": false, "duration": duration * 1.3, "energy": 1.8, "pull": 0.05})
 
 
-## Сфера-купол вокруг персонажа (Оплот).
+## Сфера Оплота вокруг персонажа: пиксельный пузырь с рунами, держится duration и гаснет.
 static func dome(owner: Node3D, color: Color, duration: float, radius: float = 1.1) -> void:
 	if owner == null or not owner.is_inside_tree():
 		return
-	var s := SphereMesh.new()
-	s.radius = radius
-	s.height = radius * 2.0
-	s.radial_segments = 12
-	s.rings = 6
-	var mi := MeshInstance3D.new()
-	mi.mesh = s
-	mi.material_override = material(Color(color, 0.35), 1.4, true)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	owner.add_child(mi)
-	mi.position = Vector3(0, 0.9, 0)
-	_fade_free(mi, duration, 1.15)
+	# Контур сферы — 21 px из 24 половины листа.
+	var fx := FlipbookFx.attach(owner, &"ward_bubble", Vector3(0, 0.95, 0), color, radius * 2.0 * 24.0 / 21.0,
+		{"loop": true, "energy": 1.7, "pull": radius * 0.7})
+	var full := fx.scale
+	fx.scale = full * 0.4
+	var tw := fx.create_tween()
+	tw.tween_property(fx, "scale", full, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(maxf(duration - 0.27, 0.0))
+	tw.tween_callback(fx.fade_out.bind(0.15))
 
 
 ## Короткая вспышка в точке (попадание, крит).
@@ -150,21 +147,30 @@ static func burst(owner: Node, pos: Vector3, color: Color, size: float = 0.5, du
 	_fade_free(mi, duration, 2.2)
 
 
-## Линия между точками (цепь Хватки, натяжение лука).
-static func beam(owner: Node, a: Vector3, b: Vector3, color: Color, width: float = 0.12, duration: float = 0.25) -> void:
-	var parent := root_for(owner)
-	if parent == null:
-		return
-	var len := a.distance_to(b)
+## Лента плашмя от a к b (u вдоль ленты: 0 у a, 1 у b) — для цепи и следа рывка.
+static func _ribbon(owner: Node, id: StringName, a: Vector3, b: Vector3, width: float, color: Color, opts: Dictionary) -> FlipbookFx:
+	var d := Combat.flat(b - a)
+	var len := d.length()
 	if len < 0.05:
-		return
-	var box := BoxMesh.new()
-	box.size = Vector3(width, width, len)
-	var mi := _spawn(parent, box, material(Color(color, 0.9), 1.8, true), (a + b) * 0.5)
-	mi.look_at(b, Vector3.UP if absf((b - a).normalized().y) < 0.99 else Vector3.RIGHT)
-	_fade_free(mi, duration, 1.0)
+		return null
+	opts["billboard"] = false
+	var fx := FlipbookFx.spawn(owner, id, (a + b) * 0.5, color, 1.0, opts)
+	if fx == null:
+		return null
+	fx.rotation.y = atan2(-d.z, d.x)
+	fx.scale = Vector3(len, 1.0, width)
+	return fx
 
 
-## След рывка.
+## Цепь от a (кто тянет) к b (кого тянут): звенья ползут к a, через duration цепь гаснет.
+static func beam(owner: Node, a: Vector3, b: Vector3, color: Color, width: float = 0.12, duration: float = 0.25) -> void:
+	# Период звеньев — 16 px из 32 на ширину 8 px: звено вдвое длиннее ширины ленты.
+	var link := maxf(width, 0.08) * 4.5
+	var fx := _ribbon(owner, &"grip_chain", a, b, link / 2.0, color, {"loop": true, "energy": 1.9, "pull": 0.3, "tile": a.distance_to(b) / (link * 2.0)})
+	if fx != null:
+		fx.create_tween().tween_callback(fx.fade_out.bind(0.12)).set_delay(maxf(duration - 0.12, 0.0))
+
+
+## След рывка: линии скорости от старта к точке прибытия.
 static func streak(owner: Node3D, from: Vector3, to: Vector3, color: Color) -> void:
-	beam(owner, from + Vector3(0, 0.5, 0), to + Vector3(0, 0.5, 0), color, 0.5, 0.3)
+	_ribbon(owner, &"speed_lines", from + Vector3(0, 0.45, 0), to + Vector3(0, 0.45, 0), 1.0, color, {"energy": 1.6, "pull": 0.2})
