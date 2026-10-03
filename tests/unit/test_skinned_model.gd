@@ -139,6 +139,49 @@ func test_every_variant_has_all_items_on_hero_and_boss() -> void:
 				assert_true(m._gen_items.has(slot), "%s/%d: нет вещи %s" % [v["id"], kind, slot])
 
 
+func test_marine_gloves_fit_palms_and_keep_forearms_visible() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for kind in [ActorModel.Kind.HERO, ActorModel.Kind.BOSS]:
+		var model := _model("marine", kind, SLOTS)
+		model.set_process(false)
+		model._tree.active = false
+		var forearms := model.find_children("body_glove_forearms", "MeshInstance3D", true, false)
+		assert_eq(forearms.size(), 1, "предплечья не исчезают под маленькими перчатками")
+		for glove: MeshInstance3D in model._gen_items[&"gloves"]:
+			var hand := &"LeftHand" if glove.name.ends_with("_L") else &"RightHand"
+			var to_hand := ItemAppearance.bind_pose(glove, hand).affine_inverse()
+			var palm_points := PackedVector3Array()
+			for body: MeshInstance3D in model._hidden_body[&"gloves"]:
+				for surface in body.mesh.get_surface_count():
+					var arrays := body.mesh.surface_get_arrays(surface)
+					var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+					var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+					var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+					var stride := bones.size() / vertices.size()
+					for index in arrays[Mesh.ARRAY_INDEX]:
+						var weight := 0.0
+						for k in stride:
+							if body.skin.get_bind_name(bones[index * stride + k]) == hand:
+								weight += weights[index * stride + k]
+						if weight >= 0.8:
+							palm_points.append(to_hand * vertices[index])
+			assert_gt(palm_points.size(), 0)
+			var palm := AABB(palm_points[0], Vector3.ZERO)
+			for point in palm_points:
+				palm = palm.expand(point)
+			var fit := AABB(to_hand * glove.mesh.get_faces()[0], Vector3.ZERO)
+			for point in glove.mesh.get_faces():
+				fit = fit.expand(to_hand * point)
+			assert_lt(fit.get_center().distance_to(palm.get_center()), 0.08, "перчатка на ладони, не на предплечье")
+			assert_lt(fit.size.length(), palm.size.length() * 2.5, "перчатка соразмерна кисти")
+		model.actor.set_items([])
+		assert_true(forearms[0].visible, "жертва перчаток оставляет целые руки")
+		for body: MeshInstance3D in model._hidden_body[&"gloves"]:
+			assert_true(body.visible)
+
+
 func test_equip_toggles_item_and_body_under_it() -> void:
 	if not SkinnedActorModel.available():
 		pending("модели героев не собраны")

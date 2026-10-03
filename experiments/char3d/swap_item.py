@@ -2,6 +2,7 @@
 
     python swap_item.py replace <персонаж.glb> <сетка вещи> <новая.glb> [size=1.1]
     python swap_item.py scale   <персонаж.glb> <сетка вещи> [length=1.2] [thick=2.0]
+    python swap_item.py fit_gloves <персонаж.glb> [clearance=1.7]
 
 Исходников вещей (output/char3d/item_*) может не быть на этой машине, а прогон
 персонажа через Blender меняет оси костей — от них зависят сокеты рук. Поэтому
@@ -13,10 +14,13 @@
   Вся вещь привязана к главной кости старой (вес 1), текстура — новая.
 - scale — та же сетка: от рукояти (конец длинной оси у главной кости) длиннее в
   length раз, поперёк — в thick раз толще (меч-«зубочистка»).
+- fit_gloves — посадка пары по ладоням в координатах привязки кистей;
+  лишние скрытые грани предплечья возвращаются в постоянно видимое тело.
 
 Вершины скинованной сетки в glTF — в позе привязки в пространстве сцены, поэтому
 рама считается прямо по ним. Старые данные остаются в буфере неиспользуемыми.
 """
+import copy
 import json
 import struct
 import sys
@@ -173,8 +177,83 @@ def scale(target, name, length=1.2, thick=2.0):
     g.save(target)
 
 
+def fit_gloves(target, clearance=1.7):
+    """Посадить пару на кисти по их вершинам, исключая слабые веса туловища.
+
+    Сравниваем рамки в позе привязки кисти: скин и анимации не меняются.
+    Правка нужна, когда исходная посадка охватила предплечье вместо ладони.
+    """
+    g = Glb(target)
+    body = next(n for n in g.json["nodes"] if n.get("name") == "hide_gloves")
+    for node in g.json["nodes"]:
+        if node.get("name") not in ("item_gloves_L", "item_gloves_R"):
+            continue
+        skin = g.json["skins"][node["skin"]]
+        hand = "LeftHand" if node["name"].endswith("_L") else "RightHand"
+        joint = next(i for i, n in enumerate(skin["joints"]) if g.json["nodes"][n]["name"] == hand)
+        bind = g.read(skin["inverseBindMatrices"])[joint].reshape(4, 4).T.astype(np.float64)
+        hand_points = []
+        for primitive in g.json["meshes"][body["mesh"]]["primitives"]:
+            a = primitive["attributes"]
+            j, w = g.read(a["JOINTS_0"]), g.read(a["WEIGHTS_0"])
+            mask = np.sum(np.where(j == joint, w, 0.0), axis=1) >= 0.8
+            hand_points.append(g.read(a["POSITION"])[mask])
+        points = np.concatenate(hand_points)
+        if not len(points):
+            raise ValueError(f"No palm vertices for {hand}")
+        local_hand = (bind @ np.column_stack((points, np.ones(len(points)))).T).T[:, :3]
+        target_center = (local_hand.min(0) + local_hand.max(0)) / 2
+        target_size = np.ptp(local_hand, axis=0).max() * clearance
+        mesh = g.json["meshes"][node["mesh"]]
+        positions = [g.read(p["attributes"]["POSITION"]) for p in mesh["primitives"]]
+        cloud = np.concatenate(positions)
+        local = (bind @ np.column_stack((cloud, np.ones(len(cloud)))).T).T[:, :3]
+        center = (local.min(0) + local.max(0)) / 2
+        factor = min(1.0, target_size / np.ptp(local, axis=0).max())
+        inverse = np.linalg.inv(bind)
+        for primitive, pos in zip(mesh["primitives"], positions):
+            transformed = (bind @ np.column_stack((pos, np.ones(len(pos)))).T).T[:, :3]
+            transformed = (transformed - center) * factor + target_center
+            fitted = (inverse @ np.column_stack((transformed, np.ones(len(pos)))).T).T[:, :3]
+            primitive["attributes"]["POSITION"] = g.write(fitted.astype(np.float32), "VEC3", 34962)
+        print(f"FIT {target} {node['name']}: scale={factor:.3f}, palm={target_center.round(3)}")
+    # Исходная большая перчатка скрывала и предплечья. Возвращаем эти грани
+    # в постоянно видимое тело; под перчатками прячутся только сами ладони.
+    body_index = g.json["nodes"].index(body)
+    body_skin = g.json["skins"][body["skin"]]
+    hand_joints = [i for i, n in enumerate(body_skin["joints"]) if g.json["nodes"][n]["name"] in ("LeftHand", "RightHand")]
+    hidden, exposed = [], []
+    for primitive in g.json["meshes"][body["mesh"]]["primitives"]:
+        a = primitive["attributes"]
+        joints, weights = g.read(a["JOINTS_0"]), g.read(a["WEIGHTS_0"])
+        hand_weight = np.sum(np.where(np.isin(joints, hand_joints), weights, 0.0), axis=1)
+        triangles = g.read(primitive["indices"]).reshape(-1, 3)
+        palm = np.all(hand_weight[triangles] >= 0.8, axis=1)
+        for mask, output in [(palm, hidden), (~palm, exposed)]:
+            if not np.any(mask):
+                continue
+            part = copy.deepcopy(primitive)
+            part["indices"] = g.write(triangles[mask].reshape(-1, 1), "SCALAR", 34963)
+            output.append(part)
+    if not hidden:
+        raise ValueError("No palm faces to hide under gloves")
+    g.json["meshes"][body["mesh"]]["primitives"] = hidden
+    if exposed:
+        visible_mesh = len(g.json["meshes"])
+        g.json["meshes"].append({"name": "body_glove_forearms", "primitives": exposed})
+        visible_node = len(g.json["nodes"])
+        g.json["nodes"].append({**body, "name": "body_glove_forearms", "mesh": visible_mesh})
+        for parent in g.json["nodes"]:
+            if body_index in parent.get("children", []):
+                parent["children"].append(visible_node)
+        for scene in g.json["scenes"]:
+            if body_index in scene.get("nodes", []):
+                scene["nodes"].append(visible_node)
+    g.save(target)
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     opts = {a.split("=")[0]: float(a.split("=")[1]) for a in sys.argv[2:] if "=" in a}
     pos = [a for a in sys.argv[2:] if "=" not in a]
-    {"replace": replace, "scale": scale}[sys.argv[1]](*pos, **opts)
+    {"replace": replace, "scale": scale, "fit_gloves": fit_gloves}[sys.argv[1]](*pos, **opts)
