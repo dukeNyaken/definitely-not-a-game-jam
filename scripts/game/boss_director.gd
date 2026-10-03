@@ -258,6 +258,7 @@ func _spawn_boss(pop: bool = true) -> void:
 	var def: EnemyDef = load("res://data/enemies/boss.tres")
 	boss = Actor.new()
 	boss.name = "Boss"
+	boss.set_meta(&"mastery_xp", Mastery.reward(&"boss", RunState.stage))
 	boss.faction = Actor.Faction.ENEMY
 	boss.display_name = Story.TYRANT_NAME
 	boss.max_hp = b.boss_hp

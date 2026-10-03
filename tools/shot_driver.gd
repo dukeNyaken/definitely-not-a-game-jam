@@ -16,6 +16,11 @@ var _speed := 1.0
 var _t := 0.0
 var _setup_done := false
 var _hovered := false
+var _card_view := ""
+var _item := ""
+var _tier := 0
+var _node := 0
+var _hover_item := ""
 
 
 func _ready() -> void:
@@ -33,6 +38,31 @@ func _ready() -> void:
 			"variant": SkinnedActorModel.select(kv[1])
 			"key": _key = kv[1]
 			"speed": _speed = float(kv[1])
+			"card": _card_view = kv[1]
+			"item": _item = kv[1]
+			"tier": _tier = int(kv[1])
+			"node": _node = int(kv[1])
+			"hover": _hover_item = kv[1]
+	if _preset in ["final_mastery", "final_empty", "final_max", "final_error", "mastery_mixed", "mastery_empty"]:
+		Mastery.memory_only = true
+		Mastery.xp.clear()
+		Mastery.choices.clear()
+		var starts := [210, 440, 900, 1000, 10, 620, 200]
+		for i in Db.ITEM_IDS.size():
+			var id := Db.ITEM_IDS[i]
+			Mastery.xp[id] = 0 if _preset in ["final_empty", "mastery_empty"] else 1000 if _preset == "final_max" else starts[i]
+	if _preset == "mastery":
+		Mastery.memory_only = true
+		for id in Db.ITEM_IDS:
+			Mastery.xp[id] = 1000
+			Mastery.choices[id] = 3
+	if _preset.begins_with("tree"):
+		Mastery.memory_only = true
+		var starts := [210, 440, 900, 1000, 10, 620, 200]
+		for i in Db.ITEM_IDS.size():
+			var id := Db.ITEM_IDS[i]
+			Mastery.xp[id] = starts[i] if _preset == "tree_mixed" else 1000
+			Mastery.choices[id] = Mastery.level(id)
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
 	var story := _preset in ["prologue", "gift", "gates", "finale"]
@@ -48,7 +78,7 @@ func _ready() -> void:
 			for i in 6:
 				RunState.sacrifice(0)
 			RunState.stage = 7
-		"menu":
+		"menu", "rules", "mastery", "mastery_mixed", "mastery_empty":
 			scene = "res://scenes/main_menu.tscn"
 		"cutscenes":
 			Theater.last_key = _key
@@ -58,21 +88,40 @@ func _ready() -> void:
 			Theater.queue = items
 			Theater.cursor = 0
 			Theater.prepare(items[0])
-		"final", "final_death":
-			for i in (6 if _preset == "final" else 3):
+		"final", "final_death", "final_mastery", "final_empty", "final_max", "final_error":
+			var is_victory := _preset in ["final", "final_mastery", "final_max", "final_error"]
+			for i in (0 if _preset == "final_empty" else 6 if is_victory else 3):
 				RunState.sacrifice(0)
-			RunState.outcome = RunState.Outcome.VICTORY if _preset == "final" else RunState.Outcome.DEATH
-			RunState.stage = 7 if _preset == "final" else 4
+			if _preset in ["final_mastery", "final_max", "final_error"]:
+				var rewards := [110, 330, 420, 210, 185, 380, 45]
+				for i in Db.ITEM_IDS.size():
+					var id := Db.ITEM_IDS[i]
+					Mastery.run_xp[id] = rewards[i]
+					Mastery.xp[id] = mini(int(Mastery.xp[id]) + rewards[i], 1000)
+					Mastery.choices[id] = Mastery.level(id)
+				for item in RunState.ring.items:
+					item.appearance = Mastery.selected(item.def_id)
+			Mastery.save_error = _preset == "final_error"
+			RunState.outcome = RunState.Outcome.VICTORY if is_victory else RunState.Outcome.DEATH
+			RunState.stage = 7 if is_victory else 1 if _preset == "final_empty" else 4
 			RunState.elapsed = 1043.0
+			RunState.running = false
 			scene = "res://scenes/final_card.tscn"
-		"boss", "boss_fight":
+		"boss", "boss_fight", "tree_full":
 			for i in 6:
 				RunState.sacrifice(0)
 			RunState.stage = 7
-		"stage4", "tree":
+		"stage4", "tree", "tree_mixed":
 			for i in 3:
 				RunState.sacrifice(0)
 			RunState.stage = 4
+		"tree_branch":
+			RunState.ring = Ring.from_ids([&"shield", &"boots", &"sword", &"armor", &"helmet", &"gloves", &"amulet"])
+			for item in RunState.ring.items:
+				item.appearance = Mastery.selected(item.def_id)
+			for id in [&"shield", &"boots", &"helmet", &"armor", &"sword", &"amulet"]:
+				RunState.sacrifice(RunState.ring.index_of(id))
+			RunState.stage = 7
 		"gallery":
 			scene = "res://tools/gallery.tscn"
 		"vfx":
@@ -85,14 +134,56 @@ func _game() -> Game:
 
 
 func _setup() -> void:
+	if _preset == "rules":
+		get_tree().current_scene._toggle_rules()
+		return
+	if _preset.begins_with("final"):
+		var card := get_tree().current_scene
+		if _item != "":
+			card._wheel.select_item(StringName(_item))
+		if _card_view == "details":
+			card._open_details()
+		elif _card_view == "collection":
+			var collection := MasteryUi.new()
+			collection.selected_id = card._wheel.selected_id
+			card._modal = collection
+			card._ui.add_child(collection)
+			if _tier > 0:
+				card._modal._inspect_tier(_tier)
+		elif _tier > 0:
+			card._inspect_tier(_tier)
+		if _hover_item != "" and _card_view == "":
+			_hover_mastery(card._wheel)
+		return
+	if _preset in ["mastery", "mastery_mixed", "mastery_empty"]:
+		var collection := MasteryUi.new()
+		if _item != "":
+			collection.selected_id = StringName(_item)
+		get_tree().current_scene.ui.add_child(collection)
+		if _tier > 0:
+			collection._inspect_tier(_tier)
+		if _hover_item != "":
+			_hover_mastery(collection._wheel)
+		return
 	var g := _game()
 	if g == null:
 		return
 	match _preset:
+		"debug", "debug_reset":
+			DebugMenu._panel.show()
+			DebugMenu._refresh()
+			if _preset == "debug_reset":
+				DebugMenu._confirm_meta_reset()
 		"altar":
 			g.debug_skip_stage()
-		"tree":
+		"tree", "tree_mixed", "tree_start", "tree_full", "tree_branch":
 			g.hud.toggle_tree()
+			if _item != "":
+				g.hud._screen.select_item(StringName(_item))
+			if _node > 0:
+				g.hud._screen._diagram.select_node(_node)
+			if _hover_item != "":
+				_hover_tree(g.hud._screen._diagram)
 		"shrine":
 			g.hud.open_shrine()
 		"gift":
@@ -100,6 +191,24 @@ func _setup() -> void:
 		"finale":
 			# Ворота пропускаем, Тирана — сразу на колени.
 			g.cutscene.skip()
+
+
+func _hover_tree(diagram: PropertyDiagram) -> void:
+	await get_tree().process_frame
+	var index := diagram.index_of(StringName(_hover_item))
+	if index >= 0:
+		var motion := InputEventMouseMotion.new()
+		motion.position = diagram._buttons[index].get_global_rect().get_center()
+		get_viewport().push_input(motion, true)
+
+
+func _hover_mastery(wheel: MasteryWheel) -> void:
+	await get_tree().process_frame
+	var index := Db.ITEM_IDS.find(StringName(_hover_item))
+	if index >= 0:
+		var motion := InputEventMouseMotion.new()
+		motion.position = wheel._buttons[index].get_global_rect().get_center()
+		get_viewport().push_input(motion, true)
 
 
 func _process(delta: float) -> void:

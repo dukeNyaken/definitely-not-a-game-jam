@@ -21,6 +21,9 @@ func press() -> bool:
 	ctx.tag = &"finisher" if finisher else &"swing"
 	var radius: float = def.stat("range", 2.3)
 	var arc: float = def.stat("arc", 120.0)
+	if finisher:
+		radius = def.stat("finisher_range", radius)
+		arc = def.stat("finisher_arc", arc)
 	var dmg := combo[combo_step] * ctx.damage_mult
 	actor.mark_attack()
 	var any := false

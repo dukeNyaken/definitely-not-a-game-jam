@@ -114,7 +114,7 @@ static func _body(cs: Cutscene, game: Game, room: Node3D) -> void:
 		return
 	if Story.was_given(RunState.snapshots, &"amulet"):
 		# Оберег Солдата — у неё в руках, и светится он по-прежнему.
-		var amulet := cs.prop(ItemVisuals.build_display(ItemState.create(&"amulet")))
+		var amulet := cs.prop(ItemVisuals.build_display(Cutscene.item_state(&"amulet")))
 		var glow := Db.item(&"amulet").essence.color
 		sol.hold(amulet, &"r_hand", 0.9)
 		sol.set_pose(&"hold")

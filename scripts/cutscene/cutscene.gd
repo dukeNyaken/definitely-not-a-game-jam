@@ -314,6 +314,18 @@ func spawn(who: StringName, pos: Vector3, look: Vector3, key: StringName = &"", 
 	return p
 
 
+## Реквизит хранит облик забега: отданная вещь берётся из снимка, надетая — из кольца.
+static func item_state(id: StringName) -> ItemState:
+	for state in RunState.snapshots:
+		if state.def_id == id:
+			return state
+	if RunState.ring != null:
+		for state in RunState.ring.items:
+			if state.def_id == id:
+				return state
+	return Mastery.make_item(id)
+
+
 ## Табличка над головой: имя и роль говорящего (или свои title/subtitle). Видна duration секунд.
 func tag(a: Node3D, who: StringName, duration: float = 4.5, title: String = "", subtitle: String = "") -> void:
 	if skipped or a == null or not is_instance_valid(a):

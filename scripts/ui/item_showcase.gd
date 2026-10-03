@@ -12,6 +12,8 @@ var self_pixelate: bool = true
 var _displays: Array[Node3D] = []
 var _ring_states: Array[ItemState] = []
 var _ring_radius := 0.0
+var _flat_preview := false
+var _sway_time := 0.0
 
 
 func _init() -> void:
@@ -91,7 +93,7 @@ func _rebuild_ring_items() -> void:
 	for d in _displays:
 		d.queue_free()
 	_displays.clear()
-	var generated := GeneratedItemDisplay.build()
+	var generated := GeneratedItemDisplay.build(_ring_states)
 	var n := _ring_states.size()
 	for i in n:
 		var a := TAU * i / n
@@ -123,12 +125,29 @@ func rebuild_hero() -> void:
 
 ## Одна вещь крупно.
 func show_single(state: ItemState) -> void:
+	# Повторный выбор облика заменяет модель и камеру, сохраняя вращение витрины.
+	for display in _displays:
+		if is_instance_valid(display):
+			pivot.remove_child(display)
+			display.queue_free()
+	_displays.clear()
+	for child in viewport.get_children():
+		if child is Camera3D:
+			viewport.remove_child(child)
+			child.queue_free()
 	_add_camera(Vector3(0, 0.9, 4.0), Vector3(0, 0.0, 0), 2.6)
 	var d := ItemVisuals.build_display(state)
 	d.scale = Vector3.ONE * 1.6
+	if d.has_meta(&"hero_variant"):
+		# Одно кадрирование для всех трёх обликов, с местом для кристаллов реликвии.
+		viewport.get_camera_3d().size = 1.6 * (float(GeneratedItemDisplay.FIT.get(state.def_id, GeneratedItemDisplay.FIT_DEFAULT)) + 0.4)
 	pivot.add_child(d)
 	_displays.append(d)
 	spin_speed = 0.7
+	_flat_preview = state.def_id == &"amulet"
+	if _flat_preview:
+		pivot.rotation = Vector3.ZERO
+		_sway_time = 0.0
 
 
 ## Действующие лица сцены в ряд, лицом к зрителю. aspect — ширина витрины к высоте: персонажи стоят
@@ -149,7 +168,7 @@ func show_cast(whos: Array[StringName], aspect: float) -> void:
 			# Солдат — при всех семи вещах: такой он в начале пути.
 			var gear: Array[ItemState] = []
 			for id in Db.ITEM_IDS:
-				gear.append(ItemState.create(id))
+				gear.append(Mastery.make_item(id))
 			p.set_items(gear)
 
 
@@ -164,7 +183,12 @@ func _apply_retro(mode: int) -> void:
 
 
 func _process(delta: float) -> void:
-	pivot.rotation.y += spin_speed * delta
+	if _flat_preview:
+		# Плоский медальон читается спереди; полный оборот прячет его за украшениями.
+		_sway_time += delta
+		pivot.rotation.y = sin(_sway_time * 0.7) * 0.35
+	else:
+		pivot.rotation.y += spin_speed * delta
 	for d in _displays:
 		if is_instance_valid(d) and _displays.size() > 1:
 			d.rotation.y -= delta * 0.9

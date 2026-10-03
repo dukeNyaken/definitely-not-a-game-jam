@@ -31,6 +31,7 @@ static func create(def: EnemyDef, stage: int, elite_items: Array[ItemState] = []
 	a.collision_layer = LAYER_ENEMY
 	a.collision_mask = LAYER_HERO
 	a.set_meta(&"elite", elite)
+	a.set_meta(&"mastery_xp", Mastery.reward(def.id, stage, elite))
 	a.set_meta(&"enemy_def", def)
 	var shape := CollisionShape3D.new()
 	var cyl := CylinderShape3D.new()

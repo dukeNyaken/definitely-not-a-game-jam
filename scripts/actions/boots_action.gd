@@ -20,6 +20,7 @@ func press() -> bool:
 	var from := actor.global_position
 	var dist: float = def.stat("distance", 4.0)
 	actor.start_dash(ctx.direction, dist, float(def.stat("duration", 0.18)))
+	actor.add_invulnerability(float(def.stat("dash_guard", 0.0)))
 	start_cooldown(float(def.stat("cooldown", 1.0)))
 	Vfx.streak(actor, from, from + ctx.direction * dist, Color(0.8, 0.75, 0.6, 0.6))
 	Audio.play(&"dash")

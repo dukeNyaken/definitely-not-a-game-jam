@@ -32,6 +32,20 @@ func test_enabled_respects_setting_and_bot_flag() -> void:
 	assert_false(Cutscene.enabled(), "настройка игрока")
 
 
+func test_cinematic_hides_and_restores_meta_tree_hint() -> void:
+	var hud := Hud.new()
+	add_child_autofree(hud)
+	hud.set_process(false)
+	hud._tree_hint = Control.new()
+	hud.add_child(hud._tree_hint)
+	hud.set_cinematic(true, 0.0)
+	await wait_process_frames(2)
+	assert_almost_eq(hud._tree_hint.modulate.a, 0.0, 0.001, "подсказка Tab не видна поверх сцены")
+	hud.set_cinematic(false, 0.0)
+	await wait_process_frames(2)
+	assert_almost_eq(hud._tree_hint.modulate.a, 1.0, 0.001, "подсказка возвращается в бою")
+
+
 func test_after_skip_steps_return_at_once() -> void:
 	var cs := _cutscene()
 	cs.active = true
@@ -44,6 +58,55 @@ func test_after_skip_steps_return_at_once() -> void:
 	await cs.thought("И мысль тоже.")
 	await cs.wait(10.0)
 	assert_eq(Engine.get_process_frames(), frame, "ни одного кадра ожидания")
+
+
+func test_cutscene_props_keep_run_and_sacrifice_appearances_after_menu_choice_changes() -> void:
+	var old_ring := RunState.ring
+	var old_snapshots := RunState.snapshots
+	var old_xp := Mastery.xp
+	var old_choices := Mastery.choices
+	RunState.ring = Ring.generate(1234, Db.ITEM_IDS)
+	var amulet: ItemState = RunState.ring.items[RunState.ring.index_of(&"amulet")]
+	amulet.appearance = 3
+	var result := RunState.ring.sacrifice(RunState.ring.index_of(&"amulet"))
+	RunState.snapshots = [result["victim_snapshot"]]
+	var sword: ItemState = RunState.ring.items[RunState.ring.index_of(&"sword")]
+	sword.appearance = 2
+	Mastery.xp = {&"amulet": 1000, &"sword": 1000}
+	Mastery.choices = {&"amulet": 1, &"sword": 3}
+	assert_eq(Cutscene.item_state(&"amulet").appearance, 3, "оберег у очага сохраняет облик подарка")
+	assert_same(Cutscene.item_state(&"amulet"), result["victim_snapshot"])
+	assert_eq(Cutscene.item_state(&"sword").appearance, 2, "реквизит берёт надетый облик забега")
+	RunState.ring = old_ring
+	RunState.snapshots = old_snapshots
+	Mastery.xp = old_xp
+	Mastery.choices = old_choices
+
+
+func test_gallery_hero_uses_selected_mastery_forms_on_each_character() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	var old_xp := Mastery.xp
+	var old_choices := Mastery.choices
+	Mastery.xp = {}
+	Mastery.choices = {}
+	for id in Db.ITEM_IDS:
+		Mastery.xp[id] = 1000
+		Mastery.choices[id] = 3
+	for variant in SkinnedActorModel.variants():
+		SkinnedActorModel.select(variant["id"])
+		var showcase := ItemShowcase.new()
+		add_child_autofree(showcase)
+		showcase.show_cast([&"hero"], 1.0)
+		for child in showcase.viewport.get_children():
+			if child is Puppet:
+				assert_true(child.model is SkinnedActorModel)
+				assert_eq(child.items.size(), 7)
+				for state in child.items:
+					assert_eq(state.appearance, 3, "галерея показывает выбранный облик, а не исходный")
+	Mastery.xp = old_xp
+	Mastery.choices = old_choices
 
 
 func test_skipped_walk_teleports() -> void:

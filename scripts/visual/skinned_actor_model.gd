@@ -180,6 +180,7 @@ static func select(id: String) -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("hero", "variant", id)
 	cfg.save(CHOICE)
+	IconFactory.refresh()
 
 
 static func _read_config() -> Dictionary:
@@ -427,7 +428,7 @@ func refresh_items() -> void:
 			continue
 		for part in _item_nodes[id]:
 			for ch in (part as Node).get_children():
-				if not ch.has_meta(&"prop_index"):
+				if not ch.has_meta(&"prop_index") and not ch.has_meta(&"mastery_trim"):
 					(ch as Node3D).visible = false
 	if _idle_node != null and _cfg.has("armed_idle"):
 		if _hero_idle != &"":

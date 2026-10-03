@@ -54,6 +54,7 @@ static func tree_bbcode(state: ItemState, with_effect: bool = false) -> String:
 	if not def.is_passive():
 		head += " (%s)" % def.input_label
 	lines.append(head)
+	lines.append("Облик %d: %s — %s" % [state.appearance, Mastery.form(state.def_id, state.appearance)["name"], Mastery.form(state.def_id, state.appearance)["effect"]])
 	for entry in walk(state):
 		var indent := "    ".repeat(int(entry["depth"]) + 1)
 		lines.append("%s└ %s" % [indent, property_bbcode(entry["property"], with_effect)])

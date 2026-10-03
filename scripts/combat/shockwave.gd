@@ -9,6 +9,7 @@ var damage: float = 20.0
 var duration: float = 0.35
 var color: Color = Color.ORANGE
 var knockback: float = 1.0
+var stun_duration: float = 0.0
 var _t: float = 0.0
 var _hit: Dictionary = {}
 var _visual: FlipbookFx
@@ -45,6 +46,6 @@ func _physics_process(delta: float) -> void:
 		if d <= r + a.body_radius:
 			_hit[a] = true
 			# Вспышку попадания рисует модель цели (FlipbookFx.impact).
-			Combat.deal(ctx, a, damage, {"source_pos": global_position, "knockback": knockback})
+			Combat.deal(ctx, a, damage, {"source_pos": global_position, "knockback": knockback, "stun": stun_duration})
 	if k >= 1.0:
 		queue_free()

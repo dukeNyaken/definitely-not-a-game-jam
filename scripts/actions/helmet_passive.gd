@@ -21,6 +21,13 @@ func _on_crit(by: ActionContext, target: Actor) -> void:
 	ctx.depth = by.depth + 1
 	if is_instance_valid(target):
 		ctx.aim_point = target.global_position
+		var duration: float = def.stat("crit_open", 0.0)
+		target.open_for_crit(duration)
+		var radius: float = def.stat("crit_open_radius", 0.0)
+		if radius > 0.0:
+			for other in Combat.targets_in_radius(actor, target.global_position, radius):
+				other.open_for_crit(duration)
+			Vfx.ring(actor, target.global_position, radius, def.essence.color, 0.3)
 	Audio.play(&"crit")
 	used.emit(ctx)
 	emit_native(ctx)

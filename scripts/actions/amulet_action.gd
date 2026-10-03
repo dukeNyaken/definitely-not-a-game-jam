@@ -11,6 +11,8 @@ func press() -> bool:
 	var duration: float = def.stat("expand_time", 0.35)
 	var wave := Shockwave.new()
 	wave.setup(ctx, radius, float(def.stat("damage", 20.0)) * ctx.damage_mult, duration, def.color)
+	wave.knockback = def.stat("wave_push", 1.0)
+	wave.stun_duration = def.stat("wave_stun", 0.0)
 	var parent := Vfx.root_for(actor)
 	if parent != null:
 		parent.add_child(wave)

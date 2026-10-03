@@ -12,6 +12,7 @@ func press() -> bool:
 	var pull_to: float = def.stat("pull_to", 1.4)
 	actor.mark_attack()
 	for t in Combat.targets_in_arc(actor, ctx.origin, ctx.direction, radius, arc):
+		t.open_for_crit(float(def.stat("grab_open", 0.0)))
 		var to := Combat.flat(t.global_position - ctx.origin)
 		var dist := to.length()
 		if dist > pull_to:

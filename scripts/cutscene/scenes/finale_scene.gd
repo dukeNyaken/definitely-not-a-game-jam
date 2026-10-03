@@ -486,7 +486,7 @@ static func _snapshot(snaps: Array[ItemState], id: StringName) -> ItemState:
 	for s in snaps:
 		if s.def_id == id:
 			return s
-	return ItemState.create(id)
+	return Mastery.make_item(id)
 
 
 static func _to_hand(node: Node3D, socket: Node3D) -> void:
