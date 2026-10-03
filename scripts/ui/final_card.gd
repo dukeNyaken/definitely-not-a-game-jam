@@ -169,7 +169,9 @@ func _show_item(id: StringName) -> void:
 func _open_collection() -> void:
 	_close_modal()
 	get_viewport().gui_release_focus()
-	_modal = MasteryUi.new()
+	var collection := MasteryUi.new()
+	collection.selected_id = _wheel.selected_id
+	_modal = collection
 	_ui.add_child(_modal)
 
 
