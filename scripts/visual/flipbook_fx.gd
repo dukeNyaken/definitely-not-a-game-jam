@@ -129,7 +129,7 @@ func fade_out(duration: float) -> void:
 		return
 	_fading = true
 	var tw := create_tween()
-	tw.tween_property(_mat, "shader_parameter/fade", 0.0, duration)
+	tw.tween_method(func(v: float) -> void: _mat.set_shader_parameter(&"fade", v), 1.0, 0.0, duration)
 	tw.tween_callback(queue_free)
 
 

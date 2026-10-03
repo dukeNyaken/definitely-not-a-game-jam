@@ -67,3 +67,6 @@ func _process(delta: float) -> void:
 	if _once("crit", 1.36):
 		dummies[0].open_for_crit(1.0)
 		Combat.deal(ctx, dummies[0], 10.0)
+	if _once("kill", 2.0):
+		elite.block_arc_degrees = 0.0
+		Combat.deal(ctx, elite, 99999.0)
