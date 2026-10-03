@@ -51,7 +51,7 @@ var _roll_phase: float = 0.0
 var _last_pos: Vector3 = Vector3.INF
 var _hop: float = 0.0
 var _flip_t: float = -1.0
-var _was_dashing: bool = false
+var _jester_dashing: bool = false
 var _stab_left: bool = false
 
 
@@ -989,9 +989,9 @@ func _animate(delta: float) -> void:
 	# Шут крутит сальто на каждом рывке (выпад, отскок, уворот).
 	if kind == Kind.JESTER:
 		var dashing := actor.is_dashing()
-		if dashing and not _was_dashing:
+		if dashing and not _jester_dashing:
 			_flip_t = 0.0
-		_was_dashing = dashing
+		_jester_dashing = dashing
 		if _flip_t >= 0.0:
 			_flip_t += delta
 			var k2 := clampf(_flip_t / 0.3, 0.0, 1.0)

@@ -305,6 +305,28 @@ func refresh_items() -> void:
 		_idle_node.animation = _cfg["armed_idle"] if actor.has_item(&"sword") else _cfg["locomotion"][0]
 
 
+## Вступление босса без сюжетных сцен: сгенерированные вещи тоже прячутся (под ними видно тело)
+## и проявляются по одной, когда долетают до своего сокета.
+func hide_all_items() -> void:
+	super.hide_all_items()
+	for slot in _gen_items:
+		_show_generated(slot, false)
+
+
+func reveal_item(id: StringName) -> void:
+	super.reveal_item(id)
+	if _gen_items.has(id) and actor.has_item(id):
+		_show_generated(id, true)
+		_flash = 0.12
+
+
+func _show_generated(slot: StringName, on: bool) -> void:
+	for mi in _gen_items[slot]:
+		mi.visible = on
+	for mi in _hidden_body.get(slot, []):
+		mi.visible = not on
+
+
 # --- Каждый кадр ----------------------------------------------------------------
 
 func _animate(delta: float) -> void:
