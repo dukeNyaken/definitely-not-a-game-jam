@@ -69,6 +69,10 @@ func _details(holder: ItemState) -> String:
 	var g := UiKit.hex(UiKit.GOLD)
 	var muted := UiKit.hex(UiKit.MUTED)
 	var lines := PackedStringArray()
+	lines.append("[b]Опыт вещей за забег — сохранён навсегда[/b]" if not Mastery.save_error else "[b]Ошибка сохранения опыта: прогресс пока только в памяти[/b]")
+	for id in Db.ITEM_IDS:
+		lines.append("%s: +%d XP · %s" % [Db.item(id).display_name, int(Mastery.run_xp.get(id, 0)), Mastery.progress_text(id)])
+	lines.append("")
 	lines.append("[b][color=#%s]Дерево свойств[/color][/b]" % g)
 	if holder != null:
 		lines.append(PropertyTree.tree_bbcode(holder, true))

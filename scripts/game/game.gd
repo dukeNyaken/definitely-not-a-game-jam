@@ -31,6 +31,7 @@ var _wave_time: float = 0.0
 var _shrine_timer: float = 0.0
 var _ui_lock: int = 0
 var _hitstop_end: int = 0
+var _mastery_unlocks: PackedStringArray = []
 
 
 func _ready() -> void:
@@ -54,6 +55,7 @@ func _ready() -> void:
 	hud.name = "HUD"
 	add_child(hud)
 	hud.setup(self)
+	Mastery.unlocked.connect(_on_mastery_unlocked)
 	RunState.running = true
 	start_stage(RunState.stage)
 
@@ -492,3 +494,14 @@ func _finish(delay: float) -> void:
 	hud.fade(true, 0.6)
 	await get_tree().create_timer(0.65).timeout
 	get_tree().change_scene_to_file("res://scenes/final_card.tscn")
+
+
+func _on_mastery_unlocked(id: StringName, tier: int) -> void:
+	if _mastery_unlocks.is_empty():
+		_show_mastery_unlocks.call_deferred()
+	_mastery_unlocks.append("%s %d" % [Db.item(id).display_name, tier])
+
+
+func _show_mastery_unlocks() -> void:
+	banner.emit("Открыты новые облики", " · ".join(_mastery_unlocks))
+	_mastery_unlocks.clear()

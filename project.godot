@@ -19,6 +19,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 Controls="*res://scripts/autoload/controls.gd"
 Db="*res://scripts/autoload/db.gd"
+Mastery="*res://scripts/autoload/item_mastery.gd"
 RunState="*res://scripts/autoload/run_state.gd"
 Audio="*res://scripts/autoload/audio.gd"
 Render="*res://scripts/autoload/render_settings.gd"

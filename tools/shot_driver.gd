@@ -20,10 +20,15 @@ func _ready() -> void:
 			"render": Render.set_mode(Render.Mode.PS2 if kv[1] == "ps2" else Render.Mode.PS1, false)
 			"out": _out = kv[1]
 			"delay": _delay = float(kv[1])
+	if _preset == "mastery":
+		Mastery.memory_only = true
+		for id in Db.ITEM_IDS:
+			Mastery.xp[id] = 1000
+			Mastery.choices[id] = 3
 	RunState.new_run(424242)
 	var scene := "res://scenes/game.tscn"
 	match _preset:
-		"menu":
+		"menu", "mastery":
 			scene = "res://scenes/main_menu.tscn"
 		"final", "final_death":
 			for i in (6 if _preset == "final" else 3):
@@ -50,6 +55,9 @@ func _game() -> Game:
 
 
 func _setup() -> void:
+	if _preset == "mastery":
+		get_tree().current_scene.ui.add_child(MasteryUi.new())
+		return
 	var g := _game()
 	if g == null:
 		return

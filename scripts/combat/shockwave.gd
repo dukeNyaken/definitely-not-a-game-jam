@@ -9,6 +9,7 @@ var damage: float = 20.0
 var duration: float = 0.35
 var color: Color = Color.ORANGE
 var knockback: float = 1.0
+var stun_duration: float = 0.0
 var _t: float = 0.0
 var _hit: Dictionary = {}
 var _visual: MeshInstance3D
@@ -46,7 +47,7 @@ func _physics_process(delta: float) -> void:
 		var d := Combat.flat(a.global_position - global_position).length()
 		if d <= r + a.body_radius:
 			_hit[a] = true
-			Combat.deal(ctx, a, damage, {"source_pos": global_position, "knockback": knockback})
+			Combat.deal(ctx, a, damage, {"source_pos": global_position, "knockback": knockback, "stun": stun_duration})
 			Vfx.burst(self, a.global_position + Vector3(0, 0.9, 0), color, 0.5)
 	if k >= 1.0:
 		queue_free()

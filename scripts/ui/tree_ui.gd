@@ -37,6 +37,7 @@ static func build_text() -> String:
 	lines.append("")
 	for s in RunState.ring.items:
 		lines.append(PropertyTree.tree_bbcode(s, true))
+		lines.append(Mastery.progress_text(s.def_id))
 		lines.append("")
 	if not RunState.sacrifice_log.is_empty():
 		lines.append("[b][color=#%s]Жертвы (их наденет босс):[/color][/b]" % UiKit.hex(Color(0.8, 0.6, 1.0)))
