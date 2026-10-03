@@ -37,21 +37,14 @@ func _ready() -> void:
 	var layout := VBoxContainer.new()
 	layout.add_theme_constant_override(&"separation", 10)
 	panel.add_child(layout)
-	var header := HBoxContainer.new()
-	layout.add_child(header)
 	var heading := VBoxContainer.new()
-	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(heading)
-	heading.add_child(UiKit.label("Самое нужное остаётся с тобой", 42, UiKit.GOLD))
-	var status := UiKit.label("Опыт сохранён · выбери вещь на колесе", 18, UiKit.MUTED)
-	if Mastery.save_error:
-		status.text = "Не удалось сохранить опыт · прогресс пока в памяти"
-		status.add_theme_color_override(&"font_color", UiKit.DANGER.lightened(0.3))
+	heading.add_theme_constant_override(&"separation", 4)
+	layout.add_child(heading)
+	heading.add_child(UiKit.label("Победа" if victory else "Поражение", 72, UiKit.GOLD if victory else UiKit.DANGER.lightened(0.25), HORIZONTAL_ALIGNMENT_CENTER))
+	heading.add_child(UiKit.label("Этап %d / 7 · %s · Сид %d" % [RunState.stage, RunState.time_text(), RunState.seed_value], 17, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+	var status := UiKit.label("", 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	_update_save_status(status)
 	heading.add_child(status)
-	var result := VBoxContainer.new()
-	header.add_child(result)
-	result.add_child(UiKit.label("Победа" if victory else "Погиб на этапе %d" % RunState.stage, 30, UiKit.GOLD if victory else UiKit.DANGER.lightened(0.2), HORIZONTAL_ALIGNMENT_RIGHT))
-	result.add_child(UiKit.label("%s · Сид %d" % [RunState.time_text(), RunState.seed_value], 17, UiKit.MUTED, HORIZONTAL_ALIGNMENT_RIGHT))
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 22)
 	h.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -86,7 +79,9 @@ func _ready() -> void:
 	_item_panel.add_theme_constant_override(&"separation", 10)
 	item_frame.add_child(_item_panel)
 	_show_item(_wheel.selected_id)
-	Mastery.changed.connect(func(): _show_item(_wheel.selected_id))
+	Mastery.changed.connect(func():
+		_show_item(_wheel.selected_id)
+		_update_save_status(status))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override(&"separation", 14)
 	layout.add_child(buttons)
@@ -103,6 +98,11 @@ func _wrapped(text: String, font_size: int, color: Color, align: int = HORIZONTA
 	var label := UiKit.label(text, font_size, color, align)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
+
+
+func _update_save_status(label: Label) -> void:
+	label.text = "Не удалось сохранить опыт · прогресс пока в памяти" if Mastery.save_error else "Опыт сохранён · наведи для +XP · нажми для обликов"
+	label.add_theme_color_override(&"font_color", UiKit.DANGER.lightened(0.3) if Mastery.save_error else UiKit.MUTED)
 
 
 func _initial_item() -> StringName:

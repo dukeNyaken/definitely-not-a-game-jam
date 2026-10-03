@@ -162,6 +162,74 @@ func test_save_reload_replace_and_backup_recovery() -> void:
 			DirAccess.remove_absolute(path + suffix)
 
 
+func test_reset_persists_empty_profile_including_backup_recovery() -> void:
+	var path := "res://.godot/mastery_reset_test.cfg"
+	RunState.running = false
+	Mastery.memory_only = false
+	Mastery.xp = {&"sword": 1000, &"boots": 250}
+	Mastery.choices = {&"sword": 3, &"boots": 2}
+	assert_true(Mastery.save_progress(path))
+	assert_true(Mastery.save_progress(path))
+	Mastery.run_start_xp = {&"sword": 900}
+	Mastery.run_xp = {&"sword": 450}
+	watch_signals(Mastery)
+	assert_true(Mastery.reset_progress(path))
+	assert_signal_emit_count(Mastery, "progress_reset", 1)
+	assert_signal_emit_count(Mastery, "changed", 1)
+	assert_true(Mastery.run_start_xp.is_empty())
+	assert_true(Mastery.run_xp.is_empty())
+	Mastery.load_progress(path)
+	for id in Db.ITEM_IDS:
+		assert_eq(Mastery.level(id), 1)
+		assert_eq(Mastery.selected(id), 1)
+		assert_eq(int(Mastery.xp.get(id, 0)), 0)
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("[meta]\nversion=0\n")
+	file.close()
+	Mastery.load_progress(path)
+	for id in Db.ITEM_IDS:
+		assert_eq(int(Mastery.xp.get(id, 0)), 0, "резервная копия не возвращает стёртый опыт")
+		assert_eq(Mastery.selected(id), 1)
+	for suffix in ["", ".bak", ".tmp"]:
+		if FileAccess.file_exists(path + suffix):
+			DirAccess.remove_absolute(path + suffix)
+
+
+func test_reset_updates_live_forms_without_healing_or_losing_sacrifices() -> void:
+	var previous_ring := RunState.ring
+	var ring := Ring.from_ids([&"amulet", &"armor", &"shield", &"boots"])
+	for item in ring.items:
+		item.appearance = 3
+	var snapshot: ItemState = ring.sacrifice(0)["victim_snapshot"]
+	RunState.ring = ring
+	var property := ring.get_item(&"armor").properties[0]
+	var hero := TestHelpers.hero(self, ring.items)
+	Combat.hero = hero
+	hero.hp = 62
+	hero.armor = 30
+	var boots := hero.component(&"boots")
+	boots.start_cooldown(0.7)
+	var shield := hero.component(&"shield") as ShieldAction
+	shield.press()
+	Mastery.xp = {&"armor": 1000, &"shield": 1000, &"boots": 1000}
+	Mastery.choices = {&"armor": 3, &"shield": 3, &"boots": 3}
+	assert_true(Mastery.reset_progress())
+	assert_eq(hero.hp, 62.0)
+	assert_eq(hero.max_armor, 50.0)
+	assert_eq(hero.armor, 10.0, "уменьшение ёмкости сохраняет полученный урон")
+	assert_same(hero.component(&"boots"), boots)
+	assert_eq(boots.cooldown_left, 0.7)
+	assert_eq(float(boots.def.stat("distance")), 4.0)
+	assert_true(shield.holding)
+	assert_eq(hero.block_arc_degrees, 120.0)
+	assert_eq(ring.ids(), [&"armor", &"shield", &"boots"] as Array[StringName])
+	assert_same(ring.get_item(&"armor").properties[0], property)
+	assert_eq(snapshot.appearance, 3, "снимок совершённой жертвы остаётся историей забега")
+	for item in hero.items:
+		assert_eq(item.appearance, 1)
+	RunState.ring = previous_ring
+
+
 func test_sword_relic_finisher_hits_behind() -> void:
 	var hero := hero_with(&"sword", 3)
 	var target := TestHelpers.dummy(self, Vector3(0, 0, 2.8))
