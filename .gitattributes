@@ -1,0 +1,2 @@
+# батники cmd читает надёжно только с CRLF
+*.bat text eol=crlf

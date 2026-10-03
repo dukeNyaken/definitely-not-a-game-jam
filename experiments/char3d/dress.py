@@ -445,25 +445,56 @@ def _resize(rgb, w, h):
     return out
 
 
-def image_shell(shell, folder, mirror_x, tex_h):
+def _row_extents(mask):
+    """Левый и правый край силуэта в каждой строке маски; пустые строки — по соседним."""
+    h, w = mask.shape
+    rows = np.nonzero(mask.any(1))[0]
+    left = mask[rows].argmax(1)
+    right = w - mask[rows, ::-1].argmax(1)
+    ys = np.arange(h)
+    return np.interp(ys, rows, left), np.interp(ys, rows, right)
+
+
+def _body_extents(p, window, samples=24):
+    """Края точек p по X на каждой высоте: (высоты, левый край, правый край). Край берётся
+    по точкам в окне ±window по высоте: кольца лоу-поли сетки косые, и тонкий слой
+    ловил бы только часть кольца."""
+    zs = np.linspace(p[:, 2].min(), p[:, 2].max(), samples)
+    lo, hi = [], []
+    for z in zs:
+        x = p[np.abs(p[:, 2] - z) <= window, 0]
+        lo.append(x.min() if x.size else np.nan)
+        hi.append(x.max() if x.size else np.nan)
+    lo, hi = np.array(lo), np.array(hi)
+    ok = ~np.isnan(lo)
+    return zs[ok], lo[ok], hi[ok]
+
+
+def image_shell(shell, folder, mirror_x, tex_h, zspan=None):
     """Развёртка оболочки прямо на картинки вещи (front/back после prep.py в folder): грань,
-    смотрящая вперёд, ложится ортогональной проекцией на вид спереди (левая часть
-    текстуры), назад — на вид сзади (правая). Рамка силуэта картинки — на рамку оболочки.
+    смотрящая вперёд, ложится на вид спереди (левая часть текстуры), назад — на вид сзади
+    (правая). По высоте рамка силуэта картинки совпадает с рамкой оболочки, по ширине —
+    построчно: на каждой высоте ширина оболочки ложится на ширину силуэта в своей строке
+    картинки. Поэтому рисунок идёт вдоль наклонной ноги (А-поза), а не стоит вертикально
+    поперёк неё, и бока берут край вещи, а не залитый фон.
     Текстура — сами картинки, обрезанные по силуэту, высотой tex_h: без запекания и без
     мелких островов развёртки (с ними рисунок рассыпался в шум). mirror_x — оболочка из
     двух половин (обе ноги): у каждой своя рамка, половина на -X видит картинку
-    отражённой (одна поножь на картинке — обе на теле)."""
+    отражённой (одна поножь на картинке — обе на теле). zspan — (низ, верх) картинки по
+    высоте вместо рамки оболочки: поножь нарисована от бедра до щиколотки, а оболочка
+    обрезана голенищем сапога, и без привязки колено картинки уезжало вверх."""
     views = []
     for side in ("front", "back"):
         f = folder / f"{side}.png"
         if not Path(str(f).replace(".png", "_fill.png")).exists():
             f = folder / "front.png"                 # нет вида сзади — спина как перед
-        rgb, _, (x0, x1, y0, y1) = imgproj.load_rgba(f, linear=False)
+        rgb, mask, (x0, x1, y0, y1) = imgproj.load_rgba(f, linear=False)
         crop = rgb[y0:y1, x0:x1]
         # ширина кратна 4: сжатие текстур в Godot идёт блоками 4x4
         w = max(4, 4 * round(tex_h * crop.shape[1] / crop.shape[0] / 4))
-        views.append(_resize(crop, w, tex_h))
-    atlas = np.hstack(views)                        # строка 0 — верх
+        left, right = _row_extents(mask[y0:y1, x0:x1])
+        views.append((_resize(crop, w, tex_h), crop.shape[1], left, right))
+    atlas = np.hstack([v[0] for v in views])        # строка 0 — верх
     W = atlas.shape[1]
     img = bpy.data.images.new(shell.name + "_tex", W, tex_h)
     img.pixels.foreach_set(np.dstack([atlas[::-1], np.ones((tex_h, W))]).ravel().astype(np.float32))
@@ -473,26 +504,35 @@ def image_shell(shell, folder, mirror_x, tex_h):
     mw = shell.matrix_world
     co = verts(shell)
     halves = [co[:, 0] >= 0, co[:, 0] < 0] if mirror_x else [np.ones(len(co), bool)]
-    boxes = [(co[h].min(0), co[h].max(0)) if h.any() else (co.min(0), co.max(0)) for h in halves]
+    halves = [h if h.any() else np.ones(len(co), bool) for h in halves]
+    boxes = [(co[h].min(0), co[h].max(0)) for h in halves]
+    if zspan:
+        boxes = [(np.array([a[0], a[1], zspan[0]]), np.array([b[0], b[1], zspan[1]])) for a, b in boxes]
+    edges = [_body_extents(co[h], 0.04 * K) for h in halves]
     while me.uv_layers:
         me.uv_layers.remove(me.uv_layers[0])
     uv = me.uv_layers.new(name="UVMap").data
     rot = mw.to_3x3()
-    offs = [0, views[0].shape[1]]
+    offs = [0, views[0][0].shape[1]]
     for f in me.polygons:
         n = rot @ f.normal
         back = n.y > 0
         c = mw @ f.center
         half = 1 if mirror_x and c.x < 0 else 0
         lo, hi = boxes[half]
+        zs, ex0, ex1 = edges[half]
         flip = (half == 1) != back                  # вид сзади и половина на -X — зеркально
-        vw = views[back].shape[1]
+        tex, cw, left, right = views[back]
+        vw = tex.shape[1]
         for li in f.loop_indices:
             p = co[me.loops[li].vertex_index]
-            u = np.clip((p[0] - lo[0]) / (hi[0] - lo[0]), 0, 1)
-            u = 1 - u if flip else u
-            u = 0.5 / vw + u * (1 - 1 / vw)        # полпикселя от края — без затекания соседнего вида
             v = np.clip((p[2] - lo[2]) / (hi[2] - lo[2]), 0, 1)
+            a, b = np.interp(p[2], zs, ex0), np.interp(p[2], zs, ex1)
+            u = np.clip((p[0] - a) / max(b - a, 1e-6), 0, 1)
+            u = 1 - u if flip else u
+            row = (1 - v) * (len(left) - 1)
+            px = np.interp(row, np.arange(len(left)), left) * (1 - u) + np.interp(row, np.arange(len(right)), right) * u
+            u = 0.5 / vw + px / cw * (1 - 1 / vw)   # полпикселя от края — без затекания соседнего вида
             uv[li].uv = ((offs[back] + u * vw) / W, v)
     _textured(shell, img)
     return f"текстура {W}x{tex_h} (виды спереди и сзади)"
@@ -558,7 +598,9 @@ def main():
         others = set().union(*(f for n, f in hide.items() if n != name))
         faces = shell_faces(body, rule, arm) - others
         shell = make_shell(body, faces, rule["offset"] * K, mesh_name)
-        tex = image_shell(shell, folder, rule.get("mirror_x", False), rule["tex"])
+        span = rule.get("image_span")      # кости, по началам которых низ и верх картинки
+        zspan = (bone_world(arm, span[0])[0].z, bone_world(arm, span[1])[0].z) if span else None
+        tex = image_shell(shell, folder, rule.get("mirror_x", False), rule["tex"], zspan)
         hide[name] = hide.get(name, set()) | faces
         lines.append(f"{slot}: оболочка {mesh_name}, {len(shell.data.polygons)} гр., {tex}")
     total_faces = len(body.data.polygons)
