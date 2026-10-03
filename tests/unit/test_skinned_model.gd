@@ -82,3 +82,24 @@ func test_locomotion_speeds_increase() -> void:
 			var m := _model(v["id"], kind, [])
 			for i in range(1, m._speeds.size()):
 				assert_gt(m._speeds[i], m._speeds[i - 1], "%s/%d: скорости ходьбы растут" % [v["id"], kind])
+
+
+func test_menu_showcase_has_every_item_of_the_hero() -> void:
+	if not SkinnedActorModel.available():
+		pending("прототип не собран")
+		return
+	for v in SkinnedActorModel.variants():
+		SkinnedActorModel.select(v["id"])
+		var shown := GeneratedItemDisplay.build()
+		for slot in SLOTS:
+			assert_true(shown.has(slot), "%s: на витрине нет %s" % [v["id"], slot])
+			if not shown.has(slot):
+				continue
+			var d: Node3D = shown[slot]
+			add_child_autofree(d)
+			var size := 0.0
+			for mi in d.find_children("*", "MeshInstance3D", true, false):
+				var box: AABB = (d.global_transform.affine_inverse() * mi.global_transform) * mi.mesh.get_aabb()
+				size = maxf(size, box.get_longest_axis_size() * d.scale.x)
+			var fit: float = GeneratedItemDisplay.FIT.get(slot, GeneratedItemDisplay.FIT_DEFAULT)
+			assert_almost_eq(size, fit, fit * 0.6, "%s/%s: размер на витрине" % [v["id"], slot])

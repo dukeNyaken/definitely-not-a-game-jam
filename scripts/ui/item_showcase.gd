@@ -9,6 +9,8 @@ var spin_speed: float = 0.35
 ## Пикселизовать самостоятельно (если витрина лежит поверх ретро-постобработки).
 var self_pixelate: bool = true
 var _displays: Array[Node3D] = []
+var _ring_states: Array[ItemState] = []
+var _ring_radius := 0.0
 
 
 func _init() -> void:
@@ -58,14 +60,8 @@ func _add_camera(pos: Vector3, look: Vector3, size: float) -> void:
 ## Семь вещей по кольцу.
 func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	_add_camera(Vector3(0, 3.2, 6.5), Vector3(0, 0.3, 0), 7.5)
-	var n := states.size()
-	for i in n:
-		var a := TAU * i / n
-		var d := ItemVisuals.build_display(states[i])
-		d.scale = Vector3.ONE * 1.3
-		pivot.add_child(d)
-		d.position = Vector3(cos(a) * radius, 0.6, sin(a) * radius)
-		_displays.append(d)
+	_ring_states = states
+	_ring_radius = radius
 	var ring := MeshInstance3D.new()
 	ring.mesh = Vfx.ring_mesh(radius, 0.06, 64)
 	ring.material_override = Vfx.material(Color(1.0, 0.78, 0.35, 0.8), 1.6, true)
@@ -89,8 +85,28 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	sky.look_at(sky.position + fwd, Vector3.UP)
 
 
-## Герой в центре кольца; пересоздаётся при смене варианта в меню «Герой».
+## Вещи по кольцу: сгенерированные вещи выбранного героя, а без прототипа — процедурные.
+func _rebuild_ring_items() -> void:
+	for d in _displays:
+		d.queue_free()
+	_displays.clear()
+	var generated := GeneratedItemDisplay.build()
+	var n := _ring_states.size()
+	for i in n:
+		var a := TAU * i / n
+		var d: Node3D = generated.get(_ring_states[i].def_id)
+		if d == null:
+			d = ItemVisuals.build_display(_ring_states[i])
+			d.scale = Vector3.ONE * 1.3
+		pivot.add_child(d)
+		d.position = Vector3(cos(a) * _ring_radius, 0.6, sin(a) * _ring_radius)
+		_displays.append(d)
+
+
+## Герой в центре кольца и его вещи вокруг; пересоздаются при смене варианта в меню «Герой».
 func rebuild_hero() -> void:
+	if not _ring_states.is_empty():
+		_rebuild_ring_items()
 	if _hero != null and is_instance_valid(_hero):
 		_hero.queue_free()
 	_hero = Actor.new()
