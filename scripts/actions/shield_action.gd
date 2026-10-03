@@ -13,6 +13,7 @@ func press() -> bool:
 	if holding or not can_use():
 		return false
 	holding = true
+	actor.add_reflect(float(def.stat("raise_reflect", 0.0)))
 	actor.block_arc_degrees = def.stat("arc", 120.0)
 	start_cooldown(float(def.stat("raise_cooldown", 0.25)))
 	var ctx := new_context()

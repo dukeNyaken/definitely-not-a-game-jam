@@ -41,7 +41,9 @@ func _ready() -> void:
 	add_child(showcase)
 	var preview: Array[ItemState] = []
 	for id in Db.ITEM_IDS:
-		preview.append(ItemState.create(id))
+		var item := ItemState.create(id)
+		item.appearance = Mastery.selected(id)
+		preview.append(item)
 	showcase.show_ring(preview)
 
 	# Интерфейс — на слое поверх ретро-постобработки, чтобы текст оставался чётким.
@@ -108,6 +110,10 @@ func _ready() -> void:
 		_hero_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		v.add_child(_hero_button)
 		_update_hero_button()
+	var collection := UiKit.button("Облики и опыт вещей", func(): ui.add_child(MasteryUi.new()))
+	collection.custom_minimum_size = Vector2(360, 50)
+	collection.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(collection)
 	var how := UiKit.button("Как играть", _toggle_rules)
 	how.custom_minimum_size = Vector2(360, 50)
 	how.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

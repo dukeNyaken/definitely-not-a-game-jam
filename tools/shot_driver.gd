@@ -33,6 +33,11 @@ func _ready() -> void:
 			"variant": SkinnedActorModel.select(kv[1])
 			"key": _key = kv[1]
 			"speed": _speed = float(kv[1])
+	if _preset == "mastery":
+		Mastery.memory_only = true
+		for id in Db.ITEM_IDS:
+			Mastery.xp[id] = 1000
+			Mastery.choices[id] = 3
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
 	var story := _preset in ["prologue", "gift", "gates", "finale"]
@@ -48,7 +53,7 @@ func _ready() -> void:
 			for i in 6:
 				RunState.sacrifice(0)
 			RunState.stage = 7
-		"menu":
+		"menu", "mastery":
 			scene = "res://scenes/main_menu.tscn"
 		"cutscenes":
 			Theater.last_key = _key
@@ -85,6 +90,9 @@ func _game() -> Game:
 
 
 func _setup() -> void:
+	if _preset == "mastery":
+		get_tree().current_scene.ui.add_child(MasteryUi.new())
+		return
 	var g := _game()
 	if g == null:
 		return

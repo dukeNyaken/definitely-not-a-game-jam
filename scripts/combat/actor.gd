@@ -291,14 +291,16 @@ func receive_hit(amount: float, ctx: ActionContext, opts: Dictionary = {}) -> in
 	damaged.emit(dmg, ctx)
 	health_changed.emit()
 	if hp <= 0.0:
-		die()
+		die(ctx.actor if ctx != null and is_instance_valid(ctx.actor) else null)
 	return HitResult.HIT
 
 
-func die() -> void:
+func die(killer: Actor = null) -> void:
 	if dead:
 		return
 	dead = true
+	if faction == Faction.ENEMY and is_instance_valid(killer) and killer == Combat.hero and RunState.running and not killer.dead:
+		Mastery.award(killer, int(get_meta(&"mastery_xp", 0)))
 	hp = 0.0
 	move_input = Vector3.ZERO
 	block_arc_degrees = 0.0

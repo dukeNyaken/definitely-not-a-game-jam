@@ -59,6 +59,11 @@ func _draw() -> void:
 		var bp := Vector2(r.end.x - 4, r.position.y + 4)
 		draw_circle(bp, 10.0, UiKit.GOLD)
 		draw_string(get_theme_default_font(), bp + Vector2(-10, 5), str(comp.item.properties.size()), HORIZONTAL_ALIGNMENT_CENTER, 20, 14, Color(0.1, 0.07, 0.05))
+	if not crossed:
+		draw_string(get_theme_default_font(), Vector2(4, 17), "I".repeat(comp.item.appearance), HORIZONTAL_ALIGNMENT_LEFT, 42, 16, UiKit.GOLD)
+		var lv := Mastery.level(item_id)
+		var progress := 1.0 if lv == 3 else float(Mastery.xp.get(item_id, 0)) / float(Mastery.rules["thresholds"][lv])
+		draw_rect(Rect2(2, 61, 62 * progress, 3), UiKit.GOLD)
 	var font := get_theme_default_font()
 	var label := key_text if not crossed or fallback_text == "" else fallback_text
 	draw_string(font, Vector2(0, 82), label, HORIZONTAL_ALIGNMENT_CENTER, 66, 15, UiKit.TEXT if not crossed else UiKit.MUTED)

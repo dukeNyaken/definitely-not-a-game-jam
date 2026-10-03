@@ -42,6 +42,9 @@ func new_run(p_seed: int = -1) -> void:
 		p_seed = randi_range(100000, 999999)
 	seed_value = p_seed
 	ring = Ring.generate(seed_value, Db.ITEM_IDS)
+	Mastery.run_xp.clear()
+	for item in ring.items:
+		item.appearance = Mastery.selected(item.def_id)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value * 31 + 7
 	threat_order = Db.THREAT_IDS.duplicate()
