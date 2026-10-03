@@ -13,5 +13,5 @@ func apply(essence: EssenceDef, ctx: ActionContext) -> void:
 		var away := Combat.flat_dir(t.global_position - ctx.origin, ctx.direction)
 		t.force_move(away * push, float(essence.stat("push_time", 0.2)))
 		Combat.deal(ctx, t, essence.stat("damage", 5.0) * ctx.damage_mult, {"stun": essence.stat("stun", 0.5), "blockable": false})
-	Vfx.ring(actor, ctx.origin, radius, essence.color, 0.3, 0.6)
+	Vfx.ring(actor, ctx.origin, radius, essence.color, 0.4, 0.6, &"mass_quake")
 	play_sound(essence)

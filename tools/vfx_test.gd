@@ -10,7 +10,8 @@ var _done: Dictionary = {}
 ## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
 ## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
 ## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом;
-## ritual — круг алтаря, порталы врагов, поток огоньков жертвы; summon — призывные круги обычного врага и элиты.
+## ritual — круг алтаря, порталы врагов, поток огоньков жертвы; summon — призывные круги обычного врага и элиты;
+## motifs — эффекты сущностей с мотивами: Лезвие, Масса, Порыв.
 var scenario := "hits"
 
 
@@ -80,6 +81,9 @@ func _process(delta: float) -> void:
 		return
 	if scenario == "summon":
 		_summon()
+		return
+	if scenario == "motifs":
+		_motifs()
 		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
@@ -191,3 +195,21 @@ func _summoned(p: SpawnPortal) -> void:
 	e.global_position = p.global_position
 	e.facing = Combat.flat_dir(hero.global_position - p.global_position)
 	p.emerge(e)
+
+
+func _essence(id: StringName, item: StringName) -> void:
+	var ctx := ActionContext.make(hero, ItemState.create(item))
+	ctx.from_property = true
+	Db.effect(id).apply(Db.essence(id), ctx)
+
+
+func _motifs() -> void:
+	if _once("blade", 1.0):
+		hero.aim_point = dummies[0].global_position
+		hero.facing = Combat.flat_dir(hero.aim_point - hero.global_position)
+		_essence(&"blade", &"sword")
+	if _once("mass", 1.6):
+		_essence(&"mass", &"armor")
+	if _once("gust", 2.2):
+		hero.aim_point = hero.global_position + Vector3(-4, 0, 1.2)
+		_essence(&"gust", &"boots")

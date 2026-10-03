@@ -15,7 +15,7 @@ var _t: float = 0.0
 var _released: bool = false
 
 
-static func follow(p_actor: Actor, from: Vector3, color: Color) -> void:
+static func follow(p_actor: Actor, from: Vector3, color: Color, sheet: StringName = &"speed_lines") -> void:
 	var parent := Vfx.root_for(p_actor)
 	if parent == null:
 		return
@@ -23,7 +23,7 @@ static func follow(p_actor: Actor, from: Vector3, color: Color) -> void:
 	trail.actor = p_actor
 	trail.start = from
 	parent.add_child(trail)
-	trail._fx = FlipbookFx.make(&"speed_lines", color, 1.0, {"billboard": false, "manual": true, "energy": 1.6, "pull": 0.2})
+	trail._fx = FlipbookFx.make(sheet, color, 1.0, {"billboard": false, "manual": true, "energy": 1.6, "pull": 0.2})
 	trail.add_child(trail._fx)
 	trail._fx.visible = false
 

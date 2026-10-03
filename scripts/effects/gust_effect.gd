@@ -10,5 +10,5 @@ func apply(essence: EssenceDef, ctx: ActionContext) -> void:
 	var dir := Combat.flat_dir(ctx.aim_point - ctx.origin, ctx.direction)
 	var dist: float = essence.stat("distance", 4.0)
 	actor.start_dash(dir, dist, float(essence.stat("duration", 0.16)))
-	Vfx.streak(actor, ctx.origin, ctx.origin + dir * dist, essence.color)
+	Vfx.streak(actor, ctx.origin, ctx.origin + dir * dist, essence.color, &"gust_lines")
 	play_sound(essence)

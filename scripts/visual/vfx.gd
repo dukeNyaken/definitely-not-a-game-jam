@@ -99,9 +99,10 @@ static func _fade_free(mi: MeshInstance3D, duration: float, grow: float = 1.0) -
 	tw.chain().tween_callback(mi.queue_free)
 
 
-## Дуга удара (меч, кулак, Лезвие): пиксельный взмах, натянутый на сектор. mirror — взмах справа налево.
-static func slash(owner: Node3D, origin: Vector3, dir: Vector3, radius: float, arc_degrees: float, color: Color, duration: float = 0.22, mirror: bool = false) -> void:
-	var fx := FlipbookFx.spawn(owner, &"slash_arc", origin + Vector3(0, 0.6, 0), color, 1.0,
+## Дуга удара (меч, кулак, Лезвие): пиксельный взмах, натянутый на сектор. mirror — взмах справа налево;
+## sheet — развёртка взмаха (мотив сущности, например &"blade_arc").
+static func slash(owner: Node3D, origin: Vector3, dir: Vector3, radius: float, arc_degrees: float, color: Color, duration: float = 0.22, mirror: bool = false, sheet: StringName = &"slash_arc") -> void:
+	var fx := FlipbookFx.spawn(owner, sheet, origin + Vector3(0, 0.6, 0), color, 1.0,
 		{"mesh": arc_mesh(arc_degrees), "duration": maxf(duration * 1.25, 0.26), "energy": 1.9, "pull": 0.2})
 	if fx == null:
 		return
@@ -111,11 +112,14 @@ static func slash(owner: Node3D, origin: Vector3, dir: Vector3, radius: float, a
 
 
 ## Кольцо на земле (волна, толчок, Взор): пиксельный фронт расходится до radius и рвётся на штрихи.
-static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, duration: float = 0.35, _width: float = 0.35) -> void:
-	var spec: Dictionary = FlipbookFx.SHEETS[&"shock_ring"]
+## sheet — лист с radius_px (мотив сущности, например &"mass_quake"); каждый раз под случайным углом.
+static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, duration: float = 0.35, _width: float = 0.35, sheet: StringName = &"shock_ring") -> void:
+	var spec: Dictionary = FlipbookFx.SHEETS[sheet]
 	var size := radius * float(spec["size_px"]) / float(spec["radius_px"][-1])
-	FlipbookFx.spawn(owner, &"shock_ring", center + Vector3(0, 0.08, 0), color, size,
+	var fx := FlipbookFx.spawn(owner, sheet, center + Vector3(0, 0.08, 0), color, size,
 		{"billboard": false, "duration": duration * 1.3, "energy": 1.8, "pull": 0.05})
+	if fx != null:
+		fx.rotation.y = randf() * TAU
 
 
 ## Сфера Оплота вокруг персонажа: пиксельный пузырь с рунами, держится duration и гаснет.
@@ -180,9 +184,10 @@ static func beam(owner: Node, a: Vector3, b: Vector3, color: Color, width: float
 
 ## След рывка: линии скорости тянутся за персонажем от точки старта, после рывка хвосты втягиваются к нему.
 ## Если owner не в рывке (сцена, тест) — след сразу на весь путь from → to.
-static func streak(owner: Node3D, from: Vector3, to: Vector3, color: Color) -> void:
+## sheet — лист следа (мотив сущности, например &"gust_lines").
+static func streak(owner: Node3D, from: Vector3, to: Vector3, color: Color, sheet: StringName = &"speed_lines") -> void:
 	var lift := Vector3(0, 0.45, 0)
 	if owner is Actor and (owner as Actor).is_dashing():
-		DashTrail.follow(owner as Actor, from + lift, color)
+		DashTrail.follow(owner as Actor, from + lift, color, sheet)
 		return
-	_ribbon(owner, &"speed_lines", from + lift, to + lift, 1.0, color, {"energy": 1.6, "pull": 0.2})
+	_ribbon(owner, sheet, from + lift, to + lift, 1.0, color, {"energy": 1.6, "pull": 0.2})
