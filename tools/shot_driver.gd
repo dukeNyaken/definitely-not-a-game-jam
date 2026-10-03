@@ -16,6 +16,8 @@ var _speed := 1.0
 var _t := 0.0
 var _setup_done := false
 var _hovered := false
+var _card_view := ""
+var _item := ""
 
 
 func _ready() -> void:
@@ -33,6 +35,16 @@ func _ready() -> void:
 			"variant": SkinnedActorModel.select(kv[1])
 			"key": _key = kv[1]
 			"speed": _speed = float(kv[1])
+			"card": _card_view = kv[1]
+			"item": _item = kv[1]
+	if _preset in ["final_mastery", "final_empty", "final_max", "final_error"]:
+		Mastery.memory_only = true
+		Mastery.xp.clear()
+		Mastery.choices.clear()
+		var starts := [210, 440, 900, 1000, 10, 620, 200]
+		for i in Db.ITEM_IDS.size():
+			var id := Db.ITEM_IDS[i]
+			Mastery.xp[id] = 0 if _preset == "final_empty" else 1000 if _preset == "final_max" else starts[i]
 	if _preset == "mastery":
 		Mastery.memory_only = true
 		for id in Db.ITEM_IDS:
@@ -63,12 +75,24 @@ func _ready() -> void:
 			Theater.queue = items
 			Theater.cursor = 0
 			Theater.prepare(items[0])
-		"final", "final_death":
-			for i in (6 if _preset == "final" else 3):
+		"final", "final_death", "final_mastery", "final_empty", "final_max", "final_error":
+			var is_victory := _preset in ["final", "final_mastery", "final_max", "final_error"]
+			for i in (0 if _preset == "final_empty" else 6 if is_victory else 3):
 				RunState.sacrifice(0)
-			RunState.outcome = RunState.Outcome.VICTORY if _preset == "final" else RunState.Outcome.DEATH
-			RunState.stage = 7 if _preset == "final" else 4
+			if _preset in ["final_mastery", "final_max", "final_error"]:
+				var rewards := [110, 330, 420, 210, 185, 380, 45]
+				for i in Db.ITEM_IDS.size():
+					var id := Db.ITEM_IDS[i]
+					Mastery.run_xp[id] = rewards[i]
+					Mastery.xp[id] = mini(int(Mastery.xp[id]) + rewards[i], 1000)
+					Mastery.choices[id] = Mastery.level(id)
+				for item in RunState.ring.items:
+					item.appearance = Mastery.selected(item.def_id)
+			Mastery.save_error = _preset == "final_error"
+			RunState.outcome = RunState.Outcome.VICTORY if is_victory else RunState.Outcome.DEATH
+			RunState.stage = 7 if is_victory else 1 if _preset == "final_empty" else 4
 			RunState.elapsed = 1043.0
+			RunState.running = false
 			scene = "res://scenes/final_card.tscn"
 		"boss", "boss_fight":
 			for i in 6:
@@ -90,6 +114,15 @@ func _game() -> Game:
 
 
 func _setup() -> void:
+	if _preset.begins_with("final"):
+		var card := get_tree().current_scene
+		if _item != "":
+			card._wheel.select_item(StringName(_item))
+		if _card_view == "details":
+			card._open_details()
+		elif _card_view == "collection":
+			card._open_collection()
+		return
 	if _preset == "mastery":
 		get_tree().current_scene.ui.add_child(MasteryUi.new())
 		return

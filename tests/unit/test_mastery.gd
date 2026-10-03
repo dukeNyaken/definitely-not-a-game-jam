@@ -3,6 +3,7 @@ extends GutTest
 var _xp: Dictionary
 var _choices: Dictionary
 var _run_xp: Dictionary
+var _run_start_xp: Dictionary
 var _memory: bool
 var _hero: Actor
 var _running: bool
@@ -12,6 +13,7 @@ func before_each() -> void:
 	_xp = Mastery.xp.duplicate()
 	_choices = Mastery.choices.duplicate()
 	_run_xp = Mastery.run_xp.duplicate()
+	_run_start_xp = Mastery.run_start_xp.duplicate()
 	_memory = Mastery.memory_only
 	_hero = Combat.hero
 	_running = RunState.running
@@ -19,6 +21,7 @@ func before_each() -> void:
 	Mastery.xp.clear()
 	Mastery.choices.clear()
 	Mastery.run_xp.clear()
+	Mastery.run_start_xp.clear()
 	RunState.running = true
 
 
@@ -26,6 +29,7 @@ func after_each() -> void:
 	Mastery.xp = _xp
 	Mastery.choices = _choices
 	Mastery.run_xp = _run_xp
+	Mastery.run_start_xp = _run_start_xp
 	Mastery.memory_only = _memory
 	Mastery.save_error = false
 	Combat.hero = _hero
@@ -111,6 +115,20 @@ func test_new_run_keeps_unlocks_and_selected_old_appearance() -> void:
 	assert_eq(Mastery.level(&"sword"), 3)
 	assert_eq(RunState.ring.get_item(&"sword").appearance, 2)
 	assert_eq(RunState.ring.get_item(&"boots").appearance, 1)
+	assert_true(Mastery.run_xp.is_empty())
+	assert_eq(Mastery.run_start_xp[&"sword"], 1000)
+
+
+func test_run_baseline_survives_capped_rewards_and_next_run_resets_it() -> void:
+	Mastery.xp[&"boots"] = 900
+	RunState.new_run(234)
+	var hero := hero_with(&"boots", 2)
+	Mastery.award(hero, 450)
+	assert_eq(Mastery.run_start_xp[&"boots"], 900)
+	assert_eq(Mastery.xp[&"boots"], 1000)
+	assert_eq(Mastery.run_xp[&"boots"], 450)
+	RunState.new_run(235)
+	assert_eq(Mastery.run_start_xp[&"boots"], 1000)
 	assert_true(Mastery.run_xp.is_empty())
 
 

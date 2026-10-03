@@ -9,6 +9,8 @@ var rules: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://d
 var xp: Dictionary = {}
 var choices: Dictionary = {}
 var run_xp: Dictionary = {}
+## Снимок до забега: вычитать run_xp из XP нельзя из-за ограничения на максимуме.
+var run_start_xp: Dictionary = {}
 var memory_only: bool = false
 var save_error: bool = false
 
@@ -30,6 +32,11 @@ func level(id: StringName) -> int:
 
 func selected(id: StringName) -> int:
 	return clampi(int(choices.get(id, level(id))), 1, level(id))
+
+
+func begin_run() -> void:
+	run_xp.clear()
+	run_start_xp = xp.duplicate()
 
 
 func form(id: StringName, tier: int) -> Dictionary:
