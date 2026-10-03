@@ -102,13 +102,13 @@ static func _flashback_spar(cs: Cutscene, game: Game, c: Vector3, up: Vector3, r
 		cs.face(yh, ys.global_position)
 		cs.face(ys, yh.global_position)
 		await cs.wait(0.35)
-	# Последний удар младшего — замедленно; старший падает в пыль.
+	# Последний удар младшего — замедленно; старший падает на одно колено в пыль.
 	cs.cam((yh.global_position + ys.global_position) * 0.5 + Vector3(0, 1.0, 0), 4.0, 0.6)
 	yh.gesture(&"chop", 0.45)
 	cs.slowmo(0.3, 0.9)
 	await cs.wait(0.35)
 	cs.flash(Color(1.0, 0.92, 0.75), 0.35, 0.5)
-	ys.set_pose(&"sit")
+	ys.set_pose(&"kneel")
 	Audio.play(&"fist_hit", -4.0)
 	CutsceneFx.dust(world, ys.global_position, 1.0)
 	CutsceneFx.sparks(world, ys.global_position + Vector3(0, 0.9, 0), WOOD_CHIPS, 18, 3.5)

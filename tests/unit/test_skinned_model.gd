@@ -121,7 +121,7 @@ func test_mesh_names_map_to_slots() -> void:
 
 func test_story_npcs_keep_props_and_support_story_poses() -> void:
 	for spec in [
-		[ActorModel.Kind.TYRANT, &"young", "", [&"sit", &"offer"]],
+		[ActorModel.Kind.TYRANT, &"young", "", [&"kneel", &"offer"]],
 		[ActorModel.Kind.FATHER, &"", "l_hand/Staff", [&"frail", &"frail_offer", &"kneel", &"slump"]],
 		[ActorModel.Kind.BELOVED, &"", "", [&"offer", &"arms_up"]],
 		[ActorModel.Kind.FAITHFUL, &"", "l_hand/Lantern", [&"lantern", &"offer"]],
