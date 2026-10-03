@@ -6,7 +6,8 @@ var dummies: Array[Actor] = []
 var elite: Actor
 var _t: float = 0.0
 var _done: Dictionary = {}
-## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна.
+## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
+## pools — лужи яда, волна Энергии, извержение зоны, удар громилы.
 var scenario := "hits"
 
 
@@ -61,6 +62,9 @@ func _process(delta: float) -> void:
 	if scenario == "arcs":
 		_arcs(ctx)
 		return
+	if scenario == "pools":
+		_pools(ctx)
+		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
 		var g := ActionContext.make(hero, ItemState.create(&"helmet"))
@@ -94,3 +98,21 @@ func _arcs(ctx: ActionContext) -> void:
 		wave.setup(ctx, 6.0, 0.0, 0.6, Db.essence(&"energy").color)
 		add_child(wave)
 		wave.global_position = hero.global_position
+
+
+func _pools(ctx: ActionContext) -> void:
+	var foe := ActionContext.make(elite, null)
+	if _once("trail", 0.4):
+		var slime := Db.enemy(&"slime")
+		for i in 6:
+			PoisonPuddle.spawn(foe, Vector3(-3.6 + i * 0.8, 0, 1.6 + sin(i * 1.3) * 0.4), slime, 0.0)
+		PoisonPuddle.spawn(foe, Vector3(-3.0, 0, 3.0), Db.enemy(&"slime_small"), 0.0)
+	if _once("zone", 0.8):
+		DamageZone.spawn(foe, Vector3(3.4, 0, 0.6), 2.0, 0.6, 0.0)
+	if _once("energy", 1.0):
+		var p := Projectile.spawn(ctx, hero.global_position, dummies[1].global_position - hero.global_position, 5.0, 0.0, &"energy", Db.essence(&"energy").color)
+		p.pierce = true
+	if _once("slam", 1.45):
+		var c := Vector3(-3.2, 0, -2.6)
+		Vfx.ring(elite, c, 2.2, Color(1, 0.5, 0.3), 0.3, 0.9)
+		FlipbookFx.eruption_field(elite, c, 2.2 * 0.7, Color(0.8, 0.6, 0.4), 3)

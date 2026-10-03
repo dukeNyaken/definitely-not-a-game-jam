@@ -42,6 +42,6 @@ func _physics_process(delta: float) -> void:
 			if Combat.flat(a.global_position - global_position).length() <= radius + a.body_radius * 0.5:
 				Combat.deal(ctx, a, damage, {"source_pos": global_position, "blockable": false})
 		Vfx.ring(self, global_position, radius, color, 0.3, 0.8)
-		Vfx.burst(self, global_position + Vector3(0, 0.5, 0), color, 1.6, 0.25)
+		FlipbookFx.eruption_field(self, global_position, radius, color)
 		Audio.play(&"zone_blast", -2.0)
 		queue_free()

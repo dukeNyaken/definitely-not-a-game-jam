@@ -12,6 +12,12 @@ const SHEETS := {
 	## Кольцо волны сверху; radius_px — радиус фронта в каждом кадре (лист 128 px).
 	&"shock_ring": {"tex": preload("res://assets/vfx/shock_ring.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 50, 60, 60, 70, 80],
 		"radius_px": [10, 24, 36, 45, 52, 57, 60, 62], "size_px": 128},
+	## Лужа яда сверху, петля с лопающимися пузырями.
+	&"poison_puddle": {"tex": preload("res://assets/vfx/poison_puddle.png"), "grid": Vector2i(3, 3), "ms": [110, 110, 110, 110, 110, 110, 110, 110]},
+	## Развёртка серпа Энергии с бегущими молниями (петля, натягивается на дугу).
+	&"energy_wave": {"tex": preload("res://assets/vfx/energy_wave.png"), "grid": Vector2i(3, 2), "ms": [50, 50, 50, 50, 50, 50]},
+	## Столб из земли (билборд 32×48, низ — земля): зона заклинателя, удар громилы.
+	&"zone_eruption": {"tex": preload("res://assets/vfx/zone_eruption.png"), "grid": Vector2i(3, 3), "ms": [40, 50, 60, 70, 80, 90, 100], "aspect": 32.0 / 48.0},
 }
 
 const SHADER := """
@@ -55,6 +61,8 @@ var loop: bool = false
 var speed: float = 1.0
 ## Кадры выставляет владелец (set_frame), сам эффект не листает и не удаляется.
 var manual: bool = false
+## Задержка до появления, с: эффект скрыт и стоит на первом кадре.
+var delay: float = 0.0
 var _ms: Array = []
 var _frame: int = 0
 var _t: float = 0.0
@@ -80,7 +88,8 @@ static func total_ms(id: StringName) -> float:
 
 
 ## opts: additive (true), billboard (true), loop (false), speed (1.0) или duration (с),
-## energy (1.6), pull (0.0), mesh (своя сетка с UV — тогда без билборда), manual (false).
+## energy (1.6), pull (0.0), mesh (своя сетка с UV — тогда без билборда), manual (false),
+## random_start (false) — петля с случайного кадра, чтобы соседние эффекты не мигали в такт.
 static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}) -> FlipbookFx:
 	var spec: Dictionary = SHEETS[id]
 	var billboard: bool = opts.get("billboard", true) and not opts.has("mesh")
@@ -98,13 +107,16 @@ static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}
 			_plane.size = Vector2.ONE
 		fx.mesh = _plane
 	fx.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	fx.scale = Vector3.ONE * size
+	fx.scale = Vector3(size * float(spec.get("aspect", 1.0)), size, size)
 	fx.loop = opts.get("loop", false)
 	fx.speed = opts.get("speed", 1.0)
 	if opts.has("duration"):
 		fx.speed = total_ms(id) / (1000.0 * maxf(float(opts["duration"]), 0.01))
 	fx.manual = opts.get("manual", false)
 	fx._ms = spec["ms"]
+	if opts.get("random_start", false):
+		fx._frame = randi() % fx._ms.size()
+		fx._t = randf() * float(fx._ms[fx._frame])
 	var m := ShaderMaterial.new()
 	m.shader = _shader(opts.get("additive", true), billboard)
 	m.set_shader_parameter(&"sheet", spec["tex"])
@@ -112,6 +124,7 @@ static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}
 	m.set_shader_parameter(&"tint", tint)
 	m.set_shader_parameter(&"energy", opts.get("energy", 1.6))
 	m.set_shader_parameter(&"depth_pull", opts.get("pull", 0.0))
+	m.set_shader_parameter(&"frame", float(fx._frame))
 	fx._mat = m
 	fx.material_override = m
 	return fx
@@ -154,6 +167,27 @@ func set_fade(v: float) -> void:
 	_mat.set_shader_parameter(&"fade", v)
 
 
+## Столб из земли высотой height: билборд стоит низом на земле.
+static func eruption(owner: Node, ground: Vector3, height: float, tint: Color, delay_s: float = 0.0) -> void:
+	var fx := FlipbookFx.spawn(owner, &"zone_eruption", ground + Vector3(0, height * 0.46, 0), tint, height, {"energy": 2.2, "pull": height * 0.5})
+	if fx != null and delay_s > 0.0:
+		fx.delay = delay_s
+		fx.visible = false
+
+
+## Поле гейзеров на круге radius: большой столб в центре и несколько поменьше вразнобой.
+static func eruption_field(owner: Node, center: Vector3, radius: float, tint: Color, count: int = 4) -> void:
+	eruption(owner, center, radius * 1.6, tint)
+	for i in count:
+		var a := TAU * (i + randf() * 0.6) / count
+		var at := center + Vector3(cos(a), 0, sin(a)) * radius * randf_range(0.4, 0.75)
+		eruption(owner, at, radius * randf_range(0.8, 1.05), tint, randf_range(0.02, 0.12))
+
+
+func set_tint(c: Color) -> void:
+	_mat.set_shader_parameter(&"tint", c)
+
+
 func fade_out(duration: float) -> void:
 	if _fading:
 		return
@@ -166,6 +200,11 @@ func fade_out(duration: float) -> void:
 func _process(delta: float) -> void:
 	if manual:
 		return
+	if delay > 0.0:
+		delay -= delta
+		if delay > 0.0:
+			return
+		visible = true
 	_t += delta * 1000.0 * speed
 	while _t >= float(_ms[_frame]):
 		_t -= float(_ms[_frame])

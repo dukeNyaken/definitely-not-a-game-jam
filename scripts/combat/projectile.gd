@@ -40,16 +40,17 @@ func _ready() -> void:
 
 
 func _build_visual() -> Node3D:
+	if kind == &"energy":
+		# Серп с молниями: лист натянут на дугу 120°, внешний край — фронт волны.
+		var fx := FlipbookFx.make(&"energy_wave", color, 1.0, {"mesh": Vfx.arc_mesh(120.0, 1.0 / 1.6), "loop": true, "energy": 2.0, "random_start": true})
+		fx.scale = Vector3.ONE * radius * 1.6
+		return fx
 	var mi := MeshInstance3D.new()
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	if kind == &"energy":
-		mi.mesh = Vfx.sector_mesh(radius * 1.6, 120.0, radius * 1.0, 10)
-		mi.material_override = Vfx.material(Color(color, 0.95), 2.0, true)
-	else:
-		var box := BoxMesh.new()
-		box.size = Vector3(0.08, 0.08, 0.8)
-		mi.mesh = box
-		mi.material_override = Vfx.material(color, 1.4, false)
+	var box := BoxMesh.new()
+	box.size = Vector3(0.08, 0.08, 0.8)
+	mi.mesh = box
+	mi.material_override = Vfx.material(color, 1.4, false)
 	return mi
 
 
@@ -99,6 +100,8 @@ func _reflect(by: Actor) -> void:
 	_hit[by] = true
 	_traveled = 0.0
 	color = Db.essence(&"bulwark").color
+	if _visual is FlipbookFx:
+		(_visual as FlipbookFx).set_tint(color)
 	_orient()
-	Vfx.burst(by, global_position, color, 0.6)
+	FlipbookFx.spawn(by, &"impact", global_position, color, 1.2, {"energy": 2.4, "pull": 1.0})
 	Audio.play(&"reflect")

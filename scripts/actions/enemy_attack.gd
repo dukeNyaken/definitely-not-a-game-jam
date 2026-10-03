@@ -145,7 +145,7 @@ func _release() -> void:
 			for t in Combat.targets_in_radius(actor, c, edef.aoe_radius):
 				Combat.deal(ctx, t, dmg, {"knockback": 2.0, "source_pos": c})
 			Vfx.ring(actor, c, edef.aoe_radius, Color(1, 0.5, 0.3), 0.3, 0.9)
-			Vfx.burst(actor, c + Vector3(0, 0.3, 0), Color(0.8, 0.6, 0.4), 1.4, 0.25)
+			FlipbookFx.eruption_field(actor, c, edef.aoe_radius * 0.7, Color(0.8, 0.6, 0.4), 3)
 			Audio.play(&"brute_slam")
 			_shake(0.6)
 		EnemyDef.Behavior.RANGED:

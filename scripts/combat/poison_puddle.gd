@@ -17,8 +17,7 @@ var radius: float = 0.6
 var lifetime: float = 5.0
 var _t: float = 0.0
 var _tick_t: float = 0.0
-var _mesh: MeshInstance3D
-var _mat: StandardMaterial3D
+var _fx: FlipbookFx
 
 
 static func spawn(p_ctx: ActionContext, pos: Vector3, def: EnemyDef, dmg: float) -> PoisonPuddle:
@@ -43,23 +42,20 @@ static func spawn(p_ctx: ActionContext, pos: Vector3, def: EnemyDef, dmg: float)
 
 
 func _ready() -> void:
-	_mesh = MeshInstance3D.new()
-	_mesh.mesh = Vfx.sector_mesh(radius, 360.0, 0.0, 9)
-	_mat = Vfx.material(Color(COLOR, 0.42), 1.0, false)
-	_mesh.material_override = _mat
-	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_mesh.position.y = 0.03 + randf() * 0.004
-	_mesh.rotation.y = randf() * TAU
-	_mesh.scale = Vector3(randf_range(0.85, 1.15), 1.0, randf_range(0.85, 1.15)) * 0.3
-	add_child(_mesh)
-	create_tween().tween_property(_mesh, "scale", Vector3(_mesh.scale.x, 1.0, _mesh.scale.z) / 0.3, 0.25)
+	# Клякса занимает ~85% листа: размер квадрата — чтобы лужа совпала с радиусом урона.
+	var size := radius * 2.0 / 0.85
+	_fx = FlipbookFx.attach(self, &"poison_puddle", Vector3(0, 0.03 + randf() * 0.004, 0), Color(COLOR, 0.9), size,
+		{"billboard": false, "loop": true, "additive": false, "energy": 1.1, "random_start": true})
+	_fx.rotation.y = randf() * TAU
+	var full := Vector3(size * (-1.0 if randf() < 0.5 else 1.0), 1.0, size) * Vector3(randf_range(0.9, 1.1), 1.0, randf_range(0.9, 1.1))
+	_fx.scale = full * 0.3
+	create_tween().tween_property(_fx, "scale", full, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _physics_process(delta: float) -> void:
 	_t += delta
 	_tick_t -= delta
-	var k := clampf((lifetime - _t) / 1.2, 0.0, 1.0)
-	_mat.albedo_color.a = 0.42 * k * (0.85 + 0.15 * sin(_t * 6.0))
+	_fx.set_fade(clampf((lifetime - _t) / 1.2, 0.0, 1.0))
 	if _tick_t <= 0.0:
 		_tick_t = tick
 		for a in Combat.hostiles_of_faction(get_tree(), faction):
