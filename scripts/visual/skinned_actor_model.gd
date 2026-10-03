@@ -94,16 +94,20 @@ static func npc_config(p_kind: int, p_variant: StringName) -> Dictionary:
 				id = "young_brother"
 	if id.is_empty() or not FileAccess.file_exists(registry):
 		return {}
-	return JSON.parse_string(FileAccess.get_file_as_string(registry)).get(id, {})
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(registry)).get(id, {})
+	if registry == NPCS and not cfg.is_empty():
+		cfg["people"] = true   # мирные люди: спокойная ходьба (_calm)
+	return cfg
 
 
 ## Библиотека UAL для этого тела. Ретаргет (fix_silhouette) переписывает позу покоя, и в ней
 ## стопа загнута носком вверх; клипы UAL ставят стопу так же. Ровно сетка стоит в позе
 ## привязки скина (как её сгенерировали), поэтому поправка стопы и пальцев — такая, чтобы
 ## в Idle они совпали с позой привязки; она умножается на все ключи этих костей.
-static func _ual_for(model_path: String, skeleton: Skeleton3D, player: AnimationPlayer) -> AnimationLibrary:
-	if _foot_fixed.has(model_path):
-		return _foot_fixed[model_path]
+static func _ual_for(model_path: String, skeleton: Skeleton3D, player: AnimationPlayer, calm := false, rest: Animation = null) -> AnimationLibrary:
+	var key := model_path + ("|calm" if calm else "")
+	if _foot_fixed.has(key):
+		return _foot_fixed[key]
 	var source: AnimationLibrary = load(_read_config()["library"])
 	player.add_animation_library(&"ual", source)
 	player.play(&"ual/Idle")
@@ -113,6 +117,18 @@ static func _ual_for(model_path: String, skeleton: Skeleton3D, player: Animation
 		var i := skeleton.find_bone(bone)
 		if i >= 0:
 			fix[bone] = skeleton.get_bone_pose_rotation(i).inverse() * bind_rotation(skeleton, i)
+	# руки спокойной стойки модели (её idle) — к ним наполовину приводятся руки в ходьбе людей;
+	# без своей стойки — Idle библиотеки
+	var idle_arms := {}
+	for bone in CALM_ARMS:
+		var i := skeleton.find_bone(bone)
+		if i >= 0:
+			idle_arms[bone] = skeleton.get_bone_pose_rotation(i)
+	if rest != null:
+		for t in rest.get_track_count():
+			var bone := String(rest.track_get_path(t).get_concatenated_subnames())
+			if rest.track_get_type(t) == Animation.TYPE_ROTATION_3D and idle_arms.has(bone) and rest.track_get_key_count(t) > 0:
+				idle_arms[bone] = rest.track_get_key_value(t, 0)
 	player.stop()
 	player.remove_animation_library(&"ual")
 	skeleton.reset_bone_poses()
@@ -124,9 +140,36 @@ static func _ual_for(model_path: String, skeleton: Skeleton3D, player: Animation
 			if anim.track_get_type(t) == Animation.TYPE_ROTATION_3D and fix.has(bone):
 				for k in anim.track_get_key_count(t):
 					anim.track_set_key_value(t, k, (anim.track_get_key_value(t, k) as Quaternion) * fix[bone])
+		if calm and String(clip) in CALM_CLIPS:
+			_calm(anim, skeleton, idle_arms)
 		lib.add_animation(clip, anim)
-	_foot_fixed[model_path] = lib
+	_foot_fixed[key] = lib
 	return lib
+
+
+## Клипы передвижения UAL поставлены на героя: корпус подан вперёд, голова опущена, плечи
+## разведены, руки машут — у мирных людей это читается как агрессия. Для них в этих клипах
+## позвоночник, шея, голова и плечи стоят как в позе привязки (прямо), а руки на 70%
+## приведены к спокойной стойке. Ноги и таз — как в клипе: шаг не меняется.
+const CALM_CLIPS := ["Idle", "Walk", "Walk_Formal", "Jog_Fwd", "Sprint"]
+const CALM_UPRIGHT := ["Spine", "Chest", "UpperChest", "Neck", "Head", "LeftShoulder", "RightShoulder"]
+const CALM_ARMS := ["LeftUpperArm", "LeftLowerArm", "RightUpperArm", "RightLowerArm"]
+
+
+static func _calm(anim: Animation, skeleton: Skeleton3D, idle_arms: Dictionary) -> void:
+	for t in anim.get_track_count():
+		if anim.track_get_type(t) != Animation.TYPE_ROTATION_3D:
+			continue
+		var bone := String(anim.track_get_path(t).get_concatenated_subnames())
+		var i := skeleton.find_bone(bone)
+		if i < 0:
+			continue
+		for k in anim.track_get_key_count(t):
+			var q := anim.track_get_key_value(t, k) as Quaternion
+			if bone in CALM_UPRIGHT:
+				anim.track_set_key_value(t, k, bind_rotation(skeleton, i))
+			elif idle_arms.has(bone):
+				anim.track_set_key_value(t, k, q.slerp(idle_arms[bone], 0.7))
 
 
 ## Поворот кости относительно родителя в позе привязки скина — в ней сетка такая, какой её
@@ -233,7 +276,14 @@ func _build_body() -> void:
 		att.add_child(socket)
 		sockets[StringName(socket_name)] = socket
 	var player: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
-	player.add_animation_library(&"ual", _ual_for(model_path, skeleton, player))
+	# мирные люди и все актёры сюжетных сцен (Солдат и Сигвард там тоже не в бою)
+	var people: bool = npc.get("people", false) or actor is Puppet
+	var rest_path: String = npc.get("animations", {}).get("idle", _cfg.get("hero_idle", {}).get(hero_variant["id"], ""))
+	var rest_anim: Animation = load(rest_path) if people and not rest_path.is_empty() else null
+	player.add_animation_library(&"ual", _ual_for(model_path, skeleton, player, people, rest_anim))
+	if people and _cfg["locomotion"].has("ual/Walk"):
+		# у людей шаг — Walk_Formal: ровный, без раскачки плечами
+		_cfg["locomotion"][_cfg["locomotion"].find("ual/Walk")] = "ual/Walk_Formal"
 	# Стойка принадлежит варианту героя; библиотеку UAL и позы босса не меняем.
 	var idle_path: String = _cfg.get("hero_idle", {}).get(hero_variant["id"], "")
 	if kind == Kind.HERO and not idle_path.is_empty():

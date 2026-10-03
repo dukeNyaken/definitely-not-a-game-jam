@@ -128,30 +128,26 @@ func run() -> void:
 	quit()
 
 func neutral() -> void:
-	ap.play("ual/Idle")
-	ap.seek(0.5, true)
-	sk.force_update_all_bone_transforms()
-	var arms := {}
-	for i in sk.get_bone_count():
-		var name := sk.get_bone_name(i)
-		if "Arm" in name or "Shoulder" in name or "Hand" in name:
-			arms[i] = sk.get_bone_pose_rotation(i)
-	ap.stop()
+	# Всё — из позы привязки скина: в ней сетка такая, какой её сгенерировали (ровная спина,
+	# прямые плечи, ступни на полу). Поза покоя после fix_silhouette загибает ступни, а Idle
+	# героя разворачивает плечи назад и ставит руки «в боки» — у мирных людей это агрессия.
 	sk.reset_bone_poses()
-	# Поза покоя после fix_silhouette загибает ступни носком вверх; ровно сетка стоит в позе
-	# привязки скина (как в SkinnedActorModel.bind_rotation) — от неё всё, кроме рук.
 	var skin: Skin = null
 	for mi in sk.find_children("*", "MeshInstance3D", false, false):
 		if (mi as MeshInstance3D).skin != null:
 			skin = (mi as MeshInstance3D).skin
 	for i in sk.get_bone_count():
-		if not arms.has(i) and skin != null:
+		if skin != null:
 			var parent := sk.get_bone_parent(i)
 			var pb := bind_global(skin, parent) if parent >= 0 else Basis.IDENTITY
 			sk.set_bone_pose_rotation(i, (pb.inverse() * bind_global(skin, i)).get_rotation_quaternion())
-	for i in arms:
-		sk.set_bone_pose_rotation(i, arms[i])
 	sk.force_update_all_bone_transforms()
+	# Руки из А-позы — свободно вдоль тела: кисть под плечом чуть впереди, локоть чуть согнут назад.
+	for side in ["Left", "Right"]:
+		var s := point(side + "UpperArm")
+		var length := s.distance_to(point(side + "LowerArm")) + point(side + "LowerArm").distance_to(point(side + "Hand"))
+		var out := signf(s.x)
+		reach(side, Vector3(s.x + out * 0.05, s.y - 0.93 * length, s.z + 0.07), Vector3(s.x + out * 0.12, s.y - 0.45 * length, s.z - 0.3))
 
 func bind_global(skin: Skin, bone: int) -> Basis:
 	for b in skin.get_bind_count():
