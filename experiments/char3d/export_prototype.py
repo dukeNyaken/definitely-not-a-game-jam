@@ -24,7 +24,7 @@ HERE = Path(__file__).parent
 GAME = HERE.parents[1]
 PROTO = GAME / "assets" / "characters"
 STAND = Path(to_godot.TOOLS["godot_project"])
-OUT = Path(r"D:\AI\ComfyUI_windows_portable\ComfyUI\output\char3d")
+OUT = Path(r"C:\ComfyUI_windows_portable\ComfyUI\output\char3d")
 MANIFEST = json.loads((HERE / "data" / "prototype.json").read_text(encoding="utf-8"))
 MAPS = "res://assets/characters/retarget"
 

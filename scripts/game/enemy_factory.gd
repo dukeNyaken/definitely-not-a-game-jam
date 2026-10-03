@@ -45,7 +45,7 @@ static func create(def: EnemyDef, stage: int, elite_items: Array[ItemState] = []
 	if elite:
 		a.set_items(elite_items)
 		a.item_damage_mult = Db.balance.enemy_item_damage_mult
-	var model := ActorModel.new()
+	var model := SkinnedActorModel.for_enemy(KIND_BY_BEHAVIOR[def.behavior])
 	model.name = "Model"
 	a.add_child(model)
 	model.setup(a, KIND_BY_BEHAVIOR[def.behavior], def.color)

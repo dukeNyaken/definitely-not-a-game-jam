@@ -16,17 +16,23 @@ extends ActorModel
 
 const CONFIG := "res://assets/characters/animation.json"
 const HEROES := "res://assets/characters/heroes.json"
+const NPCS := "res://assets/characters/npcs.json"
+const ENEMIES := "res://assets/characters/enemies.json"
 const CHOICE := "user://hero.cfg"
 
 var _cfg: Dictionary
 var _tree: AnimationTree
 var _speeds: PackedFloat32Array = []      # родные скорости клипов ходьбы, по порядку locomotion
 var _idle_node: AnimationNodeAnimation
+var _hero_idle: StringName = &""
 var _gen_items: Dictionary = {}           # слот -> [MeshInstance3D] из glb
 var _hidden_body: Dictionary = {}         # слот -> [MeshInstance3D] части тела под вещью
+static var _foot_fixed: Dictionary = {}   # путь модели -> библиотека UAL с поправкой стоп
 var _was_dashing := false
 var _hit_index := 0
 var _mod: LocomotionModifier
+var _holder: Node3D
+var _holder_scale := 1.0
 var _twist := 0.0
 var _blend_pos := 0.0
 var _measure_path := ""
@@ -46,15 +52,104 @@ static func for_boss() -> ActorModel:
 	return SkinnedActorModel.new() if available() and ResourceLoader.exists(current()["boss"]) else ActorModel.new()
 
 
-## Актёр сюжетной сцены (Puppet): Солдат — сгенерированный герой; Сигвард в настоящем —
-## тело босса без вещей (вещи слетаются на него только в бою); молодой Сигвард во флешбэке
-## и остальные люди — процедурные: своих моделей у них нет.
+## Актёр сюжетной сцены. У людей из npcs.json собственные тела с одеждой;
+## Сигвард в настоящем использует тело босса, остальные — процедурные.
 static func for_puppet(p_kind: int, p_variant: StringName) -> ActorModel:
+	var npc := npc_config(p_kind, p_variant)
+	if not npc.is_empty() and ResourceLoader.exists(npc["model"]):
+		return SkinnedActorModel.new()
 	if p_kind == Kind.HERO and available():
 		return SkinnedActorModel.new()
 	if p_kind == Kind.TYRANT and p_variant != &"young" and available() and ResourceLoader.exists(current()["boss"]):
 		return SkinnedActorModel.new()
 	return ActorModel.new()
+
+
+## Враг: собственное тело из enemies.json, иначе процедурная модель.
+static func for_enemy(p_kind: int) -> ActorModel:
+	var cfg := npc_config(p_kind, &"")
+	return SkinnedActorModel.new() if not cfg.is_empty() and ResourceLoader.exists(cfg["model"]) else ActorModel.new()
+
+
+## Собственное тело персонажа: люди сюжетных сцен — npcs.json, враги — enemies.json.
+static func npc_config(p_kind: int, p_variant: StringName) -> Dictionary:
+	var id := ""
+	var registry := NPCS
+	match p_kind:
+		Kind.INFANTRY, Kind.ARCHER, Kind.BRUTE, Kind.CASTER, Kind.JESTER:
+			registry = ENEMIES
+			id = String(Kind.find_key(p_kind)).to_lower()
+		Kind.FATHER: id = "father"
+		Kind.BELOVED: id = "beloved"
+		Kind.FAITHFUL: id = "faithful"
+		Kind.FRIEND: id = "friend"
+		Kind.REFUGEE: id = "refugee"
+		Kind.CAPTAIN: id = "captain"
+		Kind.WIDOW: id = "widow"
+		Kind.SMITH: id = "smith"
+		Kind.NOVICE: id = "novice"
+		Kind.TYRANT:
+			if p_variant == &"young":
+				id = "young_brother"
+	if id.is_empty() or not FileAccess.file_exists(registry):
+		return {}
+	return JSON.parse_string(FileAccess.get_file_as_string(registry)).get(id, {})
+
+
+## Библиотека UAL для этого тела. Ретаргет (fix_silhouette) переписывает позу покоя, и в ней
+## стопа загнута носком вверх; клипы UAL ставят стопу так же. Ровно сетка стоит в позе
+## привязки скина (как её сгенерировали), поэтому поправка стопы и пальцев — такая, чтобы
+## в Idle они совпали с позой привязки; она умножается на все ключи этих костей.
+static func _ual_for(model_path: String, skeleton: Skeleton3D, player: AnimationPlayer) -> AnimationLibrary:
+	if _foot_fixed.has(model_path):
+		return _foot_fixed[model_path]
+	var source: AnimationLibrary = load(_read_config()["library"])
+	player.add_animation_library(&"ual", source)
+	player.play(&"ual/Idle")
+	player.seek(0.3, true)
+	var fix := {}
+	for bone in ["LeftFoot", "LeftToes", "RightFoot", "RightToes"]:
+		var i := skeleton.find_bone(bone)
+		if i >= 0:
+			fix[bone] = skeleton.get_bone_pose_rotation(i).inverse() * bind_rotation(skeleton, i)
+	player.stop()
+	player.remove_animation_library(&"ual")
+	skeleton.reset_bone_poses()
+	var lib := AnimationLibrary.new()
+	for clip in source.get_animation_list():
+		var anim := source.get_animation(clip).duplicate(true) as Animation
+		for t in anim.get_track_count():
+			var bone := String(anim.track_get_path(t).get_concatenated_subnames())
+			if anim.track_get_type(t) == Animation.TYPE_ROTATION_3D and fix.has(bone):
+				for k in anim.track_get_key_count(t):
+					anim.track_set_key_value(t, k, (anim.track_get_key_value(t, k) as Quaternion) * fix[bone])
+		lib.add_animation(clip, anim)
+	_foot_fixed[model_path] = lib
+	return lib
+
+
+## Поворот кости относительно родителя в позе привязки скина — в ней сетка такая, какой её
+## сгенерировали (ступни на полу). Поза покоя после fix_silhouette от неё отличается.
+static func bind_rotation(skeleton: Skeleton3D, bone: int) -> Quaternion:
+	var skin: Skin = null
+	for mi in skeleton.find_children("*", "MeshInstance3D", false, false):
+		if (mi as MeshInstance3D).skin != null:
+			skin = (mi as MeshInstance3D).skin
+			break
+	if skin == null:
+		return skeleton.get_bone_rest(bone).basis.get_rotation_quaternion()
+	var parent := skeleton.get_bone_parent(bone)
+	var global := _bind_global(skin, skeleton, bone)
+	var parent_global := _bind_global(skin, skeleton, parent) if parent >= 0 else Basis.IDENTITY
+	return (parent_global.inverse() * global).get_rotation_quaternion()
+
+
+static func _bind_global(skin: Skin, skeleton: Skeleton3D, bone: int) -> Basis:
+	var name := skeleton.get_bone_name(bone)
+	for i in skin.get_bind_count():
+		if skin.get_bind_bone(i) == bone or skin.get_bind_name(i) == StringName(name):
+			return skin.get_bind_pose(i).affine_inverse().basis.orthonormalized()
+	return skeleton.get_bone_global_rest(bone).basis.orthonormalized()
 
 
 ## Собраны ли модели героев: без него игра остаётся на процедурной модели.
@@ -98,15 +193,21 @@ func _build_body() -> void:
 	holder.name = "Generated"
 	holder.rotation_degrees.y = _cfg["facing_yaw_deg"]
 	add_child(holder)
-	var variant := current()
+	_holder = holder
+	var npc := npc_config(kind, variant)
+	var hero_variant := current()
 	var boss := kind == Kind.BOSS or kind == Kind.TYRANT
-	_measure_path = variant["boss_measure" if boss else "measure"]
-	var scene: Node3D = (load(variant["boss" if boss else "model"]) as PackedScene).instantiate()
+	_measure_path = npc["measure"] if not npc.is_empty() else hero_variant["boss_measure" if boss else "measure"]
+	var model_path: String = npc["model"] if not npc.is_empty() else hero_variant["boss" if boss else "model"]
+	var scene: Node3D = (load(model_path) as PackedScene).instantiate()
 	holder.add_child(scene)
-	if kind == Kind.TYRANT:
+	# тело в glb ростом с героя; карлик-шут и другие отличаются ростом из реестра
+	_holder_scale = npc.get("scale", 1.0)
+	holder.scale = Vector3.ONE * _holder_scale
+	if kind == Kind.TYRANT and npc.is_empty():
 		# Сигвард в сюжетных сценах — человек ростом с брата; великаном он становится в бою
 		# (масштаб босса из boss.tres), а тело босса в glb выше тела героя (2.46 м против 2.1)
-		holder.scale = Vector3.ONE * _body_height(variant["model"]) / _body_height(variant["boss"])
+		holder.scale = Vector3.ONE * _body_height(hero_variant["model"]) / _body_height(hero_variant["boss"])
 	var skeleton: Skeleton3D = scene.find_children("*", "Skeleton3D", true, false)[0]
 	for mi in scene.find_children("*", "MeshInstance3D", true, false):
 		var src := mi.get_active_material(0) as BaseMaterial3D
@@ -117,6 +218,8 @@ func _build_body() -> void:
 			_gen_items.get_or_add(_slot_of(mi.name.trim_prefix("item_")), []).append(mi)
 		elif mi.name.begins_with("hide_"):
 			_hidden_body.get_or_add(_slot_of(mi.name.trim_prefix("hide_")), []).append(mi)
+	for socket_name in npc.get("sockets", {}):
+		_cfg["sockets"][socket_name].merge(npc["sockets"][socket_name], true)
 	for socket_name in _cfg["sockets"]:
 		var s: Dictionary = _cfg["sockets"][socket_name]
 		var att := BoneAttachment3D.new()
@@ -128,7 +231,31 @@ func _build_body() -> void:
 		att.add_child(socket)
 		sockets[StringName(socket_name)] = socket
 	var player: AnimationPlayer = scene.find_children("*", "AnimationPlayer", true, false)[0]
-	player.add_animation_library(&"ual", load(_cfg["library"]))
+	player.add_animation_library(&"ual", _ual_for(model_path, skeleton, player))
+	# Стойка принадлежит варианту героя; библиотеку UAL и позы босса не меняем.
+	var idle_path: String = _cfg.get("hero_idle", {}).get(hero_variant["id"], "")
+	if kind == Kind.HERO and not idle_path.is_empty():
+		var library := AnimationLibrary.new()
+		library.add_animation(&"idle", load(idle_path) as Animation)
+		player.add_animation_library(&"stance", library)
+		_hero_idle = &"stance/idle"
+		_cfg["poses"]["ease"] = {"anim": _hero_idle}
+	if not npc.is_empty():
+		var library := AnimationLibrary.new()
+		for clip in npc.get("animations", {}):
+			library.add_animation(clip, load(npc["animations"][clip]) as Animation)
+		player.add_animation_library(&"npc", library)
+		if library.has_animation(&"idle"):
+			_hero_idle = &"npc/idle"
+			_cfg["poses"]["ease"] = {"anim": _hero_idle}
+		_cfg["poses"].merge(npc.get("poses", {}), true)
+		rest_pose = StringName(npc.get("rest_pose", ""))
+		# Реквизит — те же предметы, что у процедурного наряда: сокет -> функция NpcLooks
+		# (у врагов — оружие из ActorModel, у людей — функции NpcLooks)
+		var looks: GDScript = NpcLooks
+		for socket_name in npc.get("props", {}):
+			var fn: String = npc["props"][socket_name]
+			sockets[StringName(socket_name)].add_child(call(fn) if has_method(fn) else looks.call(fn))
 	_build_tree(scene, player)
 	_mod = LocomotionModifier.new()
 	_mod.name = "Locomotion"
@@ -193,7 +320,8 @@ func _build_tree(scene: Node3D, player: AnimationPlayer) -> void:
 	loco.sync = true
 	var top := 0.0
 	for name in _cfg["locomotion"]:
-		var v: float = measure[name]["foot_speed"]
+		# замер — на теле в рост glb; уменьшенное тело (шут) ступает медленнее во столько же раз
+		var v: float = measure[name]["foot_speed"] * _holder_scale
 		# скорости ходьбы растут по списку; клип медленнее предыдущего — сбой замера
 		# (у босса Sprint вышел 0.95 м/с): без этой проверки он включался бы на медленном шаге
 		if not _speeds.is_empty() and v <= _speeds[_speeds.size() - 1]:
@@ -302,7 +430,10 @@ func refresh_items() -> void:
 				if not ch.has_meta(&"prop_index"):
 					(ch as Node3D).visible = false
 	if _idle_node != null and _cfg.has("armed_idle"):
-		_idle_node.animation = _cfg["armed_idle"] if actor.has_item(&"sword") else _cfg["locomotion"][0]
+		if _hero_idle != &"":
+			_idle_node.animation = _hero_idle
+		else:
+			_idle_node.animation = _cfg["armed_idle"] if actor.has_item(&"sword") else _cfg["locomotion"][0]
 
 
 ## Вступление босса без сюжетных сцен: сгенерированные вещи тоже прячутся (под ними видно тело)
@@ -374,9 +505,28 @@ func _animate(delta: float) -> void:
 		_tree["parameters/windup_seek/seek_request"] = w["from"] + (w["to"] - w["from"]) * _windup
 	_animate_pose(delta)
 	if actor.is_dashing() and not _was_dashing:
-		var d: Dictionary = _cfg["dash"]
-		_fire("dash", (d["to"] - d["from"]) / maxf(actor.dash_time, 0.05))
+		if kind == Kind.JESTER:
+			_flip_t = 0.0
+		else:
+			var d: Dictionary = _cfg["dash"]
+			_fire("dash", (d["to"] - d["from"]) / maxf(actor.dash_time, 0.05))
 	_was_dashing = actor.is_dashing()
+	_animate_flip(delta)
+
+
+## Шут крутит сальто на каждом рывке, как процедурный: тело вращается вокруг пояса.
+func _animate_flip(delta: float) -> void:
+	if _flip_t < 0.0:
+		return
+	_flip_t += delta
+	var k := clampf(_flip_t / 0.3, 0.0, 1.0)
+	var waist := Vector3(0, 1.0 * _holder_scale, 0)
+	var turn := Basis(Vector3.RIGHT, -TAU * (1.0 - pow(1.0 - k, 2.0)))
+	_holder.basis = turn * Basis(Vector3.UP, deg_to_rad(_cfg["facing_yaw_deg"])).scaled(Vector3.ONE * _holder_scale)
+	_holder.position = waist - turn * waist + Vector3(0, sin(k * PI) * 0.35, 0)
+	if k >= 1.0:
+		_flip_t = -1.0
+		_holder.position = Vector3.ZERO
 
 
 ## У клипов библиотеки рука своя: «протянуть» (Interact) — левой. Задаётся в poses.<поза>.hand.
@@ -387,6 +537,9 @@ func pose_hand(p: StringName) -> StringName:
 ## Поза сюжетной сцены (pose, иначе rest_pose) из poses в animation.json; неизвестная — без позы.
 func _animate_pose(delta: float) -> void:
 	var p := String(pose if pose != &"" else rest_pose)
+	# Стойка покоя (хват катаны, прицел) лежит над замахом и блоком: на них руки свободны
+	if pose == &"" and actor != null and (_windup > 0.0 or actor.block_arc_degrees > 0.0):
+		p = ""
 	var want: Dictionary = _cfg["poses"].get(p, {})
 	var layer := "" if want.is_empty() else ("pose_full" if want.get("full", false) else "pose_upper")
 	if p != _pose_now:

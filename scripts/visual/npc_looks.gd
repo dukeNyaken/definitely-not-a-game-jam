@@ -205,12 +205,16 @@ static func _refugee(m: ActorModel, p: Dictionary) -> void:
 		m._oval(arm, 0.1, 0.095, 0.22, 1.0, tunic, Vector3(0, -0.1, 0), &"rags", 6)
 		m._limb(arm, 0.075, 0.055, arm_len, SKIN, &"skin")
 		m._hand(arm, arm_len, SKIN, &"skin")
-	# Узелок на палке через плечо.
+	m.sockets[&"r_hand"].add_child(refugee_bundle())
+
+
+## Узелок на палке через плечо.
+static func refugee_bundle() -> Node3D:
 	var stick := LowPoly.pivot("Bundle")
 	stick.add_child(LowPoly.cyl(0.02, 0.025, 1.1, 5, Color(0.55, 0.4, 0.25), Vector3(0, 0.5, 0), 0.9, 0.0, 0.0, &"wood"))
 	stick.add_child(LowPoly.sphere(0.15, 7, 4, LINEN.darkened(0.15), Vector3(0, 1.05, 0), 0.9, 0.0, 0.0, &"rags"))
 	stick.rotation.x = 0.64
-	m.sockets[&"r_hand"].add_child(stick)
+	return stick
 
 
 # --- Бьёрн: капитан гвардии. Кираса, чёрно-золотой табард, шлем с плюмажем, свой щит --
@@ -242,6 +246,10 @@ static func _captain(m: ActorModel, p: Dictionary) -> void:
 		m._ball(arm, 0.14, STEEL, Vector3(0, -0.02, 0), &"iron", Vector3(1.2, 0.8, 1.1))
 	# Старая рана на левом предплечье: левой он так и не научился закрываться.
 	m._oval(m.arm_l, 0.085, 0.08, 0.16, 1.0, LINEN, Vector3(0, -arm_len * 0.62, 0), &"cloth", 6)
+	m.sockets[&"l_hand"].add_child(captain_shield())
+
+
+static func captain_shield() -> Node3D:
 	var shield := LowPoly.pivot("CaptainShield", Vector3(-0.08, 0.16, -0.1))
 	var disc := LowPoly.cyl(0.36, 0.36, 0.05, 10, Color(0.42, 0.12, 0.1), Vector3.ZERO, 0.9, 0.0, 0.0, &"wood")
 	disc.rotation.x = PI / 2
@@ -251,7 +259,7 @@ static func _captain(m: ActorModel, p: Dictionary) -> void:
 	shield.add_child(rim)
 	shield.add_child(LowPoly.box(Vector3(0.62, 0.07, 0.02), GOLD, Vector3(0, 0, -0.035), 0.6, 0.6, 0.3))
 	shield.add_child(LowPoly.gem(0.07, 0.06, 0.02, 6, STEEL, Vector3(0, 0, -0.05), &"iron", 0.6))
-	m.sockets[&"l_hand"].add_child(shield)
+	return shield
 
 
 # --- Аслауг: вдова с младенцем, тёмная шаль --------------------------------------
@@ -270,11 +278,19 @@ static func _widow(m: ActorModel, p: Dictionary) -> void:
 	m._ball(m.head, 0.168, shawl.darkened(0.2), Vector3(0, 0.3, 0.035), &"cloth", Vector3(1.0, 0.95, 1.05))
 	m._f(m.head, Vector2(0.3, 0.06), Vector2(0.24, 0.06), 0.3, shawl.darkened(0.2), Vector3(0, 0.12, 0.13), &"cloth")
 	_arms(m, p, shawl, &"cloth", SKIN, 0.08, 0.07)
-	# Младенец в пелёнках у груди.
-	var baby := LowPoly.pivot("Baby", Vector3(0, chest.y * 0.4, -0.25))
-	m._oval(baby, 0.1, 0.09, 0.32, 1.0, LINEN, Vector3.ZERO, &"cloth", 6, Vector3(0, 0, PI / 2 - 0.3))
-	m._ball(baby, 0.065, PALE, Vector3(0.15, 0.06, -0.01), &"skin")
+	var baby := widow_baby()
+	baby.position = Vector3(0, chest.y * 0.4, -0.25)
 	m.torso.add_child(baby)
+
+
+## Младенец в пелёнках у груди.
+static func widow_baby() -> Node3D:
+	var baby := LowPoly.pivot("Baby")
+	var swaddle := LowPoly.cyl(0.1, 0.09, 0.32, 6, LINEN, Vector3.ZERO, 0.9, 0.0, 0.0, &"cloth")
+	swaddle.rotation = Vector3(0, 0, PI / 2 - 0.3)
+	baby.add_child(swaddle)
+	baby.add_child(LowPoly.sphere(0.065, 7, 4, PALE, Vector3(0.15, 0.06, -0.01), 0.9, 0.0, 0.0, &"skin"))
+	return baby
 
 
 # --- Гуннар: старый кузнец, лысый, седые усы, фартук и молот ----------------------
@@ -335,10 +351,14 @@ static func _novice(m: ActorModel, p: Dictionary) -> void:
 	m._put(m.head, LowPoly.cyl(0.12, 0.22, 0.38, 7, hood, Vector3(0, 0.3, 0.08), 0.9, 0.0, 0.0, &"cloth"), Vector3(0.2, 0, 0))
 	m._ball(m.head, 0.13, hood, Vector3(0, 0.46, 0.1), &"cloth")
 	_arms(m, p, robe, &"cloth", SKIN, 0.08, 0.11)
+	m.sockets[&"r_hand"].add_child(novice_staff())
+
+
+static func novice_staff() -> Node3D:
 	var staff := LowPoly.pivot("Staff")
 	staff.add_child(LowPoly.cyl(0.025, 0.03, 1.6, 5, Color(0.55, 0.4, 0.25), Vector3(0, 0.25, 0), 0.9, 0.0, 0.0, &"wood"))
 	staff.add_child(LowPoly.torus(0.03, 0.045, 6, 3, Color(0.4, 0.6, 0.3), Vector3(0, 0.95, 0), 0.9))
-	m.sockets[&"r_hand"].add_child(staff)
+	return staff
 
 
 # --- Сигвард: старший брат. Похож на Солдата, но без единого шрама ----------------
@@ -412,11 +432,15 @@ static func _father(m: ActorModel, p: Dictionary) -> void:
 	circlet.rotation.x = -0.1
 	m.head.add_child(circlet)
 	_arms(m, p, robe, &"cloth", skin, 0.085, 0.07)
+	m.sockets[&"l_hand"].add_child(father_staff())
+
+
+static func father_staff() -> Node3D:
 	var staff := LowPoly.pivot("Staff")
 	staff.add_child(LowPoly.cyl(0.03, 0.035, 1.7, 5, Color(0.5, 0.36, 0.22), Vector3(0, 0.3, 0), 0.9, 0.0, 0.0, &"wood"))
 	staff.add_child(LowPoly.sphere(0.06, 6, 3, Color(0.5, 0.36, 0.22), Vector3(0, 1.17, 0), 0.9, 0.0, 0.0, &"wood"))
 	staff.rotation.x = -0.55
-	m.sockets[&"l_hand"].add_child(staff)
+	return staff
 
 
 # --- Гудрун: мать Сольвейг. Седая, в тёмном платье и белом повойнике, ключи у пояса --

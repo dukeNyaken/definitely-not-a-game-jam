@@ -295,21 +295,42 @@ func _dress_infantry(p: Dictionary) -> void:
 	_f(head, Vector2(0.12, 0.1), Vector2(0.18, 0.16), 0.12, corpse.darkened(0.15), Vector3(0, 0.07, -0.05), &"skin")
 	_bx(head, Vector3(0.12, 0.05, 0.03), Color(0.12, 0.06, 0.05), Vector3(0, 0.1, -0.12))
 	_eyes(Color(0.75, 1.0, 0.45), 0.24, -0.135, 0.055, 3.0)
-	head.add_child(LowPoly.cyl(0.33, 0.35, 0.035, 9, Color(1, 1, 1), Vector3(0, 0.31, 0), 0.6, 0.4, 0.0, &"rust"))
-	head.add_child(LowPoly.cyl(0.07, 0.18, 0.2, 7, Color(1, 1, 1), Vector3(0, 0.43, 0), 0.6, 0.4, 0.0, &"rust"))
-	_pyr(head, Vector2(0.06, 0.06), 0.1, Color(1, 1, 1), Vector3(0, 0.58, 0), &"rust", Vector3.ZERO, 0.4)
+	# Шапель вдвое больше головы: поля шире плеч.
+	head.add_child(LowPoly.cyl(0.66, 0.7, 0.05, 11, Color(1, 1, 1), Vector3(0, 0.31, 0), 0.6, 0.4, 0.0, &"rust"))
+	head.add_child(LowPoly.cyl(0.14, 0.34, 0.36, 8, Color(1, 1, 1), Vector3(0, 0.5, 0), 0.6, 0.4, 0.0, &"rust"))
+	_pyr(head, Vector2(0.12, 0.12), 0.2, Color(1, 1, 1), Vector3(0, 0.78, 0), &"rust", Vector3.ZERO, 0.4)
 	for arm in [arm_l, arm_r]:
 		_limb(arm, 0.085, 0.055, arm_len, corpse, &"skin")
 		_oval(arm, 0.12, 0.11, 0.2, 1.0, mail, Vector3(0, -0.08, 0), &"iron", 6, Vector3.ZERO, 0.3)
 		_hand(arm, arm_len, corpse, &"skin")
-	# Тесак-фальшион: клинок расширяется к острию.
-	var sword := LowPoly.pivot("EnemySword")
-	_f(sword, Vector2(0.07, 0.03), Vector2(0.13, 0.03), 0.62, Color(1, 1, 1), Vector3(0, 0.4, 0), &"rust", Vector2(0.02, 0), Vector3.ZERO, 0.4)
-	_put(sword, LowPoly.wedge(Vector3(0.13, 0.14, 0.03), Color(1, 1, 1), Vector3(0.02, 0.78, 0), &"rust", 0.4), Vector3.ZERO)
-	_bx(sword, Vector3(0.26, 0.05, 0.06), Color(0.4, 0.3, 0.24), Vector3(0, 0.07, 0))
-	_bx(sword, Vector3(0.05, 0.16, 0.05), Color(0.35, 0.25, 0.2), Vector3(0, -0.04, 0), &"leather")
-	sword.rotation.x = deg_to_rad(-100)
-	sockets[&"r_hand"].add_child(sword)
+	sockets[&"r_hand"].add_child(katana())
+
+
+# --- Оружие врагов: отдельные предметы на сокетах, общие с сгенерированными телами ----
+# Клинок вдоль +Y, как у меча героя (ItemVisuals): сокет повернут так, что ось руки ведёт его.
+
+## Большая двуручная катана пехотинца: длинная рукоять в оплётке, цуба, изогнутый клинок.
+func katana() -> Node3D:
+	var k := LowPoly.pivot("Katana")
+	var steel := Color(1.25, 1.25, 1.32)
+	# рукоять на две ладони, ниже кисти
+	_f(k, Vector2(0.045, 0.04), Vector2(0.04, 0.035), 0.5, Color(0.15, 0.08, 0.07), Vector3(0, -0.2, 0), &"leather")
+	for i in 4:
+		_bx(k, Vector3(0.05, 0.02, 0.045), Color(0.7, 0.6, 0.4), Vector3(0, -0.38 + i * 0.12, 0), &"cloth", Vector3(0, 0, 0.5))
+	k.add_child(LowPoly.cyl(0.1, 0.1, 0.025, 8, Color(0.3, 0.26, 0.2), Vector3(0, 0.07, 0), 0.6, 0.5, 0.0, &"iron"))
+	# изгиб: три звена, каждое чуть отклонено назад
+	var at := Vector3(0, 0.08, 0)
+	var tilt := 0.0
+	for i in 3:
+		var seg := LowPoly.pivot("Blade%d" % i, at)
+		seg.rotation.x = tilt
+		k.add_child(seg)
+		_f(seg, Vector2(0.075, 0.025), Vector2(0.07, 0.022), 0.46, steel, Vector3(0, 0.23, 0), &"iron", Vector2.ZERO, Vector3.ZERO, 0.7)
+		at += Vector3(0, cos(tilt), sin(tilt)) * 0.46
+		tilt += 0.06
+	_put(k, LowPoly.wedge(Vector3(0.07, 0.16, 0.022), steel, at + Vector3(0, 0.07, 0.01), &"iron", 0.7), Vector3(tilt, 0, 0))
+	k.rotation.x = deg_to_rad(-100)
+	return k
 
 
 # --- Лучник: скелет-арбалетчик в остроконечном капюшоне --------------------
@@ -342,6 +363,10 @@ func _dress_archer(p: Dictionary) -> void:
 		_limb(arm, 0.04, 0.028, arm_len, bone, &"bone", 5)
 		_hand(arm, arm_len, bone, &"bone")
 	_f(torso, Vector2(0.12, 0.12), Vector2(0.15, 0.15), 0.52, Color(0.8, 0.65, 0.5), Vector3(0.14, chest.y * 0.6, 0.22), &"leather")
+	sockets[&"l_hand"].add_child(crossbow())
+
+
+func crossbow() -> Node3D:
 	var bow := LowPoly.pivot("Crossbow")
 	_f(bow, Vector2(0.07, 0.07), Vector2(0.05, 0.05), 0.62, Color(1, 1, 1), Vector3(0, 0, -0.2), &"wood", Vector2.ZERO, Vector3(PI / 2, 0, 0))
 	for side in [-1.0, 1.0]:
@@ -349,7 +374,7 @@ func _dress_archer(p: Dictionary) -> void:
 	_bx(bow, Vector3(0.6, 0.01, 0.01), Color(0.8, 0.75, 0.6), Vector3(0, 0.02, -0.38))
 	bow.position = Vector3(0, -0.02, -0.04)
 	bow.rotation.x = deg_to_rad(-80)
-	sockets[&"l_hand"].add_child(bow)
+	return bow
 
 
 # --- Громила: сутулый палач-мясник в кожаном капюшоне, с секирой ---------
@@ -391,13 +416,17 @@ func _dress_brute(p: Dictionary) -> void:
 		_ball(arm, 0.14, flesh, Vector3(0, -0.24, 0), &"flesh", Vector3(1, 1.5, 1))
 		_oval(arm, 0.12, 0.13, 0.26, 1.0, leather, Vector3(0, -arm_len * 0.72, 0), &"leather", 6)
 		_hand(arm, arm_len, pale, &"skin")
-	# Секира палача: длинное топорище и широкое лезвие клином.
+	sockets[&"r_hand"].add_child(cleaver())
+
+
+## Секира палача: длинное топорище и широкое лезвие клином.
+func cleaver() -> Node3D:
 	var axe := LowPoly.pivot("Cleaver")
 	axe.add_child(LowPoly.cyl(0.03, 0.035, 1.2, 6, Color(1, 1, 1), Vector3(0, 0.45, 0), 0.9, 0.0, 0.0, &"wood"))
 	_put(axe, LowPoly.frustum(Vector2(0.06, 0.2), Vector2(0.025, 0.7), 0.5, Color(1, 1, 1), Vector3(0.28, 0.85, 0), &"rust", Vector2.ZERO, 0.5), Vector3(0, 0, deg_to_rad(-90)))
 	_bx(axe, Vector3(0.2, 0.3, 0.07), Color(0.4, 0.03, 0.03), Vector3(0.4, 0.95, 0))
 	axe.rotation.x = deg_to_rad(-80)
-	sockets[&"r_hand"].add_child(axe)
+	return axe
 
 
 # --- Заклинатель: культист в остроконечном капюшоне и маске-клюве -----------
@@ -421,7 +450,11 @@ func _dress_caster(p: Dictionary) -> void:
 	for arm in [arm_l, arm_r]:
 		_limb(arm, 0.08, 0.13, arm_len, robe, &"cloth")
 		_hand(arm, arm_len, Color(0.75, 0.72, 0.62), &"bone")
-	# Посох: шип-клетка со свечой и подвешенными костями.
+	sockets[&"r_hand"].add_child(caster_staff())
+
+
+## Посох заклинателя: шип-клетка со свечой и подвешенными костями.
+func caster_staff() -> Node3D:
 	var staff := LowPoly.pivot("Staff")
 	_f(staff, Vector2(0.06, 0.06), Vector2(0.04, 0.04), 1.6, Color(1, 1, 1), Vector3(0, 0.25, 0), &"wood")
 	for k in 3:
@@ -430,7 +463,7 @@ func _dress_caster(p: Dictionary) -> void:
 	_f(staff, Vector2(0.06, 0.06), Vector2(0.05, 0.05), 0.14, Color(0.9, 0.86, 0.74), Vector3(0, 1.12, 0))
 	_pyr(staff, Vector2(0.06, 0.06), 0.14, Color(1.0, 0.45, 0.15), Vector3(0, 1.27, 0), &"", Vector3.ZERO, 0.0, 4.0)
 	_bx(staff, Vector3(0.03, 0.18, 0.03), Color(1, 1, 1), Vector3(0.09, 0.95, 0), &"bone")
-	sockets[&"r_hand"].add_child(staff)
+	return staff
 
 
 # --- Босс — Тиран в отданных вещах: пустой рыцарь с бледными швами и короной осколков ----
@@ -530,14 +563,18 @@ func _dress_jester(p: Dictionary) -> void:
 		_ball(arm, 0.08, c, Vector3(0, -0.03, 0), &"cloth")
 		_limb(arm, 0.07, 0.05, arm_len, c, &"cloth")
 		_hand(arm, arm_len, pale, &"leather")
-		# Нож в каждой руке.
-		var knife := LowPoly.pivot("Knife")
-		knife.add_child(LowPoly.cyl(0.02, 0.022, 0.12, 5, Color(1, 1, 1), Vector3(0, -0.02, 0), 0.9, 0.0, 0.0, &"leather"))
-		_bx(knife, Vector3(0.09, 0.02, 0.03), Color(0.6, 0.6, 0.65), Vector3(0, 0.05, 0), &"iron", Vector3.ZERO, 0.5)
-		_f(knife, Vector2(0.055, 0.015), Vector2(0.005, 0.01), 0.3, Color(1.2, 1.2, 1.25), Vector3(0.01, 0.21, 0), &"iron", Vector2(0.02, 0), Vector3.ZERO, 0.7)
-		_bx(knife, Vector3(0.03, 0.08, 0.017), Color(0.4, 0.03, 0.03), Vector3(0.012, 0.25, 0))
-		knife.rotation.x = deg_to_rad(-95)
-		(sockets[&"l_hand"] if i == 0 else sockets[&"r_hand"]).add_child(knife)
+		(sockets[&"l_hand"] if i == 0 else sockets[&"r_hand"]).add_child(knife())
+
+
+## Нож шута, по одному в каждой руке.
+func knife() -> Node3D:
+	var k := LowPoly.pivot("Knife")
+	k.add_child(LowPoly.cyl(0.02, 0.022, 0.12, 5, Color(1, 1, 1), Vector3(0, -0.02, 0), 0.9, 0.0, 0.0, &"leather"))
+	_bx(k, Vector3(0.09, 0.02, 0.03), Color(0.6, 0.6, 0.65), Vector3(0, 0.05, 0), &"iron", Vector3.ZERO, 0.5)
+	_f(k, Vector2(0.055, 0.015), Vector2(0.005, 0.01), 0.3, Color(1.2, 1.2, 1.25), Vector3(0.01, 0.21, 0), &"iron", Vector2(0.02, 0), Vector3.ZERO, 0.7)
+	_bx(k, Vector3(0.03, 0.08, 0.017), Color(0.4, 0.03, 0.03), Vector3(0.012, 0.25, 0))
+	k.rotation.x = deg_to_rad(-95)
+	return k
 
 
 ## Слизень: полупрозрачный ядовитый куб; внутри кувыркаются череп и кости.
@@ -787,7 +824,7 @@ func _on_action_used(_ctx: ActionContext, comp: ActionComponent) -> void:
 func _hide_kind_weapons() -> void:
 	var r_hand: Node3D = sockets[&"r_hand"]
 	for ch in r_hand.get_children():
-		if ch.name in ["EnemySword", "Cleaver", "Staff", "Knife"]:
+		if ch.name in ["EnemySword", "Katana", "Cleaver", "Staff", "Knife"]:
 			(ch as Node3D).visible = not actor.has_item(&"sword")
 
 

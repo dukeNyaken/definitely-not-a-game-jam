@@ -73,6 +73,91 @@ func test_mesh_names_map_to_slots() -> void:
 	assert_eq(SkinnedActorModel._slot_of("gloves_R"), &"gloves")
 
 
+func test_story_npcs_keep_props_and_support_story_poses() -> void:
+	for spec in [
+		[ActorModel.Kind.TYRANT, &"young", "", [&"sit", &"offer"]],
+		[ActorModel.Kind.FATHER, &"", "l_hand/Staff", [&"frail", &"frail_offer", &"kneel", &"slump"]],
+		[ActorModel.Kind.BELOVED, &"", "", [&"offer", &"arms_up"]],
+		[ActorModel.Kind.FAITHFUL, &"", "l_hand/Lantern", [&"lantern", &"offer"]],
+		[ActorModel.Kind.FRIEND, &"", "", [&"sling", &"offer"]],
+		[ActorModel.Kind.REFUGEE, &"", "r_hand/Bundle", [&"offer", &"kneel"]],
+		[ActorModel.Kind.CAPTAIN, &"", "l_hand/CaptainShield", [&"shield_up", &"bow"]],
+		[ActorModel.Kind.WIDOW, &"", "chest/Baby", [&"hold", &"offer"]],
+		[ActorModel.Kind.SMITH, &"", "", [&"offer", &"kneel"]],
+		[ActorModel.Kind.NOVICE, &"", "r_hand/Staff", [&"offer", &"bow"]],
+	]:
+		var p := Puppet.make(spec[0], spec[1])
+		add_child_autofree(p)
+		assert_true(p.model is SkinnedActorModel, "у персонажа пролога собственная модель")
+		if not p.model is SkinnedActorModel:
+			continue
+		var m := p.model as SkinnedActorModel
+		assert_true(m._gen_items.is_empty(), "одежда встроена в тело")
+		var ap: AnimationPlayer = m.find_children("*", "AnimationPlayer", true, false)[0]
+		assert_true(ap.has_animation("npc/idle"))
+		if spec[2] != "":
+			var socket: Node3D = m.sockets[StringName(spec[2].get_slice("/", 0))]
+			assert_not_null(socket.get_node_or_null(spec[2].get_slice("/", 1)), "реквизит на сокете %s" % spec[2])
+		for pose_name in spec[3]:
+			p.set_pose(pose_name)
+			m._animate_pose(1.0)
+			assert_true(m._cfg["poses"].has(String(pose_name)), String(pose_name))
+			assert_true(ap.has_animation(m._cfg["poses"][String(pose_name)]["anim"]), String(pose_name))
+		var ring := NpcLooks.father_ring()
+		p.hold(ring)
+		assert_eq(ring.get_parent(), m.sockets[&"r_hand"], "передаваемый предмет остаётся на правой кисти")
+		p.fade(0.0, 0.0)
+		assert_false(p.visible)
+		p.fade(1.0, 0.0)
+		assert_true(p.visible)
+
+
+func test_humanoid_enemies_use_generated_bodies_with_their_weapons() -> void:
+	for spec in [["infantry", "r_hand", "Katana"], ["archer", "l_hand", "Crossbow"], ["brute", "r_hand", "Cleaver"],
+			["caster", "r_hand", "Staff"], ["jester", "r_hand", "Knife"]]:
+		var e := EnemyFactory.create(Db.enemy(StringName(spec[0])), 1)
+		add_child_autofree(e)
+		var m := e.get_node("Model") as SkinnedActorModel
+		assert_not_null(m, "%s: собственное тело" % spec[0])
+		if m == null:
+			continue
+		var weapon := m.sockets[StringName(spec[1])].get_node_or_null(spec[2]) as Node3D
+		assert_not_null(weapon, "%s: оружие на сокете" % spec[0])
+		var ap: AnimationPlayer = m.find_children("*", "AnimationPlayer", true, false)[0]
+		if m.rest_pose != &"":
+			assert_true(ap.has_animation(m._cfg["poses"][String(m.rest_pose)]["anim"]), "%s: стойка" % spec[0])
+			# на замахе стойка отпускает руки
+			m._windup = 0.5
+			m._animate_pose(1.0)
+			assert_eq(m._pose_now, "", "%s: замах поверх стойки" % spec[0])
+			m._windup = 0.0
+	var elite := EnemyFactory.create(Db.enemy(&"infantry"), 1, [ItemState.create(&"sword")] as Array[ItemState])
+	add_child_autofree(elite)
+	var em := elite.get_node("Model") as SkinnedActorModel
+	assert_false((em.sockets[&"r_hand"].get_node("Katana") as Node3D).visible, "элита с мечом героя прячет катану")
+	var jester := EnemyFactory.create(Db.enemy(&"jester"), 1)
+	add_child_autofree(jester)
+	assert_almost_eq((jester.get_node("Model") as SkinnedActorModel)._holder.scale.y, 0.55, 0.001, "шут-карлик")
+
+
+func test_ual_idle_keeps_feet_flat_like_bind_pose() -> void:
+	if not SkinnedActorModel.available():
+		pending("модели героев не собраны")
+		return
+	for v in SkinnedActorModel.variants():
+		for kind in [ActorModel.Kind.HERO, ActorModel.Kind.BOSS]:
+			var m := _model(v["id"], kind, [])
+			m._tree.active = false
+			var sk: Skeleton3D = m.find_children("*", "Skeleton3D", true, false)[0]
+			var ap: AnimationPlayer = m.find_children("*", "AnimationPlayer", true, false)[0]
+			ap.play(&"ual/Idle")
+			ap.seek(0.3, true)
+			for bone in ["LeftFoot", "LeftToes", "RightFoot", "RightToes"]:
+				var i := sk.find_bone(bone)
+				var off := sk.get_bone_pose_rotation(i).angle_to(SkinnedActorModel.bind_rotation(sk, i))
+				assert_lt(rad_to_deg(off), 1.0, "%s/%d %s: стопа в Idle как в позе привязки" % [v["id"], kind, bone])
+
+
 func test_locomotion_speeds_increase() -> void:
 	if not SkinnedActorModel.available():
 		pending("модели героев не собраны")

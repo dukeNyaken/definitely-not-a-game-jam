@@ -1,7 +1,7 @@
 {
   "tools": {
     "_why": "Пути к программам и проекту Godot, куда узел «в Godot» кладёт персонажей, — здесь одном месте; узлы ComfyUI и скрипты берут их отсюда. godot_project — пока проверочный стенд: в саму игру эксперименты не идут.",
-    "blender": "Z:/SteamLibrary/steamapps/common/Blender/blender.exe",
+    "blender": "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe",
     "godot": "C:/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_win64_console.exe",
     "godot_project": "C:/Godot/definitely-not-a-game-jam/experiments/char3d/godot_test"
   },

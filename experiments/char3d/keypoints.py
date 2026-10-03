@@ -1,6 +1,6 @@
 """DWPose по исходной картинке тела: точки суставов для rig.py.
 
-    D:/AI/ComfyUI_windows_portable/python_embeded/python.exe keypoints.py <картинка.png>
+    C:/ComfyUI_windows_portable/python_embeded/python.exe keypoints.py <картинка.png>
 
 Пишет <картинка>_pose.json: 24 точки (тело 0-17 в порядке OpenPose, стопы
 18-23: левые носок, мизинец, пятка, потом правые) — [x, y, уверенность]
@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-AUX = "D:/AI/ComfyUI_windows_portable/ComfyUI/custom_nodes/comfyui_controlnet_aux/src"
+AUX = "C:/ComfyUI_windows_portable/ComfyUI/custom_nodes/comfyui_controlnet_aux/src"
 
 
 def main(path):
@@ -27,6 +27,24 @@ def main(path):
         torchscript_device="cpu")
     rgb = np.array(Image.open(path).convert("RGB"))
     k = det.dw_pose_estimation(rgb.copy())
+    if k is None or len(k) == 0:
+        # детектор YOLOX не всегда узнаёт человека в блестящих латах; в сером — узнаёт,
+        # а размер картинки и координаты точек те же
+        gray = np.array(Image.open(path).convert("L").convert("RGB"))
+        k = det.dw_pose_estimation(gray)
+    if k is None or len(k) == 0:
+        # скелет-нежить детектор не узнаёт вовсе: рамка — фигура на ровном фоне (по маске
+        # отличия от угла картинки) с полями; поза ищется в вырезке, точки сдвигаются обратно
+        fig = np.argwhere(np.abs(rgb.astype(int) - rgb[5, 5].astype(int)).sum(2) > 30)
+        (y0, x0), (y1, x1) = fig.min(0), fig.max(0)
+        pad = int(0.08 * (y1 - y0))
+        y0, x0 = max(0, y0 - pad), max(0, x0 - pad)
+        y1, x1 = min(rgb.shape[0], y1 + pad), min(rgb.shape[1], x1 + pad)
+        det.dw_pose_estimation.det = None
+        k = det.dw_pose_estimation(rgb[y0:y1, x0:x1].copy())
+        if k is not None and len(k):
+            k[:, :, 0] += x0
+            k[:, :, 1] += y0
     if k is None or len(k) == 0:
         sys.exit("DWPose не нашёл человека")
     best = k[int(np.argmax([(q[:24, 2] > 0.3).sum() for q in k]))][:24]

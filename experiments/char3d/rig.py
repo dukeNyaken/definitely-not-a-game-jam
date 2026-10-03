@@ -166,35 +166,48 @@ def build(J):
     return arm
 
 
-def _heat(ob, arm):
+def _heat(ob, arm, how="ARMATURE_AUTO"):
     bpy.ops.object.select_all(action="DESELECT")
     ob.select_set(True)
     arm.select_set(True)
     bpy.context.view_layer.objects.active = arm
-    bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+    bpy.ops.object.parent_set(type=how)
     return sum(1 for v in ob.data.vertices if not any(g.weight > 1e-4 for g in v.groups))
+
+
+def _proxy(ob, voxel):
+    proxy = ob.copy()
+    proxy.data = ob.data.copy()
+    bpy.context.scene.collection.objects.link(proxy)
+    proxy.parent = None
+    proxy.modifiers.clear()
+    proxy.vertex_groups.clear()
+    rm = proxy.modifiers.new("remesh", "REMESH")
+    rm.mode = "VOXEL"
+    rm.voxel_size = voxel * max(proxy.dimensions)
+    bpy.context.view_layer.objects.active = proxy
+    bpy.ops.object.modifier_apply(modifier="remesh")
+    return proxy
 
 
 def skin(ob, arm):
     """Тепловые веса; если не сошлись (на сильно упрощённой сетке бывают
     неманифолдные места), — считаются на замкнутой копии, пересобранной
-    вокселями, и переносятся на сетку по ближайшей грани."""
+    вокселями, и переносятся на сетку по ближайшей грани. Длинная юбка сливает
+    ноги, и тепло может не сойтись вовсе: тогда копия грубее, а последнее
+    средство — веса по оболочкам костей."""
     global WEIGHTS_VIA
     if _heat(ob, arm) == 0:
         WEIGHTS_VIA = "тепло"
     else:
-        proxy = ob.copy()
-        proxy.data = ob.data.copy()
-        bpy.context.scene.collection.objects.link(proxy)
-        proxy.parent = None
-        proxy.modifiers.clear()
-        proxy.vertex_groups.clear()
-        rm = proxy.modifiers.new("remesh", "REMESH")
-        rm.mode = "VOXEL"
-        rm.voxel_size = R["proxy_voxel"] * max(proxy.dimensions)
-        bpy.context.view_layer.objects.active = proxy
-        bpy.ops.object.modifier_apply(modifier="remesh")
-        left = _heat(proxy, arm)
+        for scale in (1, 2, 4, None):
+            proxy = _proxy(ob, R["proxy_voxel"] * (scale or 2))
+            total = len(proxy.data.vertices)
+            left = _heat(proxy, arm, "ARMATURE_AUTO" if scale else "ARMATURE_ENVELOPE")
+            how = f"воксель ×{scale}" if scale else "оболочки костей"
+            if left < total:
+                break
+            bpy.data.objects.remove(proxy)
         ob.vertex_groups.clear()
         for g in proxy.vertex_groups:
             ob.vertex_groups.new(name=g.name)
@@ -209,7 +222,7 @@ def skin(ob, arm):
         bpy.ops.object.modifier_move_to_index(modifier="dt", index=0)
         bpy.ops.object.modifier_apply(modifier="dt")
         bpy.data.objects.remove(proxy)
-        WEIGHTS_VIA = f"через воксельную копию (без веса на копии: {left})"
+        WEIGHTS_VIA = f"через воксельную копию, {how} (без веса на копии: {left} из {total})"
         _fill_unweighted(ob)
     # не больше 4 влияний на вершину: столько берёт glTF за один набор, и так дешевле.
     # Выделение — явно: после расчёта на копии оно осталось на ней, и ограничение не применялось.

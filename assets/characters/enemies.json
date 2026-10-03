@@ -1,0 +1,68 @@
+{
+  "infantry": {
+    "model": "res://assets/characters/enemies/infantry.glb",
+    "measure": "res://assets/characters/measure/npc_infantry.json",
+    "animations": {
+      "idle": "res://assets/characters/anims/npc_infantry_idle.tres",
+      "guard": "res://assets/characters/anims/npc_infantry_guard.tres"
+    },
+    "props": {
+      "r_hand": "katana"
+    },
+    "rest_pose": "guard",
+    "poses": {
+      "guard": {
+        "anim": "npc/guard"
+      }
+    }
+  },
+  "archer": {
+    "model": "res://assets/characters/enemies/archer.glb",
+    "measure": "res://assets/characters/measure/npc_archer.json",
+    "animations": {
+      "idle": "res://assets/characters/anims/npc_archer_idle.tres",
+      "aim": "res://assets/characters/anims/npc_archer_aim.tres"
+    },
+    "props": {
+      "l_hand": "crossbow"
+    },
+    "rest_pose": "aim",
+    "poses": {
+      "aim": {
+        "anim": "npc/aim"
+      }
+    }
+  },
+  "brute": {
+    "model": "res://assets/characters/enemies/brute.glb",
+    "measure": "res://assets/characters/measure/npc_brute.json",
+    "animations": {
+      "idle": "res://assets/characters/anims/npc_brute_idle.tres"
+    },
+    "props": {
+      "r_hand": "cleaver"
+    }
+  },
+  "caster": {
+    "model": "res://assets/characters/enemies/caster.glb",
+    "measure": "res://assets/characters/measure/npc_caster.json",
+    "animations": {
+      "idle": "res://assets/characters/anims/npc_caster_idle.tres"
+    },
+    "props": {
+      "r_hand": "caster_staff"
+    }
+  },
+  "jester": {
+    "model": "res://assets/characters/enemies/jester.glb",
+    "measure": "res://assets/characters/measure/npc_jester.json",
+    "animations": {
+      "idle": "res://assets/characters/anims/npc_jester_idle.tres"
+    },
+    "props": {
+      "l_hand": "knife",
+      "r_hand": "knife"
+    },
+    "scale": 0.55
+  }
+}

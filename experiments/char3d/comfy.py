@@ -22,7 +22,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 GUARD_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 HOST = "http://127.0.0.1:8188"
-COMFY_DIR = Path(r"D:\AI\ComfyUI_windows_portable\ComfyUI")
+COMFY_DIR = Path(r"C:\ComfyUI_windows_portable\ComfyUI")
 
 
 def _get(path):

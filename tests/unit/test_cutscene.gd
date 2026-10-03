@@ -71,7 +71,7 @@ func test_every_npc_kind_builds_and_stays_out_of_combat() -> void:
 		var p := Puppet.make(l[0], l[1])
 		add_child_autofree(p)
 		assert_not_null(p.model)
-		assert_gt(p.model._meshes.size(), 10, "у вида %d есть наряд" % l[0])
+		assert_gt(p.model._meshes.size(), 0, "у вида %d есть видимая модель" % l[0])
 		assert_true(p.model.is_npc())
 		assert_false(p.is_in_group(&"actors"), "марионетка вне боя")
 		assert_false(Combat.living_actors(get_tree()).has(p))
