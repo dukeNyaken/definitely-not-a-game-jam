@@ -18,6 +18,7 @@ var _setup_done := false
 var _hovered := false
 var _card_view := ""
 var _item := ""
+var _tier := 0
 
 
 func _ready() -> void:
@@ -37,14 +38,15 @@ func _ready() -> void:
 			"speed": _speed = float(kv[1])
 			"card": _card_view = kv[1]
 			"item": _item = kv[1]
-	if _preset in ["final_mastery", "final_empty", "final_max", "final_error"]:
+			"tier": _tier = int(kv[1])
+	if _preset in ["final_mastery", "final_empty", "final_max", "final_error", "mastery_mixed", "mastery_empty"]:
 		Mastery.memory_only = true
 		Mastery.xp.clear()
 		Mastery.choices.clear()
 		var starts := [210, 440, 900, 1000, 10, 620, 200]
 		for i in Db.ITEM_IDS.size():
 			var id := Db.ITEM_IDS[i]
-			Mastery.xp[id] = 0 if _preset == "final_empty" else 1000 if _preset == "final_max" else starts[i]
+			Mastery.xp[id] = 0 if _preset in ["final_empty", "mastery_empty"] else 1000 if _preset == "final_max" else starts[i]
 	if _preset == "mastery":
 		Mastery.memory_only = true
 		for id in Db.ITEM_IDS:
@@ -65,7 +67,7 @@ func _ready() -> void:
 			for i in 6:
 				RunState.sacrifice(0)
 			RunState.stage = 7
-		"menu", "mastery":
+		"menu", "mastery", "mastery_mixed", "mastery_empty":
 			scene = "res://scenes/main_menu.tscn"
 		"cutscenes":
 			Theater.last_key = _key
@@ -122,9 +124,16 @@ func _setup() -> void:
 			card._open_details()
 		elif _card_view == "collection":
 			card._open_collection()
+			if _tier > 0:
+				card._modal._inspect_tier(_tier)
 		return
-	if _preset == "mastery":
-		get_tree().current_scene.ui.add_child(MasteryUi.new())
+	if _preset in ["mastery", "mastery_mixed", "mastery_empty"]:
+		var collection := MasteryUi.new()
+		if _item != "":
+			collection.selected_id = StringName(_item)
+		get_tree().current_scene.ui.add_child(collection)
+		if _tier > 0:
+			collection._inspect_tier(_tier)
 		return
 	var g := _game()
 	if g == null:

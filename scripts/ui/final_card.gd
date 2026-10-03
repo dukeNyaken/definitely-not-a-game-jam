@@ -73,8 +73,8 @@ func _ready() -> void:
 	else:
 		left.add_child(_wrapped("Дерево ещё не выросло", 30, UiKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
 		left.add_child(_wrapped("Опыт вещей остаётся даже после поражения.", 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
-	var result := "%s повержен" % Story.TYRANT_NAME if victory else "Погиб на этапе %d" % RunState.stage
-	left.add_child(UiKit.label(result, 20, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	var story_result := "%s повержен" % Story.TYRANT_NAME if victory else "Погиб на этапе %d" % RunState.stage
+	left.add_child(UiKit.label(story_result, 20, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	if victory:
 		left.add_child(_wrapped(Story.FINALE["epilogue"], 16, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	left.add_child(UiKit.button("Путь забега", _open_details))
@@ -173,7 +173,9 @@ func _show_item(id: StringName) -> void:
 func _open_collection() -> void:
 	_close_modal()
 	get_viewport().gui_release_focus()
-	_modal = MasteryUi.new()
+	var collection := MasteryUi.new()
+	collection.selected_id = _wheel.selected_id
+	_modal = collection
 	_ui.add_child(_modal)
 
 
