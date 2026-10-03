@@ -181,8 +181,6 @@ func start_stage(s: int) -> void:
 	banner.emit("Этап %d" % s, "%s — %s" % [threat.display_name, threat.description])
 	# После алтаря зажёванная лента битвы раскручивается с того же места.
 	Audio.play_playlist(BATTLE_MUSIC)
-	if s == 1:
-		hud.show_controls_hint()
 
 
 func _clear_world() -> void:

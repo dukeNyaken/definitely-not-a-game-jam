@@ -17,7 +17,6 @@ var _banner_title: Label
 var _banner_sub: Label
 var _banner_tween: Tween
 var _boss_bar: Control
-var _hint: PanelContainer
 var _fade: ColorRect
 var _screen: Control
 var _screen_kind: StringName = &""
@@ -221,9 +220,6 @@ func _on_state_changed(state: int) -> void:
 			_wave_label.text = "Святилище открыто"
 		Game.State.BOSS_INTRO, Game.State.BOSS:
 			_wave_label.text = ""
-	if state != Game.State.INTRO and state != Game.State.WAVES and _hint != null and RunState.stage > 1:
-		_hint.queue_free()
-		_hint = null
 
 
 ## Сверху и снизу выезжают чёрные полосы (интерфейс прячет set_cinematic).
@@ -268,35 +264,9 @@ func set_cinematic(on: bool, duration: float = 0.4) -> void:
 		_cinematic_tween.kill()
 	_cinematic_tween = create_tween().set_parallel(true)
 	var parts: Array[Control] = [_status_box, _tree_hint, _action_bar, _boss_bar, overlay]
-	if _hint != null:
-		parts.append(_hint)
 	for c in parts:
 		if c != null and is_instance_valid(c):
 			_cinematic_tween.tween_property(c, "modulate:a", 0.0 if on else 1.0, duration)
-
-
-func show_controls_hint() -> void:
-	if _hint != null:
-		return
-	_hint = PanelContainer.new()
-	_hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_hint.offset_left = 20
-	_hint.offset_bottom = -20
-	_hint.offset_top = -290
-	_hint.offset_right = 420
-	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var text := UiKit.rich(
-		"[b][color=#%s]Управление[/color][/b]\n" % UiKit.hex(UiKit.GOLD) +
-		"WASD — движение, мышь — направление\n" +
-		"ЛКМ — меч (без меча — кулак)\n" +
-		"ПКМ (держать) — щит\n" +
-		"Пробел — рывок сапогами\n" +
-		"Q — хват перчатками · E — волна амулета\n" +
-		"Tab — дерево свойств · Esc — пауза\n" +
-		"F2 — рендер PS1 / PS2", 17)
-	text.custom_minimum_size = Vector2(380, 0)
-	_hint.add_child(text)
-	root.add_child(_hint)
 
 
 # --- Экраны поверх игры -----------------------------------------------------
