@@ -20,6 +20,7 @@ var _card_view := ""
 var _item := ""
 var _tier := 0
 var _node := 0
+var _hover_item := ""
 
 
 func _ready() -> void:
@@ -41,6 +42,7 @@ func _ready() -> void:
 			"item": _item = kv[1]
 			"tier": _tier = int(kv[1])
 			"node": _node = int(kv[1])
+			"hover": _hover_item = kv[1]
 	if _preset in ["final_mastery", "final_empty", "final_max", "final_error", "mastery_mixed", "mastery_empty"]:
 		Mastery.memory_only = true
 		Mastery.xp.clear()
@@ -166,6 +168,8 @@ func _setup() -> void:
 				g.hud._screen.select_item(StringName(_item))
 			if _node > 0:
 				g.hud._screen._diagram.select_node(_node)
+			if _hover_item != "":
+				_hover_tree(g.hud._screen._diagram)
 		"shrine":
 			g.hud.open_shrine()
 		"gift":
@@ -173,6 +177,15 @@ func _setup() -> void:
 		"finale":
 			# Ворота пропускаем, Тирана — сразу на колени.
 			g.cutscene.skip()
+
+
+func _hover_tree(diagram: PropertyDiagram) -> void:
+	await get_tree().process_frame
+	var index := diagram.index_of(StringName(_hover_item))
+	if index >= 0:
+		var motion := InputEventMouseMotion.new()
+		motion.position = diagram._buttons[index].get_global_rect().get_center()
+		get_viewport().push_input(motion, true)
 
 
 func _process(delta: float) -> void:

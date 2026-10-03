@@ -80,10 +80,10 @@ func show_ring(ring: Ring) -> void:
 			_groups.back()["last"] = i
 		var button := UiKit.button("", select_node.bind(i))
 		button.focus_mode = Control.FOCUS_ALL
-		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		button.draw.connect(_draw_label.bind(button, i))
-		button.mouse_entered.connect(func(): _hover = i; queue_redraw())
-		button.mouse_exited.connect(func(): _hover = -1; queue_redraw())
+		# Невидимые цели для клавиатурного фокуса; мышь обрабатывает сам сектор.
+		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for style in [&"normal", &"hover", &"pressed", &"focus"]:
+			button.add_theme_stylebox_override(style, StyleBoxEmpty.new())
 		add_child(button)
 		_buttons.append(button)
 	_layout()
@@ -104,7 +104,6 @@ func select_node(index: int) -> void:
 	if nodes.is_empty():
 		return
 	selected_node = clampi(index, 0, nodes.size() - 1)
-	_redraw_labels()
 	queue_redraw()
 	node_selected.emit(selected_node)
 
@@ -123,7 +122,7 @@ func _center() -> Vector2:
 
 
 func _radius() -> float:
-	return minf(size.y * 0.5 - 106, size.x * 0.5 - 150)
+	return minf(size.y * 0.5 - 44, size.x * 0.5 - 64)
 
 
 func _angle(index: int) -> float:
@@ -133,19 +132,9 @@ func _angle(index: int) -> float:
 func _layout() -> void:
 	for i in _buttons.size():
 		var button := _buttons[i]
-		button.size = Vector2(156, 90)
-		button.position = _center() + Vector2.from_angle(_angle(i)) * Vector2(_radius() + 116, _radius() + 58) - button.size * 0.5
+		button.size = Vector2(46, 46)
+		button.position = _center() + Vector2.from_angle(_angle(i)) * (_radius() - 46) - button.size * 0.5
 	queue_redraw()
-
-
-func _redraw_labels() -> void:
-	for i in _buttons.size():
-		var color := _color(i)
-		var selected := i == selected_node
-		_buttons[i].add_theme_stylebox_override(&"normal", UiKit.box(Color(color, 0.11) if selected else Color(0.055, 0.045, 0.065), UiKit.GOLD if selected else color.darkened(0.6), 2 if selected else 1, 8, 4))
-		_buttons[i].add_theme_stylebox_override(&"hover", UiKit.box(Color(color, 0.17), color, 2, 8, 4))
-		_buttons[i].tooltip_text = _label(i)
-		_buttons[i].queue_redraw()
 
 
 func _color(index: int) -> Color:
@@ -154,28 +143,49 @@ func _color(index: int) -> Color:
 
 
 func _label(index: int) -> String:
-	var prop: Property = nodes[index]["property"]
-	return (nodes[index]["state"] as ItemState).def().display_name if prop == null else Db.essence(prop.essence_id).display_name
+	return Db.item(nodes[index]["source"]).display_name
 
 
-func _draw_label(button: Button, index: int) -> void:
+func _get_tooltip(at_position: Vector2) -> String:
+	var index := sector_at(at_position)
+	return str(index) if index >= 0 else ""
+
+
+func _make_custom_tooltip(for_text: String) -> Object:
+	var index := int(for_text)
+	if not for_text.is_valid_int() or index < 0 or index >= nodes.size():
+		return null
 	var state: ItemState = nodes[index]["state"]
 	var prop: Property = nodes[index]["property"]
-	button.draw_string(UiKit.body_font(), Vector2(4, 25), _label(index), HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 18, UiKit.GOLD if index == selected_node else UiKit.TEXT)
-	var caption := "%s · %s" % [state.def().input_label, MasteryWheel.ROMAN[state.appearance - 1]]
-	if prop != null:
-		var parent := int(nodes[index]["parent"])
-		caption = "После %d · %s" % [int(nodes[parent]["order"]), PropertyTree.event_label(prop.listen_event)] if bool(nodes[index]["linked"]) else "Нет запуска"
-	button.draw_string(UiKit.body_font(), Vector2(4, 48), caption, HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 14, UiKit.GOLD if prop == null else UiKit.MUTED)
+	var panel := PanelContainer.new()
+	panel.theme = UiKit.theme()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.055, 0.045, 0.065), _color(index), 1, 8, 12))
+	var content := VBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override(&"separation", 6)
+	panel.add_child(content)
+	content.add_child(UiKit.label(_label(index), 20, UiKit.GOLD))
 	if prop == null:
+		content.add_child(UiKit.label("%s · Облик %s" % [state.def().input_label, MasteryWheel.ROMAN[state.appearance - 1]], 16))
 		var lv := Mastery.level(state.def_id)
 		var target := int(Mastery.rules["thresholds"][mini(lv, 2)])
 		var xp := int(Mastery.xp.get(state.def_id, 0))
-		button.draw_rect(Rect2(12, 59, button.size.x - 24, 3), Color(0.2, 0.16, 0.21))
-		button.draw_rect(Rect2(12, 59, (button.size.x - 24) * clampf(float(xp) / target, 0, 1), 3), UiKit.GOLD)
-		button.draw_string(UiKit.body_font(), Vector2(4, 81), "%d / %d XP" % [xp, target], HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 13, UiKit.MUTED)
+		var bar := ProgressBar.new()
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.custom_minimum_size = Vector2(180, 5)
+		bar.show_percentage = false
+		bar.max_value = target
+		bar.value = xp
+		bar.add_theme_stylebox_override(&"background", UiKit.box(Color(0.2, 0.16, 0.21), Color.TRANSPARENT, 0, 0, 0))
+		bar.add_theme_stylebox_override(&"fill", UiKit.box(UiKit.GOLD, Color.TRANSPARENT, 0, 0, 0))
+		content.add_child(bar)
+		content.add_child(UiKit.label("%d / %d XP" % [xp, target], 15, UiKit.MUTED))
 	else:
-		button.draw_string(UiKit.body_font(), Vector2(4, 77), "%d XP · стоп" % int(Mastery.xp.get(nodes[index]["source"], 0)), HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 13, UiKit.MUTED)
+		content.add_child(UiKit.label("Поглощённая сила", 16))
+		content.add_child(UiKit.label("Носитель: %s" % state.def().display_name, 15, UiKit.MUTED))
+		content.add_child(UiKit.label("%d XP · не растёт" % int(Mastery.xp.get(nodes[index]["source"], 0)), 15, UiKit.MUTED))
+	return panel
 
 
 func sector_at(point: Vector2) -> int:
@@ -196,6 +206,7 @@ func sector_at(point: Vector2) -> int:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_hover = sector_at(event.position)
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if _hover >= 0 else Control.CURSOR_ARROW
 		queue_redraw()
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var index := sector_at(event.position)
@@ -232,10 +243,11 @@ func _draw() -> void:
 		outline.append(outline[0])
 		draw_polyline(outline, UiKit.GOLD if i == selected_node else Color(color, 0.8 if i in path else 0.35), 2 if i in path or hot else 1, true)
 		var icon := IconFactory.icon(nodes[i]["source"])
-		var pos := _center() + Vector2.from_angle(angle) * (radius - 29)
+		var pos := _center() + Vector2.from_angle(angle) * (radius - 46)
 		if icon != null:
 			draw_circle(pos, 23, Color(0.035, 0.025, 0.04, 0.9))
 			draw_texture_rect(icon, Rect2(pos - Vector2(23, 23), Vector2(46, 46)), false)
+		draw_string(UiKit.body_font(), pos + Vector2(-68, 42), _label(i), HORIZONTAL_ALIGNMENT_CENTER, 136, 18, UiKit.GOLD if hot else UiKit.TEXT)
 		var number_pos := _center() + Vector2.from_angle(angle) * (INNER + 21)
 		draw_circle(number_pos, 15, Color(0.04, 0.03, 0.05))
 		draw_string(UiKit.body_font(), number_pos + Vector2(-15, 6), str(nodes[i]["order"]) if bool(nodes[i]["linked"]) else "!", HORIZONTAL_ALIGNMENT_CENTER, 30, 18, UiKit.GOLD if i in path else UiKit.TEXT)

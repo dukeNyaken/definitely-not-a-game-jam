@@ -58,7 +58,7 @@ func _ready() -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override(&"separation", 20)
 	layout.add_child(footer)
-	_summary = UiKit.label("По часовой · 1 — навык, далее — его силы\nНажми сектор для параметров", 17, UiKit.MUTED)
+	_summary = UiKit.label("По часовой · 1 — навык, далее — его силы\nНаведи для XP · Нажми для параметров", 17, UiKit.MUTED)
 	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(_summary)
 	var close := UiKit.button("В бой · Tab", func(): close_requested.emit())
@@ -80,7 +80,6 @@ func _refresh_tree() -> void:
 
 
 func _refresh_meta() -> void:
-	_diagram._redraw_labels()
 	_diagram.queue_redraw()
 	if not _diagram.nodes.is_empty():
 		_inspect_node(_diagram.selected_node)
@@ -105,13 +104,12 @@ func _inspect_node(index: int) -> void:
 		_details.add_child(UiKit.label("%s · %s" % [def.input_label, def.event_label()], 19, UiKit.GOLD))
 		_details.add_child(_wrapped("Облик %s · %s" % [MasteryWheel.ROMAN[_host.appearance - 1], Mastery.form(_host.def_id, _host.appearance)["name"]], 17, UiKit.MUTED))
 		_details.add_child(UiKit.label(Mastery.progress_text(_host.def_id), 17))
-		var hints := {&"sword": "Три удара подряд; последний — завершающий.", &"shield": "Удерживай ПКМ. Блокирует атаки спереди.", &"armor": "Броня принимает урон раньше здоровья.", &"helmet": "После атаки врага — окно крита.", &"boots": "Рывок по направлению движения.", &"gloves": "Притягивает и оглушает цели перед тобой.", &"amulet": "Волна вокруг героя."}
+		var hints := {&"sword": "Три удара подряд; последний — завершающий.", &"shield": "Удерживай ПКМ. Блокирует атаки спереди.", &"armor": "Броня принимает урон раньше здоровья.", &"helmet": "Враг завершил атаку — окно крита.", &"boots": "Рывок по направлению движения.", &"gloves": "Притягивает и оглушает цели перед тобой.", &"amulet": "Волна вокруг героя."}
 		_details.add_child(_wrapped(hints[_host.def_id], 17, UiKit.TEXT))
 		metrics = BattleSkillInfo.native(_host)
 	else:
 		var essence := Db.essence(prop.essence_id)
-		_details.add_child(_wrapped(prop.display_name(), 30, essence.color))
-		_details.add_child(_wrapped("После: %s" % PropertyTree.event_label(prop.listen_event), 19, UiKit.GOLD))
+		_details.add_child(_wrapped(Db.item(prop.source_item_id).display_name, 30, essence.color))
 		_details.add_child(_wrapped("Носитель: %s · Урон +%d%%" % [_host.def().display_name, roundi((ActionContext.item_mult(_host) - 1) * 100)], 17, UiKit.MUTED))
 		_details.add_child(UiKit.label("%s · %d XP · стоп" % [Db.item(prop.source_item_id).display_name, int(Mastery.xp.get(prop.source_item_id, 0))], 17, UiKit.MUTED))
 		if not bool(_diagram.nodes[index]["linked"]):
