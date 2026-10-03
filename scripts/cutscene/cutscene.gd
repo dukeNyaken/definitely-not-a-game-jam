@@ -17,6 +17,7 @@ const MOODS := {
 	&"scene": [Color.WHITE, 0.0, 0.6, 0.12, 0.0],
 	&"flashback": [CutsceneUi.SEPIA, 0.85, 0.7, 0.5, 0.6],
 	&"palace": [Color(1.0, 0.5, 0.45), 0.32, 1.1, 0.2, 0.0],
+	&"hearth": [Color(1.0, 0.74, 0.48), 0.3, 0.95, 0.16, 0.0],
 	&"hurt": [Color(0.72, 0.78, 0.95), 0.5, 0.9, 0.18, 0.0],
 	&"blood": [Color(1.0, 0.32, 0.3), 0.45, 1.05, 0.2, 0.0],
 	&"dawn": [Color(1.0, 0.84, 0.58), 0.4, 0.45, 0.1, 0.0],
@@ -42,8 +43,9 @@ var _barks: Array[Array] = []
 var _barking: bool = false
 
 
+## В просмотре из меню «Катсцены» сцены идут всегда — что бы ни стояло в настройке.
 static func enabled() -> bool:
-	return Render.cutscenes and not RunState.skip_cutscenes
+	return Theater.requested() or (Render.cutscenes and not RunState.skip_cutscenes)
 
 
 func setup(p_game: Game) -> void:

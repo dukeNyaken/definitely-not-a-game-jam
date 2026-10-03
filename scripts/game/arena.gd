@@ -16,6 +16,8 @@ var _occluders: Array[Dictionary] = []
 ## Реквизит по краю: { "node": Node3D, "angle": float }.
 var _edge_props: Array[Dictionary] = []
 var _lights: Array[OmniLight3D] = []
+## Сцена под крышей: луна и зарево не светят, общий свет слабее (см. set_indoor).
+var _indoor: bool = false
 var _t: float = 0.0
 var _rng := RandomNumberGenerator.new()
 
@@ -104,6 +106,13 @@ func _build_environment() -> void:
 	add_child(_rim)
 
 
+## Сюжетная сцена под крышей (дом Сольвейг): луна и зарево гаснут, общий свет слабеет —
+## кадр освещают огни самой сцены. set_indoor(false) возвращает свет арены.
+func set_indoor(on: bool) -> void:
+	_indoor = on
+	_apply_render_mode(Render.mode)
+
+
 func _apply_render_mode(mode: int) -> void:
 	var e := _env.environment
 	var ps1 := mode == Render.Mode.PS1
@@ -112,8 +121,9 @@ func _apply_render_mode(mode: int) -> void:
 	e.glow_intensity = 0.9
 	e.glow_bloom = 0.12
 	e.glow_hdr_threshold = 0.9
-	e.ambient_light_energy = 1.5 if ps1 else 0.8
-	_moon.light_energy = 1.35 if ps1 else 1.05
+	e.ambient_light_energy = (1.5 if ps1 else 0.8) * (0.5 if _indoor else 1.0)
+	_moon.light_energy = 0.0 if _indoor else (1.35 if ps1 else 1.05)
+	_rim.light_energy = 0.0 if _indoor else 0.4
 
 
 # --- Пол --------------------------------------------------------------------

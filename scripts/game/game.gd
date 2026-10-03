@@ -21,8 +21,10 @@ var hud: Hud
 var altar: Altar
 var shrine: Shrine
 var boss_director: BossDirector
-## Сюжетные сцены: пролог, дары, голос из дворца, ворота, реплики в бою, финал.
+## Сюжетные сцены: пролог, дары, дом Сольвейг, тронный зал, голос из дворца, ворота, реплики в бою, финал.
 var cutscene: Cutscene
+## Просмотр сцены из меню «Катсцены»: после неё игра не идёт дальше, а возвращает зрителя в галерею.
+var theater: Theater
 var wave: int = -1
 var rng := RandomNumberGenerator.new()
 var _spawn_queue: Array[Dictionary] = []
@@ -59,6 +61,12 @@ func _ready() -> void:
 	cutscene = Cutscene.new()
 	add_child(cutscene)
 	cutscene.setup(self)
+	if Theater.requested():
+		theater = Theater.new()
+		theater.name = "Theater"
+		add_child(theater)
+		theater.run(self)
+		return
 	RunState.running = true
 	start_stage(RunState.stage)
 
@@ -454,6 +462,9 @@ func do_sacrifice(index: int) -> void:
 			"property": res["property"],
 			"ordinal": RunState.sacrifices_count(),
 		})
+		if theater != null:
+			theater.leave()
+			return
 		_next_stage(true)
 		return
 	var victim_def := Db.item(victim_id)
@@ -469,14 +480,20 @@ func do_sacrifice(index: int) -> void:
 	get_tree().create_timer(2.4, false).timeout.connect(_next_stage)
 
 
-## after_gift — после сцены дара: в затемнении — тронный зал и голос Сигварда из дворца.
+## after_gift — после сцены дара: в затемнении — дом Сольвейг (после второго дара) или её разговор
+## с Сигвардом (после третьего), затем тронный зал и голос Сигварда из дворца.
 func _next_stage(after_gift: bool = false) -> void:
 	set_state(State.TRANSITION)
 	hud.fade(true, 0.5)
 	await get_tree().create_timer(0.55, false).timeout
 	var n := RunState.sacrifices_count()
-	if after_gift and Cutscene.enabled() and n >= 1 and n <= Story.BROTHER_LINES.size():
-		await PalaceScene.play(cutscene, self, n)
+	if after_gift and Cutscene.enabled():
+		if n == Story.HEARTH_AFTER_GIFT:
+			await HearthScene.play(cutscene, self)
+		elif n == Story.TEMPTATION_AFTER_GIFT:
+			await TemptationScene.play(cutscene, self)
+		if n >= 1 and n <= Story.BROTHER_LINES.size():
+			await PalaceScene.play(cutscene, self, n)
 	start_stage(RunState.stage + 1)
 	hud.fade(false, 0.6)
 
@@ -556,4 +573,7 @@ func _finish(delay: float) -> void:
 	Engine.time_scale = 1.0
 	hud.fade(true, 0.6)
 	await get_tree().create_timer(0.65).timeout
+	if theater != null:
+		theater.leave()
+		return
 	get_tree().change_scene_to_file("res://scenes/final_card.tscn")

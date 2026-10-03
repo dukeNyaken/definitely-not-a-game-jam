@@ -1,6 +1,7 @@
 class_name ItemShowcase
 extends SubViewportContainer
-## 3D-витрина вещей: кольцо вращающихся вещей (меню) или одна вещь-артефакт (финал).
+## 3D-витрина: кольцо вращающихся вещей (меню), одна вещь-артефакт (финал)
+## или действующие лица сцены в ряд (меню «Катсцены»).
 
 var _hero: Actor
 var viewport: SubViewport
@@ -128,6 +129,28 @@ func show_single(state: ItemState) -> void:
 	pivot.add_child(d)
 	_displays.append(d)
 	spin_speed = 0.7
+
+
+## Действующие лица сцены в ряд, лицом к зрителю. aspect — ширина витрины к высоте: персонажи стоят
+## по центрам равных долей ширины, так что подписи в ряд под витриной встают точно под ними.
+func show_cast(whos: Array[StringName], aspect: float) -> void:
+	spin_speed = 0.0
+	var n := maxi(whos.size(), 1)
+	var height := maxf(2.7, n * 0.95 / aspect)
+	var step := height * aspect / n
+	_add_camera(Vector3(0, 2.2, 6.0), Vector3(0, 1.08, 0), height)
+	for i in whos.size():
+		var p := Puppet.make(Story.kind_of(whos[i]))
+		viewport.add_child(p)
+		p.set_physics_process(false)
+		p.position = Vector3((i - (n - 1) * 0.5) * step, 0, 0)
+		p.look_toward(p.position + Vector3(0, 0, 1))
+		if whos[i] == &"hero":
+			# Солдат — при всех семи вещах: такой он в начале пути.
+			var gear: Array[ItemState] = []
+			for id in Db.ITEM_IDS:
+				gear.append(ItemState.create(id))
+			p.set_items(gear)
 
 
 func _ready() -> void:

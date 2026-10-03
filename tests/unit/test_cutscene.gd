@@ -64,7 +64,7 @@ func test_skip_needs_an_active_scene() -> void:
 
 func test_every_npc_kind_builds_and_stays_out_of_combat() -> void:
 	var looks := []
-	for k in range(ActorModel.Kind.FRIEND, ActorModel.Kind.FATHER + 1):
+	for k in range(ActorModel.Kind.FRIEND, ActorModel.Kind.MOTHER + 1):
 		looks.append([k, &""])
 	looks.append([ActorModel.Kind.TYRANT, &"young"])
 	for l in looks:
@@ -148,10 +148,32 @@ func test_set_pieces_build() -> void:
 	add_child_autofree(hall)
 	assert_eq((hall.get_meta(&"braziers") as Array).size(), 2)
 	assert_not_null(hall.find_child("Throne", true, false))
-	for make in [SetPieces.weapon_rack, SetPieces.training_post, SetPieces.candle_stand, SetPieces.letter, SetPieces.bread, SetPieces.flask]:
+	for make in [SetPieces.weapon_rack, SetPieces.training_post, SetPieces.candle_stand, SetPieces.letter, SetPieces.bread, SetPieces.flask,
+			SetPieces.hearth, SetPieces.night_window, SetPieces.spinning_wheel, SetPieces.chest, SetPieces.purse]:
 		var n: Node3D = make.call()
 		assert_gt(n.get_child_count(), 0)
 		n.free()
+
+
+func test_cottage_has_what_the_hearth_scene_needs() -> void:
+	var room := SetPieces.cottage()
+	add_child_autofree(room)
+	for key in [&"hearth", &"window", &"table", &"wheel", &"chest"]:
+		assert_true(room.get_meta(key) is Node3D, str(key))
+	assert_not_null((room.get_meta(&"table") as Node3D).get_node_or_null("Flame"), "пламя свечи, которое гаснет в конце")
+
+
+## Позы сомнения: руки сцеплены у пояса; у downcast ещё и опущена голова (отрицательный наклон — вниз).
+func test_doubt_poses() -> void:
+	var p := Puppet.make(ActorModel.Kind.BELOVED)
+	add_child_autofree(p)
+	p.set_pose(&"wring")
+	p.model._animate(0.016)
+	assert_almost_eq(p.model.head.rotation.x, 0.0, 0.001)
+	assert_ne(p.model.arm_l.basis, Basis())
+	p.set_pose(&"downcast")
+	p.model._animate(0.016)
+	assert_lt(p.model.head.rotation.x, 0.0)
 
 
 func test_flicker_light_and_fire() -> void:

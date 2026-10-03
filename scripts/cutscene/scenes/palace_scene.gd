@@ -21,7 +21,7 @@ static func play(cs: Cutscene, game: Game, n: int) -> void:
 	cs.begin()
 	if moon != null:
 		moon.visible = false
-	var hall := _build(cs, game)
+	var hall := build_hall(cs, game)
 	await _body(cs, game, hall, n, text)
 	cs.ui.black(1.0, 0.0 if cs.skipped else 0.6)
 	await cs.wait(0.6)
@@ -32,7 +32,8 @@ static func play(cs: Cutscene, game: Game, n: int) -> void:
 
 
 ## Зал: пол, ковёр, окна в зареве, колонны, трон, стяги и две жаровни с живым огнём.
-static func _build(cs: Cutscene, game: Game) -> Node3D:
+## В том же зале идёт TemptationScene.
+static func build_hall(cs: Cutscene, game: Game) -> Node3D:
 	var hall := SetPieces.throne_hall()
 	cs.prop(hall)
 	hall.global_position = ORIGIN

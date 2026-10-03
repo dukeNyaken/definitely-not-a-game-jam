@@ -4,7 +4,7 @@ extends Node3D
 ## Читает состояние своего Actor каждый кадр; разовые анимации — по сигналам.
 
 ## SLIME, JESTER — враги; после них — люди сюжетных сцен (наряды в NpcLooks).
-enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM, SLIME, JESTER, FRIEND, BELOVED, FAITHFUL, REFUGEE, CAPTAIN, WIDOW, SMITH, NOVICE, TYRANT, FATHER }
+enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM, SLIME, JESTER, FRIEND, BELOVED, FAITHFUL, REFUGEE, CAPTAIN, WIDOW, SMITH, NOVICE, TYRANT, FATHER, MOTHER }
 
 const SLIME_EDGE := 0.95
 
@@ -40,7 +40,8 @@ var _crown: Node3D
 ## Вариант наряда (например, &"young" — Тиран во флешбэке). Задаётся до setup().
 var variant: StringName = &""
 ## Поза сюжетной сцены: &"kneel", &"slump", &"sit", &"hold", &"bow", &"offer", &"ease", &"arms_up", &"hands_back",
-## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer". Пустая — обычная анимация; rest_pose — поза по умолчанию у NPC.
+## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer", &"wring", &"downcast". Пустая — обычная анимация;
+## rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
 ## Осколки короны босса по вещам: def_id → узел.
@@ -134,7 +135,7 @@ func _proportions() -> Dictionary:
 			return {"hip_y": 0.46, "hip_w": 0.12, "leg": 0.42, "chest": Vector3(0.5, 0.42, 0.34), "shoulder": 0.3, "arm": 0.4, "limb": 0.12}
 		Kind.INFANTRY:
 			return {"hip_y": 0.9, "hip_w": 0.13, "leg": 0.84, "chest": Vector3(0.52, 0.6, 0.3), "shoulder": 0.34, "arm": 0.66, "limb": 0.16}
-		Kind.BELOVED, Kind.FAITHFUL, Kind.WIDOW:
+		Kind.BELOVED, Kind.FAITHFUL, Kind.WIDOW, Kind.MOTHER:
 			return {"hip_y": 0.9, "hip_w": 0.11, "leg": 0.84, "chest": Vector3(0.44, 0.56, 0.28), "shoulder": 0.29, "arm": 0.64, "limb": 0.13}
 		Kind.SMITH:
 			return {"hip_y": 0.88, "hip_w": 0.15, "leg": 0.8, "chest": Vector3(0.72, 0.62, 0.42), "shoulder": 0.44, "arm": 0.7, "limb": 0.22}
@@ -1057,6 +1058,14 @@ func _apply_pose(p: StringName, moving: float, arm_l_basis: Basis, arm_r_basis: 
 			arm_l_basis = Basis(Vector3.UP, -0.25) * Basis(Vector3.RIGHT, 0.55)
 			if p == &"frail_offer":
 				arm_r_basis = Basis(Vector3.UP, 0.2) * Basis(Vector3.RIGHT, 1.35)
+		&"wring", &"downcast":
+			# Руки сцеплены у пояса: тревога, ожидание. downcast — ещё и опущенная голова: сомнение.
+			arm_l_basis = Basis(Vector3.UP, -0.85) * Basis(Vector3.RIGHT, 0.55)
+			arm_r_basis = Basis(Vector3.UP, 0.85) * Basis(Vector3.RIGHT, 0.55)
+			# Наклон небольшой: камера смотрит сверху, и сильнее опущенная голова закрыла бы лицо макушкой.
+			if p == &"downcast":
+				torso.rotation.x = -0.08
+				head.rotation.x = -0.16
 	return [arm_l_basis, arm_r_basis]
 
 

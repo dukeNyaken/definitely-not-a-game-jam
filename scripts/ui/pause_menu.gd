@@ -70,6 +70,7 @@ func _volume_row(title: String, value: float, setter: Callable) -> Control:
 
 func _restart() -> void:
 	get_tree().paused = false
+	Theater.close()
 	RunState.new_run()
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
 

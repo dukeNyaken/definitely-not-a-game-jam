@@ -50,7 +50,8 @@ func _export() -> void:
 	for p in story.BROTHER_BARKS:
 		lines["bark.brother.%d" % p] = {"speaker": "brother", "text": story.BROTHER_BARKS[p]}
 	lines["bark.iva"] = {"speaker": "faithful", "text": story.IVA_BARK}
-	for section in [["prologue", story.PROLOGUE], ["gates", story.GATES], ["finale", story.FINALE]]:
+	for section in [["prologue", story.PROLOGUE], ["hearth", story.HEARTH], ["temptation", story.TEMPTATION],
+			["gates", story.GATES], ["finale", story.FINALE]]:
 		var d: Dictionary = section[1]
 		for key in d:
 			lines["%s.%s" % [section[0], key]] = {"speaker": "", "text": d[key]}

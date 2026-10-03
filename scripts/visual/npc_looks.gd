@@ -24,6 +24,8 @@ static func scale_for(kind: int, variant: StringName = &"") -> float:
 			return 1.0 if variant == &"young" else 1.04
 		ActorModel.Kind.FATHER:
 			return 0.98
+		ActorModel.Kind.MOTHER:
+			return 0.9
 	return 1.0
 
 
@@ -39,6 +41,7 @@ static func dress(m: ActorModel, p: Dictionary) -> void:
 		ActorModel.Kind.NOVICE: _novice(m, p)
 		ActorModel.Kind.TYRANT: _tyrant(m, p)
 		ActorModel.Kind.FATHER: _father(m, p)
+		ActorModel.Kind.MOTHER: _mother(m, p)
 
 
 # --- Общие части ------------------------------------------------------------
@@ -414,6 +417,37 @@ static func _father(m: ActorModel, p: Dictionary) -> void:
 	staff.add_child(LowPoly.sphere(0.06, 6, 3, Color(0.5, 0.36, 0.22), Vector3(0, 1.17, 0), 0.9, 0.0, 0.0, &"wood"))
 	staff.rotation.x = -0.55
 	m.sockets[&"l_hand"].add_child(staff)
+
+
+# --- Гудрун: мать Сольвейг. Седая, в тёмном платье и белом повойнике, ключи у пояса --
+
+static func _mother(m: ActorModel, p: Dictionary) -> void:
+	var dress := Color(0.3, 0.36, 0.31)
+	var apron := Color(0.82, 0.78, 0.7)
+	# Выцветший багрянец шали — тот же цвет, что у платья дочери.
+	var shawl := Color(0.48, 0.2, 0.2)
+	var coif := Color(0.92, 0.9, 0.84)
+	var grey := Color(0.74, 0.73, 0.72)
+	var skin := Color(0.86, 0.75, 0.68)
+	var chest: Vector3 = p["chest"]
+	m.rest_pose = &"wring"
+	_legs(m, p, dress.darkened(0.3), &"cloth", 0.08)
+	_skirt(m, dress, 0.21, 0.4)
+	m._f(m.hips, Vector2(0.34, 0.03), Vector2(0.26, 0.03), 0.62, apron, Vector3(0, -0.42, -0.3), &"rags", Vector2.ZERO, Vector3(0.18, 0, 0))
+	m._oval(m.torso, 0.24, 0.18, chest.y * 0.9, 0.66, dress, Vector3(0, chest.y * 0.45, 0), &"cloth")
+	m._f(m.torso, Vector2(0.56, 0.36), Vector2(0.3, 0.22), 0.3, shawl, Vector3(0, chest.y * 0.82, 0.02), &"cloth")
+	m._f(m.torso, Vector2(0.28, 0.03), Vector2(0.44, 0.03), 0.5, shawl, Vector3(0, chest.y * 0.36, chest.z * 0.6), &"cloth")
+	# Связка ключей у пояса: дом пока её.
+	m.hips.add_child(LowPoly.torus(0.035, 0.05, 8, 3, GOLD, Vector3(0.24, -0.02, -0.12), 0.4, 0.8, 0.3, &"gold"))
+	for k in 3:
+		m._bx(m.hips, Vector3(0.02, 0.13, 0.02), GOLD, Vector3(0.22 + k * 0.025, -0.11, -0.13), &"gold", Vector3(0, 0, -0.2 + k * 0.2), 0.8, 0.2)
+	_head(m, skin, 0.2)
+	# Повойник; из-под него — седые пряди на висках.
+	m._ball(m.head, 0.166, coif, Vector3(0, 0.31, 0.035), &"", Vector3(1.0, 0.95, 1.05))
+	m._f(m.head, Vector2(0.28, 0.06), Vector2(0.22, 0.06), 0.24, coif, Vector3(0, 0.14, 0.13))
+	for side in [-1.0, 1.0]:
+		m._bx(m.head, Vector3(0.03, 0.11, 0.05), grey, Vector3(side * 0.137, 0.22, -0.08), &"fur")
+	_arms(m, p, dress, &"cloth", skin, 0.075, 0.065)
 
 
 # --- Реквизит ---------------------------------------------------------------

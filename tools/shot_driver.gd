@@ -1,6 +1,8 @@
 extends Node
 ## Драйвер скриншотов: готовит состояние по пресету, ждёт delay секунд, сохраняет кадр.
 ## every=N — серия кадров каждые N секунд до delay (раскадровка сюжетной сцены).
+## preset=theater key=<ключ сцены> — сцена из меню «Катсцены» (ключи — в CutsceneCatalog: hearth, temptation,
+## gift_3, palace_5 …); preset=cutscenes — само меню, key — выбранная в нём сцена. speed=N ускоряет время.
 
 var _preset := "game"
 var _out := "user://shot.png"
@@ -8,6 +10,9 @@ var _delay := 3.0
 ## Серия: кадр каждые every секунд до delay — out_<секунда>.png (раскадровка сцены за один прогон).
 var _every := 0.0
 var _next_shot := 0.0
+## Ключ сцены каталога для пресетов theater и cutscenes.
+var _key := "hearth"
+var _speed := 1.0
 var _t := 0.0
 var _setup_done := false
 var _hovered := false
@@ -26,6 +31,8 @@ func _ready() -> void:
 			"delay": _delay = float(kv[1])
 			"every": _every = float(kv[1])
 			"variant": SkinnedActorModel.select(kv[1])
+			"key": _key = kv[1]
+			"speed": _speed = float(kv[1])
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
 	var story := _preset in ["prologue", "gift", "gates", "finale"]
@@ -43,6 +50,14 @@ func _ready() -> void:
 			RunState.stage = 7
 		"menu":
 			scene = "res://scenes/main_menu.tscn"
+		"cutscenes":
+			Theater.last_key = _key
+			scene = Theater.GALLERY_SCENE
+		"theater":
+			var items: Array[Dictionary] = [{"key": _key, "opts": CutsceneCatalog.resolve(CutsceneCatalog.find(_key))}]
+			Theater.queue = items
+			Theater.cursor = 0
+			Theater.prepare(items[0])
 		"final", "final_death":
 			for i in (6 if _preset == "final" else 3):
 				RunState.sacrifice(0)
@@ -88,6 +103,8 @@ func _setup() -> void:
 
 
 func _process(delta: float) -> void:
+	if _speed != 1.0:
+		Engine.time_scale = _speed
 	_t += delta
 	if not _setup_done and _t > 1.0:
 		_setup_done = true

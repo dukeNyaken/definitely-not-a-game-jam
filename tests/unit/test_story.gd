@@ -69,8 +69,29 @@ func test_brother_line_ring_variant() -> void:
 	assert_eq(Story.brother_line(Story.BROTHER_LINES.size() + 1, gloves), "")
 
 
+## Сцены Сольвейг: сначала страх (дом, разговор с матерью), потом искушение (тронный зал) —
+## и обе раньше дара, после которого Сигвард читает её письмо.
+func test_bride_scenes_have_their_place_and_lines() -> void:
+	var gifts := Db.balance.stage_count - 1
+	assert_between(Story.HEARTH_AFTER_GIFT, 1, gifts)
+	assert_between(Story.TEMPTATION_AFTER_GIFT, 1, gifts)
+	assert_lt(Story.HEARTH_AFTER_GIFT, Story.TEMPTATION_AFTER_GIFT)
+	for section in [Story.HEARTH, Story.TEMPTATION]:
+		for key in section:
+			assert_ne(str(section[key]), "", key)
+	assert_eq(Story.kind_of(&"mother"), ActorModel.Kind.MOTHER)
+
+
+func test_hearth_lists_what_was_given_to_strangers() -> void:
+	assert_eq(Story.hearth_given_line(_snaps([])), "")
+	assert_eq(Story.hearth_given_line(_snaps([&"amulet"])), "", "оберег у самой Сольвейг — не в счёт")
+	assert_string_contains(Story.hearth_given_line(_snaps([&"sword", &"amulet"])), "отдал меч.")
+	assert_string_contains(Story.hearth_given_line(_snaps([&"sword", &"boots"])), "меч и сапоги")
+	assert_eq(Story.list_text(["меч", "сапоги", "щит"] as Array[String]), "меч, сапоги и щит")
+
+
 func test_chapters() -> void:
-	for key in ["prologue", "gates", "epilogue"]:
+	for key in ["prologue", "hearth", "temptation", "gates", "epilogue"]:
 		assert_ne(str(Story.chapter(key)[0]), "", key)
 	assert_eq(Story.gift_chapter(1, &"sword"), ["Дар первый", "Меч · Торстейн"])
 	assert_eq(Story.gift_chapter(6, &"amulet")[1], "Оберег · Сольвейг")

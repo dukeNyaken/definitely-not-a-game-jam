@@ -133,8 +133,9 @@ func _build_line() -> void:
 	root.add_child(_line_bg)
 	_line_box = VBoxContainer.new()
 	_line_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_line_box.offset_left = -640
-	_line_box.offset_right = 640
+	# Узкая колонка: длинная реплика переносится на вторую строку, а не дотягивается до подсказки пропуска справа.
+	_line_box.offset_left = -450
+	_line_box.offset_right = 450
 	_line_box.offset_top = -BAR_H - 96
 	_line_box.offset_bottom = -22
 	_line_box.alignment = BoxContainer.ALIGNMENT_END

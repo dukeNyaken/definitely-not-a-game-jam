@@ -13,6 +13,8 @@ func _ready() -> void:
 	theme = UiKit.theme()
 	get_tree().paused = false
 	Engine.time_scale = 1.0
+	# Из меню начинается забег, а не просмотр сцен.
+	Theater.close()
 	var bg := TextureRect.new()
 	var grad := Gradient.new()
 	grad.set_color(0, Color(0.16, 0.11, 0.12))
@@ -55,9 +57,9 @@ func _ready() -> void:
 	v.set_anchors_preset(Control.PRESET_CENTER_LEFT)
 	v.offset_left = 110
 	v.offset_right = 760
-	v.offset_top = -300
-	v.offset_bottom = 320
-	v.add_theme_constant_override(&"separation", 16)
+	v.offset_top = -340
+	v.offset_bottom = 340
+	v.add_theme_constant_override(&"separation", 14)
 	ui.add_child(v)
 	v.add_child(UiKit.outlined(UiKit.label("Только самое нужное", 64, UiKit.GOLD), 8))
 	var line := ColorRect.new()
@@ -95,6 +97,10 @@ func _ready() -> void:
 	story_btn.custom_minimum_size = Vector2(360, 50)
 	story_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(story_btn)
+	var scenes := UiKit.button("Катсцены", func(): get_tree().change_scene_to_file("res://scenes/cutscene_gallery.tscn"))
+	scenes.custom_minimum_size = Vector2(360, 50)
+	scenes.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(scenes)
 	# Выбор героя — только если собраны сгенерированные герои (assets/characters/heroes.json).
 	if SkinnedActorModel.available() and SkinnedActorModel.variants().size() > 1:
 		_hero_button = UiKit.button("", _next_hero)
