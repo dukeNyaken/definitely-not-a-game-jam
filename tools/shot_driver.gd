@@ -56,9 +56,11 @@ func _ready() -> void:
 			Mastery.choices[id] = 3
 	if _preset.begins_with("tree"):
 		Mastery.memory_only = true
-		for id in Db.ITEM_IDS:
-			Mastery.xp[id] = 1000
-			Mastery.choices[id] = 3
+		var starts := [210, 440, 900, 1000, 10, 620, 200]
+		for i in Db.ITEM_IDS.size():
+			var id := Db.ITEM_IDS[i]
+			Mastery.xp[id] = starts[i] if _preset == "tree_mixed" else 1000
+			Mastery.choices[id] = Mastery.level(id)
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
 	var story := _preset in ["prologue", "gift", "gates", "finale"]
@@ -107,7 +109,7 @@ func _ready() -> void:
 			for i in 6:
 				RunState.sacrifice(0)
 			RunState.stage = 7
-		"stage4", "tree":
+		"stage4", "tree", "tree_mixed":
 			for i in 3:
 				RunState.sacrifice(0)
 			RunState.stage = 4
@@ -158,7 +160,7 @@ func _setup() -> void:
 	match _preset:
 		"altar":
 			g.debug_skip_stage()
-		"tree", "tree_start", "tree_full", "tree_branch":
+		"tree", "tree_mixed", "tree_start", "tree_full", "tree_branch":
 			g.hud.toggle_tree()
 			if _item != "":
 				g.hud._screen.select_item(StringName(_item))
