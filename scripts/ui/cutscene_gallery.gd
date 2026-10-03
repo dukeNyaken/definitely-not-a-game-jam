@@ -367,13 +367,18 @@ func _back() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_cancel"):
+		# Смена сцены сразу отсоединит меню: отмечаем ввод до перехода.
+		get_viewport().set_input_as_handled()
 		_back()
+		return
 	elif event.is_action_pressed(&"move_down", true):
 		_select(mini(_index + 1, _entries.size() - 1))
 	elif event.is_action_pressed(&"move_up", true):
 		_select(maxi(_index - 1, 0))
 	elif event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).physical_keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		get_viewport().set_input_as_handled()
 		_play_one()
+		return
 	else:
 		return
 	get_viewport().set_input_as_handled()
