@@ -1,5 +1,5 @@
 extends CanvasLayer
-## Отладочное меню (F1): порядок кольца, жертва без алтаря, выдать свойство, пропуск этапа, бессмертие.
+## Отладочное меню (F1): жертвы, свойства, пропуск этапа, бессмертие и сброс мета-прогресса.
 
 var _panel: PanelContainer
 var _ring_box: VBoxContainer
@@ -7,6 +7,9 @@ var _host: OptionButton
 var _essence: OptionButton
 var _immortal: CheckButton
 var _status: Label
+var _meta_status: Label
+var _reset_dialog: ConfirmationDialog
+var _reset_was_paused := false
 
 
 func _ready() -> void:
@@ -14,7 +17,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_panel = PanelContainer.new()
 	_panel.theme = UiKit.theme()
-	_panel.position = Vector2(20, 120)
+	_panel.position = Vector2(20, 40)
 	_panel.custom_minimum_size = Vector2(430, 0)
 	_panel.visible = false
 	add_child(_panel)
@@ -49,6 +52,19 @@ func _ready() -> void:
 	_immortal.focus_mode = Control.FOCUS_NONE
 	_immortal.toggled.connect(_on_immortal)
 	v.add_child(_immortal)
+	v.add_child(HSeparator.new())
+	v.add_child(UiKit.button("Сбросить мета-прогресс", _confirm_meta_reset))
+	_meta_status = UiKit.label("Опыт и облики всех вещей", 15, UiKit.MUTED)
+	v.add_child(_meta_status)
+	_reset_dialog = ConfirmationDialog.new()
+	_reset_dialog.theme = UiKit.theme()
+	_reset_dialog.title = "Сброс мета-прогресса"
+	_reset_dialog.dialog_text = "Опыт всех вещей и облики II–III будут сброшены.\nСброс сохранится в локальном профиле."
+	_reset_dialog.ok_button_text = "Сбросить"
+	_reset_dialog.cancel_button_text = "Отмена"
+	_reset_dialog.confirmed.connect(_reset_meta)
+	_reset_dialog.canceled.connect(_cancel_meta_reset)
+	add_child(_reset_dialog)
 	RunState.ring_changed.connect(_refresh)
 
 
@@ -118,3 +134,22 @@ func _on_immortal(on: bool) -> void:
 	var g := _game()
 	if g != null:
 		g.debug_refresh_hero()
+
+
+func _confirm_meta_reset() -> void:
+	if _reset_dialog.visible:
+		return
+	_reset_was_paused = get_tree().paused
+	get_tree().paused = true
+	_reset_dialog.popup_centered(Vector2i(560, 180))
+
+
+func _cancel_meta_reset() -> void:
+	get_tree().paused = _reset_was_paused
+
+
+func _reset_meta() -> void:
+	var saved := Mastery.reset_progress()
+	_meta_status.text = "Мета-прогресс сброшен" if saved else "Сброс в памяти · не удалось сохранить"
+	_meta_status.add_theme_color_override(&"font_color", UiKit.GOLD if saved else UiKit.DANGER.lightened(0.3))
+	get_tree().paused = _reset_was_paused

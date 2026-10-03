@@ -3,6 +3,7 @@ extends Node
 
 signal changed
 signal unlocked(item_id: StringName, level: int)
+signal progress_reset
 
 const SAVE_PATH := "user://item_mastery.cfg"
 var rules: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/item_mastery.json"))
@@ -96,6 +97,46 @@ func progress_text(id: StringName) -> String:
 	if lv == 3:
 		return "Ур. 3 · МАКС"
 	return "Ур. %d · %d / %d XP" % [lv, int(xp.get(id, 0)), int(rules["thresholds"][lv])]
+
+
+## Отладочный сброс: новый пустой профиль, включая резервную копию.
+func reset_progress(path: String = SAVE_PATH) -> bool:
+	xp.clear()
+	choices.clear()
+	run_xp.clear()
+	run_start_xp.clear()
+	save_error = false
+	var saved := save_progress(path)
+	if saved and not memory_only:
+		var err := DirAccess.copy_absolute(path, path + ".bak")
+		save_error = err != OK
+		if save_error:
+			push_warning("Не удалось сбросить резервную копию опыта: %s" % error_string(err))
+		saved = not save_error
+	# Прошедший забег и снимки жертв сохраняют свои облики; текущий герой — нет.
+	if RunState.running:
+		for item in RunState.ring.items:
+			item.appearance = 1
+		var hero := Combat.hero
+		if is_instance_valid(hero):
+			for item in hero.items:
+				item.appearance = 1
+				var comp := hero.component(item.def_id)
+				if comp == null:
+					continue
+				comp.def = item.def()
+				if item.def_id == &"armor":
+					var capacity := float(comp.def.stat("armor", 50.0))
+					hero.armor = clampf(hero.armor + capacity - hero.max_armor, 0.0, capacity)
+					hero.max_armor = capacity
+				if comp is ShieldAction and comp.holding:
+					hero.block_arc_degrees = comp.def.stat("arc", 120.0)
+			hero.items_changed.emit()
+			hero.health_changed.emit()
+		RunState.ring_changed.emit()
+	progress_reset.emit()
+	changed.emit()
+	return saved
 
 
 func load_progress(path: String = SAVE_PATH) -> void:

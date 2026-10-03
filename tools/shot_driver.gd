@@ -147,6 +147,8 @@ func _setup() -> void:
 			card._open_collection()
 			if _tier > 0:
 				card._modal._inspect_tier(_tier)
+		if _hover_item != "" and _card_view == "":
+			_hover_mastery(card._wheel)
 		return
 	if _preset in ["mastery", "mastery_mixed", "mastery_empty"]:
 		var collection := MasteryUi.new()
@@ -160,6 +162,11 @@ func _setup() -> void:
 	if g == null:
 		return
 	match _preset:
+		"debug", "debug_reset":
+			DebugMenu._panel.show()
+			DebugMenu._refresh()
+			if _preset == "debug_reset":
+				DebugMenu._confirm_meta_reset()
 		"altar":
 			g.debug_skip_stage()
 		"tree", "tree_mixed", "tree_start", "tree_full", "tree_branch":
@@ -185,6 +192,15 @@ func _hover_tree(diagram: PropertyDiagram) -> void:
 	if index >= 0:
 		var motion := InputEventMouseMotion.new()
 		motion.position = diagram._buttons[index].get_global_rect().get_center()
+		get_viewport().push_input(motion, true)
+
+
+func _hover_mastery(wheel: MasteryWheel) -> void:
+	await get_tree().process_frame
+	var index := Db.ITEM_IDS.find(StringName(_hover_item))
+	if index >= 0:
+		var motion := InputEventMouseMotion.new()
+		motion.position = wheel._buttons[index].get_global_rect().get_center()
 		get_viewport().push_input(motion, true)
 
 

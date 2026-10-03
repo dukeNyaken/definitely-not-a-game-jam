@@ -36,6 +36,8 @@ func _ready() -> void:
 		var button := Button.new()
 		button.name = String(id)
 		button.focus_mode = Control.FOCUS_ALL
+		if not collection_mode:
+			button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		button.add_theme_stylebox_override(&"normal", UiKit.box(Color(0.055, 0.045, 0.065, 0.92), Color(0.22, 0.19, 0.23), 1, 8, 4))
 		button.add_theme_stylebox_override(&"hover", UiKit.box(Color(0.12, 0.09, 0.12), Db.item(id).essence.color, 1, 8, 4))
@@ -59,6 +61,16 @@ func _ready() -> void:
 	if collection_mode:
 		_refresh_collection()
 		Mastery.changed.connect(_refresh_collection)
+	else:
+		Mastery.progress_reset.connect(_refresh_after_reset)
+
+
+func _refresh_after_reset() -> void:
+	start_xp = Mastery.run_start_xp.duplicate()
+	end_xp = Mastery.xp.duplicate()
+	earned_xp = Mastery.run_xp.duplicate()
+	finish_animation()
+	_update_buttons()
 
 
 func _refresh_collection() -> void:
@@ -81,7 +93,7 @@ func _center() -> Vector2:
 
 
 func _radius() -> float:
-	return minf(size.x * 0.5 - 122.0, size.y * 0.5 - 100.0)
+	return minf(size.x * 0.5 - 122.0, size.y * 0.5 - 100.0) if collection_mode else minf(size.x * 0.5 - 42.0, size.y * 0.5 - 34.0)
 
 
 func _angle(index: int) -> float:
@@ -91,23 +103,57 @@ func _angle(index: int) -> float:
 func _layout_buttons() -> void:
 	for i in _buttons.size():
 		var direction := Vector2.from_angle(_angle(i))
-		_buttons[i].size = Vector2(126, 78)
-		_buttons[i].position = _center() + direction * (_radius() + 60.0) - _buttons[i].size * 0.5
+		_buttons[i].size = Vector2(126, 78) if collection_mode else Vector2(46, 46)
+		_buttons[i].position = _center() + direction * (_radius() + 60.0 if collection_mode else _radius() - 46.0) - _buttons[i].size * 0.5
 
 
 func _update_buttons() -> void:
 	for i in _buttons.size():
 		var id := Db.ITEM_IDS[i]
+		if not collection_mode:
+			_buttons[i].text = ""
+			for style in [&"normal", &"hover", &"pressed", &"focus"]:
+				_buttons[i].add_theme_stylebox_override(style, StyleBoxEmpty.new())
+			continue
 		var lv := tier_at(float(end_xp.get(id, 0)))
 		var upgraded := lv > tier_at(float(start_xp.get(id, 0)))
-		_buttons[i].text = "%s · %s\n%s%s" % [Db.item(id).display_name, ROMAN[lv - 1], "+%d XP" % int(earned_xp.get(id, 0)), "  ✦" if upgraded else ""]
-		if collection_mode:
-			_buttons[i].text = "%s\n%d / 3 открыто" % [Db.item(id).display_name, lv]
+		_buttons[i].text = "%s\n%d / 3 открыто" % [Db.item(id).display_name, lv]
 		_buttons[i].add_theme_font_override(&"font", UiKit.body_font())
 		_buttons[i].add_theme_font_size_override(&"font_size", 17)
 		_buttons[i].add_theme_color_override(&"font_color", UiKit.TEXT if id != selected_id else UiKit.GOLD)
 		_buttons[i].add_theme_stylebox_override(&"normal", UiKit.box(Color(0.1, 0.075, 0.1) if id == selected_id else Color(0.055, 0.045, 0.065, 0.92), Db.item(id).essence.color if id == selected_id else Color(0.22, 0.19, 0.23), 2 if id == selected_id else 1, 8, 4))
 		_buttons[i].tooltip_text = "%s\n%d / %d XP%s" % [Db.item(id).display_name, int(end_xp.get(id, 0)), int(Mastery.rules["thresholds"].back()), "\nНовый облик открыт" if upgraded else ""]
+
+
+func _get_tooltip(at_position: Vector2) -> String:
+	if collection_mode:
+		return ""
+	var index := sector_at(at_position)
+	return str(index) if index >= 0 else ""
+
+
+func _make_custom_tooltip(for_text: String) -> Object:
+	if not for_text.is_valid_int():
+		return null
+	var index := int(for_text)
+	if index < 0 or index >= Db.ITEM_IDS.size():
+		return null
+	var id := Db.ITEM_IDS[index]
+	var lv := tier_at(float(end_xp.get(id, 0)))
+	var panel := PanelContainer.new()
+	panel.theme = UiKit.theme()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.055, 0.045, 0.065), Db.item(id).essence.color, 1, 8, 12))
+	var content := VBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override(&"separation", 6)
+	panel.add_child(content)
+	content.add_child(UiKit.label("%s · %s" % [Db.item(id).display_name, ROMAN[lv - 1]], 20, UiKit.GOLD))
+	content.add_child(UiKit.label("+%d XP за забег" % int(earned_xp.get(id, 0)), 22))
+	content.add_child(UiKit.label("%d / %d XP" % [int(end_xp.get(id, 0)), int(Mastery.rules["thresholds"].back())], 16, UiKit.MUTED))
+	if lv > tier_at(float(start_xp.get(id, 0))):
+		content.add_child(UiKit.label("Новый облик открыт · %s" % ROMAN[lv - 1], 16, UiKit.GOLD))
+	return panel
 
 
 static func tier_at(value: float) -> int:
@@ -140,6 +186,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var index := sector_at(event.position)
 		_hover = Db.ITEM_IDS[index] if index >= 0 else &""
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if index >= 0 else Control.CURSOR_ARROW
 		queue_redraw()
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var index := sector_at(event.position)
@@ -246,10 +293,11 @@ func _draw_sector(index: int, radius: float) -> void:
 	outline.append(outline[0])
 	draw_polyline(outline, Color(color, 0.95 if hot else 0.28), 2.0 if hot else 1.0, true)
 	var icon := IconFactory.icon(id)
+	var pos := _center() + Vector2.from_angle(angle) * (radius - 46.0)
 	if icon != null:
-		var pos := _center() + Vector2.from_angle(angle) * (radius - 24.0)
 		draw_circle(pos, 23, Color(0.035, 0.025, 0.04, 0.88))
 		draw_texture_rect(icon, Rect2(pos - Vector2(23, 23), Vector2(46, 46)), false)
+	draw_string(UiKit.body_font(), pos + Vector2(-64, 41), Db.item(id).display_name, HORIZONTAL_ALIGNMENT_CENTER, 128, 18, UiKit.GOLD if hot else UiKit.TEXT)
 
 
 func _band(inner: float, outer: float, from: float, to: float, color: Color) -> void:
