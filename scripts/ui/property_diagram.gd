@@ -139,7 +139,7 @@ func _layout() -> void:
 
 func _color(index: int) -> Color:
 	var prop: Property = nodes[index]["property"]
-	return (nodes[index]["state"] as ItemState).def().essence.color if prop == null else Color(0.55, 0.55, 0.55)
+	return UiKit.item_color((nodes[index]["state"] as ItemState).def_id) if prop == null else Color(0.55, 0.55, 0.55)
 
 
 func _label(index: int) -> String:
@@ -228,7 +228,7 @@ func _draw() -> void:
 		var state: ItemState = group["state"]
 		var from := _angle(int(group["first"])) - step * 0.5 + GAP
 		var to := _angle(int(group["last"])) + step * 0.5 - GAP
-		var color := state.def().essence.color
+		var color := UiKit.item_color(state.def_id)
 		_band(HUB + 4, INNER - 4, from, to, Color(color, 0.23))
 		draw_arc(_center(), INNER - 4, from, to, 40, Color(color, 0.8), 2, true)
 		var mark := _center() + Vector2.from_angle((from + to) * 0.5) * 83

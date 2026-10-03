@@ -19,6 +19,11 @@ static var _body_font: Font
 static var _bold_font: Font
 
 
+## Цвет вещи в кольцах интерфейса; меч отличается от серых пожертвованных сил.
+static func item_color(id: StringName) -> Color:
+	return Color(1.0, 0.3, 0.65) if id == &"sword" else Db.item(id).essence.color
+
+
 static func title_font() -> Font:
 	if _title_font == null:
 		_title_font = load("res://assets/fonts/CormorantSC-Bold.ttf")
