@@ -24,6 +24,8 @@ IDS = ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "c
 ENEMIES = ["infantry", "archer", "brute", "caster", "jester"]
 # без скелета: сетка как есть, её ставит процедурная модель (ActorModel.SWARM_GLB, SLIME_SKULL_GLB)
 STATIC = ["swarm", "slime_skull"]
+# переделанные по концепт-артам (restyle.py): папка сборки отличается от id в игре
+SOURCE = {"infantry": "infantry_v2", "jester": "jester_v2"}
 
 
 def main(ids):
@@ -32,7 +34,7 @@ def main(ids):
         shutil.copyfile(OUT / name / "lowpoly.glb", ep.PROTO / "enemies" / f"{name}.glb")
         print(f"STATIC {name}.glb", flush=True)
     for name in [n for n in ids or IDS + ENEMIES if n not in STATIC]:
-        src = OUT / name / "animated.glb"
+        src = OUT / SOURCE.get(name, name) / "animated.glb"
         if not src.exists():
             print(f"ПРОПУСК {name}: нет {src}")
             continue

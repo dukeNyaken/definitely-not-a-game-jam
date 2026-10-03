@@ -257,7 +257,10 @@ func _build_body() -> void:
 		var looks: GDScript = NpcLooks
 		for socket_name in npc.get("props", {}):
 			var fn: String = npc["props"][socket_name]
-			sockets[StringName(socket_name)].add_child(call(fn) if has_method(fn) else looks.call(fn))
+			var prop: Node3D = call(fn) if has_method(fn) else looks.call(fn)
+			# предмет своего размера: у карлика (scale 0.55) нож не уменьшается вместе с телом
+			prop.scale /= _holder_scale
+			sockets[StringName(socket_name)].add_child(prop)
 	_build_tree(scene, player)
 	_mod = LocomotionModifier.new()
 	_mod.name = "Locomotion"

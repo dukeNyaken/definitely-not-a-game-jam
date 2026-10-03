@@ -31,6 +31,12 @@ STATIC = {
 }
 
 
+# Поправки по персонажу: лицо шута с фото читается только на текстуре 512; рог его
+# колпака Hunyuan вытягивает за спину — squash.py прижимает его к затылку до оснастки.
+BAKE = {"jester_v2": ["tex=512"]}
+SQUASH = {"jester_v2": ["z=1.45", "y=0.12", "k=0.08"]}
+
+
 def main(ids):
     for name in ids or ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "captain", "widow", "smith", "novice", "mother"]:
         d = OUT / name
@@ -40,8 +46,9 @@ def main(ids):
                 blender("bake.py", [d / "raw.glb", d / "front.png", d / "lowpoly.glb", STATIC[name][0], d / "back.png", *STATIC[name][1:]], d / "bake.py.log")
             continue
         for script, args, result in [
-            ("bake.py", [d / "raw.glb", d / "front.png", d / "lowpoly.glb", "body", d / "back.png", "tris=1500", "tex=256", "height=2.1"], "lowpoly.glb"),
-            ("rig.py", [d / "lowpoly.glb", d / "front.png", d / "rigged.glb"], "rigged.glb"),
+            ("bake.py", [d / "raw.glb", d / "front.png", d / "lowpoly.glb", "body", d / "back.png", "tris=1500", "tex=256", "height=2.1", *BAKE.get(name, [])], "lowpoly.glb"),
+            *([("squash.py", [d / "lowpoly.glb", d / "squashed.glb", *SQUASH[name]], "squashed.glb")] if name in SQUASH else []),
+            ("rig.py", [d / ("squashed.glb" if name in SQUASH else "lowpoly.glb"), d / "front.png", d / "rigged.glb"], "rigged.glb"),
             ("anim.py", [d / "rigged.glb", d / "animated.glb"], "animated.glb"),
         ]:
             if not (d / result).exists():
