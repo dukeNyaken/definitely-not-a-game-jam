@@ -1,5 +1,5 @@
 extends CanvasLayer
-## Отладочное меню (F1): жертвы, свойства, пропуск этапа, бессмертие и сброс мета-прогресса.
+## Отладочное меню (F1): жертвы, свойства, пропуск этапа, бессмертие и мета-прогресс.
 
 var _panel: PanelContainer
 var _ring_box: VBoxContainer
@@ -53,6 +53,7 @@ func _ready() -> void:
 	_immortal.toggled.connect(_on_immortal)
 	v.add_child(_immortal)
 	v.add_child(HSeparator.new())
+	v.add_child(UiKit.button("Открыть все облики", _unlock_all_appearances))
 	v.add_child(UiKit.button("Сбросить мета-прогресс", _confirm_meta_reset))
 	_meta_status = UiKit.label("Опыт и облики всех вещей", 15, UiKit.MUTED)
 	v.add_child(_meta_status)
@@ -134,6 +135,17 @@ func _on_immortal(on: bool) -> void:
 	var g := _game()
 	if g != null:
 		g.debug_refresh_hero()
+
+
+func _unlock_all_appearances() -> void:
+	for id in Db.ITEM_IDS:
+		# Открываем коллекцию, сохраняя выбранные игроком облики.
+		Mastery.choices[id] = Mastery.selected(id)
+		Mastery.xp[id] = Mastery.xp_cap()
+	var saved := Mastery.save_progress()
+	Mastery.changed.emit()
+	_meta_status.text = "Все облики открыты" if saved else "Облики открыты в памяти · не удалось сохранить"
+	_meta_status.add_theme_color_override(&"font_color", UiKit.GOLD if saved else UiKit.DANGER.lightened(0.3))
 
 
 func _confirm_meta_reset() -> void:
