@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b55ssdvxibwhb"
+uid="uid://cthbtlv0617s1"
 path="res://.godot/imported/knight_item_armor__legs_tex.png-b0a7f6b8a9b1958b9ad5a3b19db4d9f7.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "a118f896a47c0e3dcefe296359f2387b"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

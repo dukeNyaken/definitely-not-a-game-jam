@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://mn1neqal3gjs"
+uid="uid://bqypsh0aw28kj"
 path="res://.godot/imported/barbarian_item_armor_tex.png-2e4d7422dd4ded029d1612679516dbd8.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "86eeeb424e47be88334f35e42d879a51"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

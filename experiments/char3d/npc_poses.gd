@@ -77,7 +77,9 @@ func run() -> void:
 				var blade := Vector3(0, 0.55, 0.83).normalized()
 				var grip := Vector3(rs.x * 0.25, rs.y - 0.5, 0.32)
 				reach("Right", grip, Vector3(rs.x - 0.2, rs.y - 0.4, 0.0))
-				align("RightHand", item_dir(Basis(Vector3.RIGHT, deg_to_rad(-100)) * Vector3.UP), blade)
+				var kb := Basis(Vector3.RIGHT, deg_to_rad(-100))
+				# клинок вперёд-вверх, лезвие (выпуклая сторона, -Z катаны) вперёд-вниз
+				align("RightHand", item_dir(kb * Vector3.UP), blade, item_dir(kb * Vector3.FORWARD), Vector3(0, -blade.z, blade.y))
 				var ls := point("LeftUpperArm")
 				reach("Left", grip - blade * 0.22, Vector3(ls.x + 0.2, ls.y - 0.45, 0.0))
 				save_pose(id, "guard")
@@ -86,7 +88,9 @@ func run() -> void:
 				var ls := point("LeftUpperArm")
 				var rs := point("RightUpperArm")
 				reach("Left", Vector3(ls.x * 0.4, ls.y - 0.12, 0.55), Vector3(ls.x + 0.25, ls.y - 0.3, 0.2))
-				align("LeftHand", item_dir(Basis(Vector3.RIGHT, deg_to_rad(-80)) * Vector3.FORWARD), Vector3.BACK)
+				var cb := Basis(Vector3.RIGHT, deg_to_rad(-80))
+				# ложе вперёд (+Z скелета), дуга лежит горизонтально: верх арбалета вверх
+				align("LeftHand", item_dir(cb * Vector3.FORWARD), Vector3.BACK, item_dir(cb * Vector3.UP), Vector3.UP)
 				reach("Right", Vector3(rs.x * 0.3, rs.y - 0.16, 0.3), Vector3(rs.x - 0.25, rs.y - 0.3, 0.0))
 				save_pose(id, "aim")
 			if id == "widow":
@@ -192,10 +196,15 @@ func item_dir(local_dir: Vector3) -> Vector3:
 	var r: Array = cfg["sockets"]["r_hand"]["rot"]
 	return Basis.from_euler(Vector3(deg_to_rad(r[0]), deg_to_rad(r[1]), deg_to_rad(r[2]))) * local_dir
 
-## Поворачивает кость так, чтобы ось bone_dir (в её пространстве) смотрела в want (в пространстве скелета).
-func align(name: String, bone_dir: Vector3, want: Vector3) -> void:
-	var b := sk.get_bone_global_pose(sk.find_bone(name)).basis.orthonormalized()
-	set_world(name, Basis(Quaternion((b * bone_dir).normalized(), want.normalized())) * b)
+## Поворачивает кость так, чтобы ось bone_dir (в её пространстве) смотрела в want (в пространстве
+## скелета), а вторая ось bone_up — как можно ближе к want_up: иначе предмет крутится вокруг первой.
+func align(name: String, bone_dir: Vector3, want: Vector3, bone_up: Vector3, want_up: Vector3) -> void:
+	set_world(name, frame(want, want_up) * frame(bone_dir, bone_up).inverse())
+
+func frame(fwd: Vector3, up: Vector3) -> Basis:
+	var f := fwd.normalized()
+	var u := (up - f * up.dot(f)).normalized()
+	return Basis(f, u, f.cross(u))
 
 func save_pose(id: String, name: String) -> void:
 	var anim := Animation.new()
