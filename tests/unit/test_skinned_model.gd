@@ -98,7 +98,7 @@ func test_story_npcs_keep_props_and_support_story_poses() -> void:
 		if spec[2] != "":
 			var socket: Node3D = m.sockets[StringName(spec[2].get_slice("/", 0))]
 			assert_not_null(socket.get_node_or_null(spec[2].get_slice("/", 1)), "реквизит на сокете %s" % spec[2])
-		for pose_name in spec[3]:
+		for pose_name in spec[3] + [&"wring", &"downcast", &"huddle"]:
 			p.set_pose(pose_name)
 			m._animate_pose(1.0)
 			assert_true(m._cfg["poses"].has(String(pose_name)), String(pose_name))

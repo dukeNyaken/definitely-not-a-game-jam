@@ -163,9 +163,10 @@ func test_big_text_moves_without_pixel_steps() -> void:
 
 
 func test_offer_hand_follows_the_model() -> void:
-	var friend := Puppet.make(ActorModel.Kind.FRIEND)
-	add_child_autofree(friend)
-	assert_eq(friend.offer_hand(), &"r_hand", "процедурная модель протягивает правую")
+	# Гудрун своей модели не имеет: процедурная
+	var mother := Puppet.make(ActorModel.Kind.MOTHER)
+	add_child_autofree(mother)
+	assert_eq(mother.offer_hand(), &"r_hand", "процедурная модель протягивает правую")
 	var sig := Puppet.make(ActorModel.Kind.TYRANT)
 	add_child_autofree(sig)
 	if sig.model is SkinnedActorModel:
@@ -216,8 +217,10 @@ func test_cloak_follows_the_shoulders_of_its_wearer() -> void:
 
 ## Замёрзший: стоит, сжавшись, руки крест-накрест на груди. Поза — только у процедурных моделей.
 func test_huddle_pose_hunches_and_crosses_the_arms() -> void:
-	var p := Puppet.make(ActorModel.Kind.REFUGEE)
+	# поза процедурной модели; у сгенерированных она запечена (test_skinned_model)
+	var p := Puppet.make(ActorModel.Kind.MOTHER)
 	add_child_autofree(p)
+	p.model.rest_pose = &""  # своя поза покоя у неё — руки у пояса; отсчёт — от опущенных
 	p.model._animate(0.016)
 	var straight: float = p.model.torso.rotation.x
 	var hands_apart: float = p.hand_position(&"l_hand").distance_to(p.hand_position(&"r_hand"))
@@ -227,7 +230,9 @@ func test_huddle_pose_hunches_and_crosses_the_arms() -> void:
 	assert_lt(p.model.head.rotation.x, 0.0, "голова втянута")
 	assert_gt(p.hand_position(&"l_hand").y, 0.75, "руки подняты к груди")
 	assert_lt(p.hand_position(&"l_hand").distance_to(p.hand_position(&"r_hand")), hands_apart, "руки сведены")
-	assert_not_null(p.model.find_child("Bundle", true, false), "узелок сцена правила убирает сама")
+	var refugee := Puppet.make(ActorModel.Kind.REFUGEE)
+	add_child_autofree(refugee)
+	assert_not_null(refugee.model.find_child("Bundle", true, false), "узелок сцена правила убирает сама")
 
 
 func test_set_pieces_build() -> void:
@@ -252,7 +257,7 @@ func test_cottage_has_what_the_hearth_scene_needs() -> void:
 
 ## Позы сомнения: руки сцеплены у пояса; у downcast ещё и опущена голова (отрицательный наклон — вниз).
 func test_doubt_poses() -> void:
-	var p := Puppet.make(ActorModel.Kind.BELOVED)
+	var p := Puppet.make(ActorModel.Kind.MOTHER)
 	add_child_autofree(p)
 	p.set_pose(&"wring")
 	p.model._animate(0.016)

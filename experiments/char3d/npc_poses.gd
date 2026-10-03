@@ -40,6 +40,32 @@ func run() -> void:
 					sockets[socket_name]["offset"] = [off.x, off.y, off.z]
 			if not sockets.is_empty():
 				registry[id]["sockets"] = sockets
+			if people:
+				# общие позы сцен: руки сцеплены у пояса (тревога), то же с опущенной головой
+				# (сомнение), сжался от холода — руки крест-накрест на груди
+				for pose_name in ["wring", "downcast", "huddle"]:
+					neutral()
+					var l := point("LeftUpperArm")
+					var r := point("RightUpperArm")
+					var waist := point("Hips").y + 0.14
+					if pose_name == "huddle":
+						turn_world("Spine", Vector3.RIGHT, 10.0)
+						turn_world("Chest", Vector3.RIGHT, 8.0)
+						turn_world("Head", Vector3.RIGHT, 10.0)
+						l = point("LeftUpperArm")
+						r = point("RightUpperArm")
+						reach("Left", Vector3(r.x * 0.55, r.y - 0.12, r.z + 0.2), Vector3(l.x + 0.1, l.y - 0.35, l.z + 0.25))
+						reach("Right", Vector3(l.x * 0.55, l.y - 0.18, l.z + 0.24), Vector3(r.x - 0.1, r.y - 0.35, r.z + 0.25))
+					else:
+						if pose_name == "downcast":
+							turn_world("Spine", Vector3.RIGHT, 4.0)
+							turn_world("Head", Vector3.RIGHT, 12.0)
+						reach("Left", Vector3(0.04, waist, 0.2), Vector3(l.x + 0.15, l.y - 0.35, -0.05))
+						reach("Right", Vector3(-0.04, waist, 0.2), Vector3(r.x - 0.15, r.y - 0.35, -0.05))
+					save_pose(id, pose_name)
+					registry[id]["animations"][pose_name] = "res://assets/characters/anims/npc_%s_%s.tres" % [id, pose_name]
+					registry[id].get_or_add("poses", {})[pose_name] = {"anim": "npc/" + pose_name}
+				neutral()
 			if id == "friend":
 				# рука на перевязи: левое предплечье поперёк живота
 				var ls := point("LeftUpperArm")

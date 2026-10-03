@@ -3,7 +3,21 @@
     "model": "res://assets/characters/npcs/young_brother.glb",
     "measure": "res://assets/characters/measure/npc_young_brother.json",
     "animations": {
-      "idle": "res://assets/characters/anims/npc_young_brother_idle.tres"
+      "idle": "res://assets/characters/anims/npc_young_brother_idle.tres",
+      "wring": "res://assets/characters/anims/npc_young_brother_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_young_brother_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_young_brother_huddle.tres"
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
+      }
     }
   },
   "father": {
@@ -13,7 +27,10 @@
     "animations": {
       "idle": "res://assets/characters/anims/npc_father_idle.tres",
       "frail": "res://assets/characters/anims/npc_father_frail.tres",
-      "frail_offer": "res://assets/characters/anims/npc_father_frail_offer.tres"
+      "frail_offer": "res://assets/characters/anims/npc_father_frail_offer.tres",
+      "wring": "res://assets/characters/anims/npc_father_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_father_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_father_huddle.tres"
     },
     "poses": {
       "frail": {
@@ -21,6 +38,15 @@
       },
       "frail_offer": {
         "anim": "npc/frail_offer"
+      },
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
       }
     },
     "sockets": {
@@ -40,7 +66,21 @@
     "model": "res://assets/characters/npcs/beloved.glb",
     "measure": "res://assets/characters/measure/npc_beloved.json",
     "animations": {
-      "idle": "res://assets/characters/anims/npc_beloved_idle.tres"
+      "idle": "res://assets/characters/anims/npc_beloved_idle.tres",
+      "wring": "res://assets/characters/anims/npc_beloved_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_beloved_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_beloved_huddle.tres"
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
+      }
     }
   },
   "faithful": {
@@ -50,7 +90,10 @@
     "animations": {
       "idle": "res://assets/characters/anims/npc_faithful_idle.tres",
       "lantern": "res://assets/characters/anims/npc_faithful_lantern.tres",
-      "offer": "res://assets/characters/anims/npc_faithful_offer.tres"
+      "offer": "res://assets/characters/anims/npc_faithful_offer.tres",
+      "wring": "res://assets/characters/anims/npc_faithful_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_faithful_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_faithful_huddle.tres"
     },
     "poses": {
       "lantern": {
@@ -58,6 +101,15 @@
       },
       "offer": {
         "anim": "npc/offer"
+      },
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
       }
     },
     "sockets": {
@@ -78,12 +130,24 @@
     "measure": "res://assets/characters/measure/npc_friend.json",
     "animations": {
       "idle": "res://assets/characters/anims/npc_friend_idle.tres",
-      "sling": "res://assets/characters/anims/npc_friend_sling.tres"
+      "sling": "res://assets/characters/anims/npc_friend_sling.tres",
+      "wring": "res://assets/characters/anims/npc_friend_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_friend_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_friend_huddle.tres"
     },
     "rest_pose": "sling",
     "poses": {
       "sling": {
         "anim": "npc/sling"
+      },
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
       }
     }
   },
@@ -91,7 +155,10 @@
     "model": "res://assets/characters/npcs/refugee.glb",
     "measure": "res://assets/characters/measure/npc_refugee.json",
     "animations": {
-      "idle": "res://assets/characters/anims/npc_refugee_idle.tres"
+      "idle": "res://assets/characters/anims/npc_refugee_idle.tres",
+      "wring": "res://assets/characters/anims/npc_refugee_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_refugee_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_refugee_huddle.tres"
     },
     "props": {
       "r_hand": "refugee_bundle"
@@ -104,13 +171,27 @@
           177.943649291992
         ]
       }
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
+      }
     }
   },
   "captain": {
     "model": "res://assets/characters/npcs/captain.glb",
     "measure": "res://assets/characters/measure/npc_captain.json",
     "animations": {
-      "idle": "res://assets/characters/anims/npc_captain_idle.tres"
+      "idle": "res://assets/characters/anims/npc_captain_idle.tres",
+      "wring": "res://assets/characters/anims/npc_captain_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_captain_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_captain_huddle.tres"
     },
     "props": {
       "l_hand": "captain_shield"
@@ -123,6 +204,17 @@
           -163.455520629883
         ]
       }
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
+      }
     }
   },
   "widow": {
@@ -130,7 +222,10 @@
     "measure": "res://assets/characters/measure/npc_widow.json",
     "animations": {
       "idle": "res://assets/characters/anims/npc_widow_idle.tres",
-      "hold": "res://assets/characters/anims/npc_widow_hold.tres"
+      "hold": "res://assets/characters/anims/npc_widow_hold.tres",
+      "wring": "res://assets/characters/anims/npc_widow_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_widow_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_widow_huddle.tres"
     },
     "props": {
       "chest": "widow_baby"
@@ -153,6 +248,15 @@
     "poses": {
       "hold": {
         "anim": "npc/hold"
+      },
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
       }
     }
   },
@@ -160,14 +264,31 @@
     "model": "res://assets/characters/npcs/smith.glb",
     "measure": "res://assets/characters/measure/npc_smith.json",
     "animations": {
-      "idle": "res://assets/characters/anims/npc_smith_idle.tres"
+      "idle": "res://assets/characters/anims/npc_smith_idle.tres",
+      "wring": "res://assets/characters/anims/npc_smith_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_smith_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_smith_huddle.tres"
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
+      }
     }
   },
   "novice": {
     "model": "res://assets/characters/npcs/novice.glb",
     "measure": "res://assets/characters/measure/npc_novice.json",
     "animations": {
-      "idle": "res://assets/characters/anims/npc_novice_idle.tres"
+      "idle": "res://assets/characters/anims/npc_novice_idle.tres",
+      "wring": "res://assets/characters/anims/npc_novice_wring.tres",
+      "downcast": "res://assets/characters/anims/npc_novice_downcast.tres",
+      "huddle": "res://assets/characters/anims/npc_novice_huddle.tres"
     },
     "props": {
       "r_hand": "novice_staff"
@@ -179,6 +300,17 @@
           -59.6157836914063,
           177.943649291992
         ]
+      }
+    },
+    "poses": {
+      "wring": {
+        "anim": "npc/wring"
+      },
+      "downcast": {
+        "anim": "npc/downcast"
+      },
+      "huddle": {
+        "anim": "npc/huddle"
       }
     }
   }
