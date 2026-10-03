@@ -327,6 +327,19 @@ static func letter() -> Node3D:
 	return r
 
 
+## Плащ: ворот на плечах и полотнище за спиной. Начало координат — у шеи, плащ висит вниз,
+## спина — в сторону +Z (модели смотрят в -Z). Как он сидит на актёре — WornCloak.
+static func cloak(color: Color = Color(0.5, 0.12, 0.12)) -> Node3D:
+	var r := LowPoly.pivot("Cloak")
+	r.add_child(LowPoly.box(Vector3(0.66, 0.13, 0.38), color, Vector3(0, -0.03, 0.0), 0.95, 0.0, 0.0, &"cloth"))
+	var back := LowPoly.frustum(Vector2(0.9, 0.1), Vector2(0.58, 0.16), 1.05, color.darkened(0.08), Vector3(0, -0.58, 0.17), &"cloth")
+	back.rotation.x = 0.1
+	r.add_child(back)
+	for x in [-0.25, 0.25]:
+		r.add_child(LowPoly.box(Vector3(0.15, 0.46, 0.05), color.darkened(0.15), Vector3(x, -0.3, -0.17), 0.95, 0.0, 0.0, &"cloth"))
+	return r
+
+
 ## Хлеб в холщовом узелке.
 static func bread() -> Node3D:
 	var r := LowPoly.pivot("Bread")

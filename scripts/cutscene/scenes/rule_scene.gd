@@ -1,20 +1,36 @@
 class_name RuleScene
 extends RefCounted
 ## Правило мира — у первого алтаря забега, перед первым выбором жертвы. Раньше эта фраза шла в прологе
-## текстом на чёрном фоне; здесь она нужна игроку и сыграна сценой. Свет алтаря поднимается столбом,
-## и в нём встают две золотые тени прошлого: воин отдаёт меч тому, кому он нужнее. Меч перелетает
-## из рук в руки — и его сила светом возвращается к отдавшему. От его ног загорается дорога из света;
-## он уходит по ней, и тени тают. Сразу после сцены Солдат встаёт на алтарь сам.
+## текстом на чёрном фоне; здесь она нужна игроку и сыграна сценой.
+##
+## Свет алтаря поднимается столбом, арена темнеет, и в зимней стуже встают две тени прошлого: замёрзший
+## стоит в снегу, сжавшись и дрожа, бледный от холода; воин в багровом плаще идёт мимо — и останавливается.
+## Он снимает плащ и укрывает им чужого человека. Тот согревается и распрямляется. Тепло плаща не пропало: оно светом возвращается
+## к отдавшему, снег стихает, кадр теплеет, и от ног воина загорается дорога из света. Они уходят по ней
+## вдвоём. Солдат смотрит на отцовский перстень — и остаётся перед алтарём со своим выбором.
+##
+## Отдают плащ, а не меч: меч — первый дар самого Солдата, и сцена дара показала бы то же самое дважды.
+## Плащ — не одна из семи вещей, поэтому предание остаётся преданием; а отдать его в стужу — значит
+## по-настоящему рискнуть собой, и правило «не ослабляет» видно без слов.
 
 const GOLD := Color(1.0, 0.82, 0.45)
+const COLD := Color(0.62, 0.78, 1.0)
+const CRIMSON := Color(0.9, 0.1, 0.08)
+const SNOW := Color(0.82, 0.9, 1.0, 0.9)
 const KEYS: Array[StringName] = [&"rule_giver", &"rule_taker"]
 ## Сколько плит света в дороге и на каком расстоянии от алтаря останавливается Солдат:
 ## дальше кольца, чтобы алтарь не открылся посреди сцены.
 const PATH_STEPS := 7
 const HERO_DISTANCE := 3.6
 const SHADE_ALPHA := 0.55
-## Меч в руках теней крупнее обычного: издалека должно быть видно, что именно отдают.
-const SWORD_SCALE := 1.1
+## Яркость теней. Ниже единицы: части тела накладываются друг на друга, и ярче они выгорали бы в белое —
+## золотой и бледно-синий стали бы неотличимы.
+const SHADE_GLOW := 0.8
+## Отдавший светится ярче прежнего, когда сила вещи возвращается к нему.
+const BLAZE_ALPHA := 0.9
+## Тени играют за алтарём, на таком расстоянии от него (вглубь кадра): дальше его кольца,
+## иначе яркая дуга кольца прошла бы прямо по их ногам.
+const STAGE_DEPTH := 4.6
 
 
 ## Сцена идёт один раз за забег: у первого алтаря, пока не отдана ни одна вещь.
@@ -47,55 +63,93 @@ static func _body(cs: Cutscene, game: Game) -> void:
 	await cs.wait(3.2)
 	if cs.skipped:
 		return
-	# Свет алтаря поднимается столбом; в нём встают две тени: воин с мечом и тот, кому меч нужнее.
-	cs.mood(&"legend", 1.4)
-	CutsceneFx.pillar(world, c, GOLD, 7.0, 0.95, 2.4)
+	# Свет алтаря поднимается столбом, арена темнеет: стужа, снег. Замёрзший сидит в снегу.
+	CutsceneFx.pillar(world, c, GOLD, 7.0, 0.95, 2.2)
 	Vfx.ring(hero, c, 3.2, GOLD, 1.0, 0.3)
-	cs.flash(GOLD, 0.7, 0.2)
+	cs.flash(GOLD, 0.8, 0.35)
 	Audio.play(&"altar_open", -4.0)
-	var giver_at := c + up * 2.4 - right * 1.3
-	var taker_at := c + up * 2.4 + right * 1.3
-	var giver := cs.spawn(&"hero", giver_at, taker_at, KEYS[0])
-	var taker := cs.spawn(&"refugee", taker_at, giver_at, KEYS[1])
-	var sword := ItemVisuals.build_display(ItemState.create(&"sword"))
-	giver.hold(sword, giver.offer_hand(), SWORD_SCALE)
-	giver.set_pose(&"hold")
-	var shade := _gild(giver, _gild(taker, Vfx.material(Color(GOLD, 0.0), 1.3, true)))
-	var state := {"handed": false}
-	_fade(cs, shade, SHADE_ALPHA, 1.4)
-	# Солдат остаётся в кадре снизу: он смотрит предание вместе со зрителем.
-	cs.cam(c + top, 8.2, 2.0)
-	await cs.wait(1.6)
-	# Он протягивает меч — и отдаёт. Отданное добровольно.
-	cs.after(1.0, func(): giver.set_pose(&"offer"))
-	cs.after(2.6, func(): _hand_over(cs, game, giver, taker, sword, state))
+	game.arena.set_indoor(true)
+	cs.mood(&"legend_cold", 1.2)
+	var stage := c + up * STAGE_DEPTH
+	var snow := cs.motes(stage + Vector3(0, 2.8, 0), Vector3(5.5, 1.2, 3.0), SNOW, 90, -0.6)
+	var taker_at := stage + right * 1.0
+	var giver_at := stage - right * 0.7
+	# Замёрзший стоит вполоборота от дороги: он никого не ждёт. Узелок на палке убран — в силуэте он читался бы как оружие.
+	var taker := cs.spawn(&"refugee", taker_at, taker_at - up * 2.0 + right * 1.0, KEYS[1])
+	var giver := cs.spawn(&"hero", stage - right * 6.2, taker_at, KEYS[0])
+	var bundle := taker.model.find_child("Bundle", true, false)
+	if bundle != null:
+		bundle.free()
+	taker.set_pose(&"huddle")
+	var warm := _gild(giver, Vfx.material(Color(GOLD, 0.0), SHADE_GLOW, true))
+	var chilled := _gild(taker, Vfx.material(Color(COLD, 0.0), SHADE_GLOW, true))
+	var cloth := Vfx.material(Color(CRIMSON, 0.0), 1.0)
+	var cloak := WornCloak.make(CRIMSON)
+	_gild(cloak, cloth)
+	cs.prop(cloak)
+	cloak.put_on(giver)
+	var state := {"given": false, "snow": snow}
+	_fade(cs, chilled, SHADE_ALPHA, 1.2)
+	# Воин в багровом плаще идёт сквозь снег — мимо.
+	cs.after(0.9, func():
+		_fade(cs, warm, SHADE_ALPHA, 1.0)
+		_fade(cs, cloth, 1.0, 1.0)
+		cs.walk_then_face(giver, giver_at, taker_at, 2.2))
+	cs.cam(stage + top, 7.0, 2.4)
+	await cs.wait(1.8)
+	# Он останавливается. Замёрзший оборачивается к нему. Крупнее: плащ переходит с плеч на плечи.
+	cs.cam((giver_at + taker_at) * 0.5 + top * 1.05, 4.6, 3.0)
+	cs.after(1.7, func(): cs.face(taker, giver_at))
+	cs.after(2.6, func(): _give(cs, game, giver, taker, cloak, chilled, state))
 	await cs.say(&"chronicle", R["law"])
 	if cs.skipped:
 		return
-	await _hand_over(cs, game, giver, taker, sword, state)
-	# Сила меча не пропала: она светом возвращается к отдавшему — и от его ног загорается дорога.
-	taker.set_pose(&"bow")
-	SacrificeFx.play(world, giver.model, taker.hand_position(), &"armor", GOLD)
+	await _give(cs, game, giver, taker, cloak, chilled, state)
+	# Тепло плаща не пропало: оно светом возвращается к отдавшему. Снег стихает, кадр теплеет.
+	SacrificeFx.play(world, giver.model, WornCloak.shoulders(taker), &"armor", GOLD)
 	Audio.play(&"sacrifice", -6.0)
+	snow.emitting = false
+	cs.mood(&"legend", 1.6)
 	var path := Vfx.material(Color(GOLD, 0.8), 1.6, true)
 	cs.after(0.9, func():
-		CutsceneFx.pillar(world, giver_at, GOLD, 5.0, 0.7, 1.8)
-		cs.flash(GOLD, 0.5, 0.18))
-	cs.after(1.6, func(): _light_path(cs, giver, giver_at, up, path))
-	cs.cam(c + up * 2.0 + top, 11.0, 4.0)
+		CutsceneFx.pillar(world, giver.global_position, GOLD, 5.0, 0.7, 1.8)
+		Vfx.ring(giver, giver.global_position, 2.0, GOLD, 0.7, 0.2)
+		cs.flash(GOLD, 0.5, 0.18)
+		_fade(cs, warm, BLAZE_ALPHA, 0.5))
+	# От его ног загорается дорога — и они уходят по ней вдвоём.
+	cs.after(1.7, func(): _light_path(cs, giver, taker, up, right, path))
+	cs.cam(stage + up * 2.6 + top, 9.5, 4.5)
 	await cs.say(&"chronicle", R["light"])
 	if cs.skipped:
 		return
-	# Тени тают, дорога гаснет; свет возвращается в алтарь — теперь очередь Солдата.
-	_fade(cs, shade, 0.0, 1.4)
-	_fade(cs, path, 0.0, 1.4)
+	await cs.wait(0.8)
+	# Тени тают, дорога гаснет; арена светлеет. Свет возвращается в алтарь.
+	for m in [warm, chilled, cloth, path]:
+		_fade(cs, m, 0.0, 1.4)
 	cs.mood(&"scene", 1.4)
-	cs.cam(c + top * 0.6, 7.5, 1.6)
-	await cs.wait(1.2)
+	cs.cam(c + top * 0.8, 8.0, 1.6)
+	await cs.wait(1.3)
+	game.arena.set_indoor(false)
 	Vfx.ring(hero, c, 3.2, GOLD, 0.9, 0.3)
 	CutsceneFx.flare(world, c + top, GOLD, 3.0, 7.0, 1.2)
 	Audio.play(&"absorb", -8.0)
-	await cs.wait(1.1)
+	await cs.wait(0.7)
+	if cs.skipped:
+		return
+	# Солдат: отцовский перстень на его руке отзывается светом. Предание он слышал от отца.
+	# Он оборачивается от алтаря вполоборота к зрителю: мысль читается по лицу, а не по затылку.
+	cs.face(hero, hero.global_position + right * 1.0 - up * 0.7)
+	cs.cam(hero.global_position + top * 1.1, 4.2, 1.2)
+	cs.orbit(-10.0, 5.0)
+	await cs.wait(0.9)
+	var ring_at := game.hero_model.socket_position(&"gloves")
+	CutsceneFx.flare(world, ring_at, GOLD, 2.2, 3.0, 1.6)
+	Vfx.burst(hero, ring_at, GOLD, 0.6, 0.4)
+	Audio.play(&"absorb", -12.0)
+	await cs.thought(R["hero"])
+	cs.orbit(0.0, 1.0)
+	cs.cam(c + top * 0.8, 8.5, 1.2)
+	await cs.wait(0.9)
 
 
 ## Солдат идёт к алтарю и останавливается у кольца снизу кадра. Если он стоял за алтарём —
@@ -111,34 +165,42 @@ static func _approach(cs: Cutscene, hero: Actor, c: Vector3, up: Vector3, right:
 	cs.face(hero, c)
 
 
-## Меч перелетает из рук в руки. Вызывается и посреди реплики, и после неё — срабатывает один раз.
-static func _hand_over(cs: Cutscene, game: Game, giver: Puppet, taker: Puppet, sword: Node3D, state: Dictionary) -> void:
-	if state["handed"] or not is_instance_valid(sword):
+## Воин снимает плащ и укрывает им замёрзшего; тот согревается — из бледно-синего становится золотым —
+## и распрямляется, сложив руки у пояса. Вызывается и посреди реплики, и после неё — срабатывает один раз.
+static func _give(cs: Cutscene, game: Game, giver: Puppet, taker: Puppet, cloak: WornCloak, chilled: StandardMaterial3D, state: Dictionary) -> void:
+	if state["given"] or not is_instance_valid(cloak) or not is_instance_valid(taker):
 		return
-	state["handed"] = true
-	var from := sword.global_position
-	var xf := sword.global_transform
-	sword.get_parent().remove_child(sword)
-	game.world.add_child(sword)
-	sword.global_transform = xf
-	cs.prop(sword)
+	state["given"] = true
+	cs.face(giver, taker.global_position)
+	giver.set_pose(&"offer")
+	cloak.take_off()
 	Audio.play(&"item_fly", -6.0)
-	await cs.fly(sword, from, taker.hand_position(), 1.2, 1.6, GOLD)
-	if not is_instance_valid(sword) or not is_instance_valid(taker):
+	await cs.fly(cloak, cloak.global_position, WornCloak.shoulders(taker), 1.1, 0.9, CRIMSON)
+	if not is_instance_valid(cloak) or not is_instance_valid(taker):
 		return
-	cs.props.erase(sword)
-	taker.hold(sword, &"r_hand", SWORD_SCALE)
-	taker.set_pose(&"hold")
+	cloak.put_on(taker)
 	giver.set_pose(&"")
-	Vfx.burst(taker, taker.hand_position(), GOLD, 0.8, 0.4)
+	Vfx.burst(taker, WornCloak.shoulders(taker), GOLD, 0.9, 0.4)
+	CutsceneFx.flare(game.world, taker.global_position + Vector3(0, 1.0, 0), GOLD, 1.8, 3.5, 1.2)
+	_tint(cs, chilled, GOLD * SHADE_GLOW, 1.2)
+	await cs.wait(0.5)
+	if is_instance_valid(taker):
+		taker.set_pose(&"wring")
+		cs.face(taker, giver.global_position)
 
 
-## Дорога из света: плиты загораются одна за другой, тень воина уходит по ним.
-static func _light_path(cs: Cutscene, giver: Puppet, from: Vector3, dir: Vector3, mat: StandardMaterial3D) -> void:
-	if not is_instance_valid(giver):
+## Дорога из света: плиты загораются одна за другой. Воин идёт по ним, согретый — рядом, на полшага позади.
+static func _light_path(cs: Cutscene, giver: Puppet, taker: Puppet, dir: Vector3, side: Vector3, mat: StandardMaterial3D) -> void:
+	if not is_instance_valid(giver) or not is_instance_valid(taker):
 		return
+	var from := Combat.flat(giver.global_position)
+	var end := from + dir * (PATH_STEPS + 0.5)
 	giver.set_pose(&"")
-	cs.walk(giver, from + dir * (PATH_STEPS + 0.5), 1.5)
+	taker.set_pose(&"")
+	cs.walk(giver, end, 1.5)
+	cs.after(0.5, func():
+		if is_instance_valid(taker):
+			cs.walk(taker, end + side * 0.95 - dir * 0.7, 1.7))
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(0.62, 0.8)
 	for k in PATH_STEPS:
@@ -156,12 +218,12 @@ static func _light_path(cs: Cutscene, giver: Puppet, from: Vector3, dir: Vector3
 		tile.create_tween().set_ignore_time_scale(true).tween_property(tile, "scale", Vector3.ONE, 0.3) \
 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		if k % 2 == 0:
-			cs.light(at + Vector3(0, 0.7, 0), GOLD, 1.1, 3.2)
+			cs.light(at + Vector3(0, 0.7, 0), GOLD, 1.4, 3.6)
 		Audio.play(&"hold_tick", -10.0)
 		await cs.wait(0.16)
 
 
-## Тень: все сетки актёра и того, что у него в руках, — одним светящимся материалом. Возвращает его же.
+## Тень: все сетки узла — одним светящимся материалом. Возвращает его же.
 static func _gild(n: Node, mat: StandardMaterial3D) -> StandardMaterial3D:
 	for ch in n.get_children():
 		if ch is MeshInstance3D:
@@ -179,6 +241,16 @@ static func _fade(cs: Cutscene, mat: StandardMaterial3D, alpha: float, dur: floa
 	cs.create_tween().set_ignore_time_scale(true).tween_property(mat, "albedo_color:a", alpha, dur)
 
 
+## Меняет цвет тени, не трогая её прозрачность.
+static func _tint(cs: Cutscene, mat: StandardMaterial3D, color: Color, dur: float) -> void:
+	if cs.skipped:
+		mat.albedo_color = Color(color, mat.albedo_color.a)
+		return
+	var from := mat.albedo_color
+	cs.create_tween().set_ignore_time_scale(true).tween_method(func(k: float):
+		mat.albedo_color = Color(from.lerp(color, k), mat.albedo_color.a), 0.0, 1.0, dur)
+
+
 static func _finalize(cs: Cutscene, game: Game) -> void:
 	for key in KEYS:
 		var p := cs.actor(key)
@@ -186,5 +258,6 @@ static func _finalize(cs: Cutscene, game: Game) -> void:
 			p.queue_free()
 		cs.cast.erase(key)
 	cs.clear_props()
+	game.arena.set_indoor(false)
 	if game.altar != null:
 		cs.face(game.hero, game.altar.global_position)

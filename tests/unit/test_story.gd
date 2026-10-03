@@ -94,6 +94,7 @@ func test_rule_moved_from_prologue_to_the_first_altar() -> void:
 	assert_false(Story.PROLOGUE.has("rule"), "в прологе правила больше нет")
 	assert_string_contains(Story.RULE["law"], "отданная добровольно, не ослабляет")
 	assert_string_contains(Story.RULE["light"], "осветить твой путь")
+	assert_ne(str(Story.RULE["hero"]), "", "после предания — мысль Солдата")
 	assert_ne(str(Story.speaker(&"chronicle")["name"]), "", "у предания есть подпись")
 	assert_false(Story.SPEAKERS.has(&"chronicle"), "предание — не персонаж: у него нет модели и роли")
 	RunState.new_run(1)

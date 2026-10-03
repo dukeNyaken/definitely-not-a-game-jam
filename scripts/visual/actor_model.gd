@@ -40,7 +40,7 @@ var _crown: Node3D
 ## Вариант наряда (например, &"young" — Тиран во флешбэке). Задаётся до setup().
 var variant: StringName = &""
 ## Поза сюжетной сцены: &"kneel", &"slump", &"sit", &"hold", &"bow", &"offer", &"ease", &"arms_up", &"hands_back",
-## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer", &"wring", &"downcast". Пустая — обычная анимация;
+## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer", &"wring", &"downcast", &"huddle". Пустая — обычная анимация;
 ## rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
@@ -1066,6 +1066,15 @@ func _apply_pose(p: StringName, moving: float, arm_l_basis: Basis, arm_r_basis: 
 			arm_l_basis = Basis(Vector3.UP, -0.25) * Basis(Vector3.RIGHT, 0.55)
 			if p == &"frail_offer":
 				arm_r_basis = Basis(Vector3.UP, 0.2) * Basis(Vector3.RIGHT, 1.35)
+		&"huddle":
+			# Замёрз: стоит, сжавшись, руки крест-накрест на груди, голова втянута, мелкая дрожь.
+			# Стоя, а не сидя: у модели нет коленей, и сидящий в силуэте читается как упавший.
+			hips.position.y = 0.86
+			torso.rotation.x = -0.3
+			torso.rotation.z = sin(Time.get_ticks_msec() * 0.045) * 0.03
+			head.rotation.x = -0.18
+			arm_l_basis = Basis(Vector3.UP, -1.15) * Basis(Vector3.RIGHT, 1.0)
+			arm_r_basis = Basis(Vector3.UP, 1.15) * Basis(Vector3.RIGHT, 1.0)
 		&"wring", &"downcast":
 			# Руки сцеплены у пояса: тревога, ожидание. downcast — ещё и опущенная голова: сомнение.
 			arm_l_basis = Basis(Vector3.UP, -0.85) * Basis(Vector3.RIGHT, 0.55)

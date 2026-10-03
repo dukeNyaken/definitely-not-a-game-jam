@@ -192,13 +192,51 @@ func test_gum_shows_only_when_the_hand_is_away_from_the_pocket() -> void:
 	assert_false(gum.visible)
 
 
+## Плащ идёт за плечами того, на ком надет; снятый — остаётся там, где его оставили.
+func test_cloak_follows_the_shoulders_of_its_wearer() -> void:
+	var a := Puppet.make(ActorModel.Kind.FRIEND)
+	var b := Puppet.make(ActorModel.Kind.REFUGEE)
+	add_child_autofree(a)
+	add_child_autofree(b)
+	b.global_position = Vector3(3, 0, 0)
+	var cloak := WornCloak.make(Color.RED)
+	add_child_autofree(cloak)
+	cloak.put_on(a)
+	assert_almost_eq(cloak.global_position, WornCloak.shoulders(a), Vector3.ONE * 0.001)
+	assert_gt(cloak.global_position.y, 1.0, "на плечах, а не у ног")
+	cloak.take_off()
+	var left := cloak.global_position
+	a.global_position = Vector3(-4, 0, 0)
+	cloak._follow()
+	assert_eq(cloak.global_position, left, "снятый плащ за актёром не идёт")
+	cloak.put_on(b)
+	assert_almost_eq(cloak.global_position.x, 3.0, 0.3)
+	assert_almost_eq(cloak.scale.y, b.model.scale.y, 0.001, "плащ садится по росту")
+
+
+## Замёрзший: стоит, сжавшись, руки крест-накрест на груди. Поза — только у процедурных моделей.
+func test_huddle_pose_hunches_and_crosses_the_arms() -> void:
+	var p := Puppet.make(ActorModel.Kind.REFUGEE)
+	add_child_autofree(p)
+	p.model._animate(0.016)
+	var straight: float = p.model.torso.rotation.x
+	var hands_apart: float = p.hand_position(&"l_hand").distance_to(p.hand_position(&"r_hand"))
+	p.set_pose(&"huddle")
+	p.model._animate(0.016)
+	assert_lt(p.model.torso.rotation.x, straight - 0.2, "спина согнута вперёд")
+	assert_lt(p.model.head.rotation.x, 0.0, "голова втянута")
+	assert_gt(p.hand_position(&"l_hand").y, 0.75, "руки подняты к груди")
+	assert_lt(p.hand_position(&"l_hand").distance_to(p.hand_position(&"r_hand")), hands_apart, "руки сведены")
+	assert_not_null(p.model.find_child("Bundle", true, false), "узелок сцена правила убирает сама")
+
+
 func test_set_pieces_build() -> void:
 	var hall := SetPieces.throne_hall()
 	add_child_autofree(hall)
 	assert_eq((hall.get_meta(&"braziers") as Array).size(), 2)
 	assert_not_null(hall.find_child("Throne", true, false))
 	for make in [SetPieces.weapon_rack, SetPieces.training_post, SetPieces.candle_stand, SetPieces.letter, SetPieces.bread, SetPieces.flask,
-			SetPieces.hearth, SetPieces.night_window, SetPieces.spinning_wheel, SetPieces.chest, SetPieces.purse]:
+			SetPieces.hearth, SetPieces.night_window, SetPieces.spinning_wheel, SetPieces.chest, SetPieces.purse, SetPieces.cloak]:
 		var n: Node3D = make.call()
 		assert_gt(n.get_child_count(), 0)
 		n.free()
