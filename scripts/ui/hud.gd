@@ -1,13 +1,12 @@
 class_name Hud
 extends CanvasLayer
-## Игровой интерфейс: здоровье и броня, кольцо (всегда видно), сид, действия, баннеры, экраны.
+## Игровой интерфейс: здоровье и броня, сид, действия, баннеры, экраны.
 
 const SLOT_ORDER: Array[StringName] = [&"sword", &"shield", &"boots", &"gloves", &"amulet", &"armor", &"helmet"]
 
 var game: Game
 var root: Control
 var overlay: WorldOverlay
-var ring: RingWidget
 var _hp_bar: Control
 var _stage_label: Label
 var _wave_label: Label
@@ -43,7 +42,7 @@ func setup(p_game: Game) -> void:
 	overlay = WorldOverlay.new()
 	root.add_child(overlay)
 	_build_status()
-	_build_ring()
+	_build_tree_hint()
 	_build_actions()
 	_build_banner()
 	_build_boss_bar()
@@ -52,12 +51,10 @@ func setup(p_game: Game) -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiKit.full_rect(_fade)
 	root.add_child(_fade)
-	RunState.ring_changed.connect(_refresh_ring)
 	game.banner.connect(show_banner)
 	game.wave_started.connect(_on_wave_started)
 	game.state_changed.connect(_on_state_changed)
 	game.hero.health_changed.connect(_hp_bar.queue_redraw)
-	_refresh_ring()
 
 
 # --- Постройка --------------------------------------------------------------
@@ -96,29 +93,18 @@ func _draw_hp() -> void:
 	_hp_bar.draw_string(font, Vector2(10, 25), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UiKit.TEXT)
 
 
-func _build_ring() -> void:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.06, 0.05, 0.07, 0.75), Color(UiKit.BORDER, 0.6), 1, 10, 8))
-	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	panel.position = Vector2(-250, 14)
-	panel.offset_left = -246
-	panel.offset_right = -14
-	panel.offset_top = 14
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(panel)
-	_ring_panel = panel
+func _build_tree_hint() -> void:
 	var v := VBoxContainer.new()
+	v.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	v.offset_left = -260
+	v.offset_right = -24
+	v.offset_top = 20
+	v.offset_bottom = 70
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(v)
-	var title := UiKit.label("Кольцо", 15, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(title)
-	ring = RingWidget.new()
-	ring.custom_minimum_size = Vector2(210, 196)
-	ring.icon_radius = 20.0
-	v.add_child(ring)
-	_seed_label = UiKit.label("", 15, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	root.add_child(v)
+	v.add_child(UiKit.outlined(UiKit.label("Tab — навыки и связи", 17, UiKit.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)))
+	_seed_label = UiKit.outlined(UiKit.label("Сид %d" % RunState.seed_value, 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_RIGHT))
 	v.add_child(_seed_label)
-	v.add_child(UiKit.label("Tab — дерево свойств", 13, Color(UiKit.MUTED, 0.8), HORIZONTAL_ALIGNMENT_CENTER))
 
 
 func _build_actions() -> void:
@@ -237,11 +223,6 @@ func _on_state_changed(state: int) -> void:
 	if state != Game.State.INTRO and state != Game.State.WAVES and _hint != null and RunState.stage > 1:
 		_hint.queue_free()
 		_hint = null
-
-
-func _refresh_ring() -> void:
-	ring.set_items(RunState.ring.items)
-	_seed_label.text = "Сид %d" % RunState.seed_value
 
 
 ## Сверху и снизу выезжают чёрные полосы (интерфейс прячет set_cinematic).
@@ -372,7 +353,10 @@ func toggle_tree() -> void:
 	if _screen_kind == &"tree":
 		close_screen()
 	elif not has_screen():
-		_open_screen(TreeUi.new(), &"tree")
+		var ui := TreeUi.new()
+		ui.actor = game.hero
+		ui.close_requested.connect(close_screen)
+		_open_screen(ui, &"tree")
 
 
 func toggle_pause() -> void:

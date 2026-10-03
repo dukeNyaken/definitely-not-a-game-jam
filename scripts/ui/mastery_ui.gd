@@ -3,6 +3,7 @@ extends Control
 ## Круговая коллекция: все 21 облик на одном экране, без прокрутки.
 
 const TIER_NAMES := ["Исходный", "Пробуждение", "Реликвия"]
+const META_SUMMARY := "Убийство → полный XP каждой надетой вещи. Жертва → XP этой вещи останавливается.\nОпыт и облики сохраняются между забегами. Дольше носишь → больше XP и сильнее навык."
 
 var selected_id: StringName = &"sword"
 var preview_tier := 1
@@ -37,7 +38,7 @@ func _ready() -> void:
 	layout.add_theme_constant_override(&"separation", 12)
 	panel.add_child(layout)
 	layout.add_child(UiKit.label("Облики семи вещей", 42, UiKit.GOLD))
-	_save_status = UiKit.label("Выбери вещь на круге, затем её облик", 18, UiKit.MUTED)
+	_save_status = UiKit.label(META_SUMMARY, 16, UiKit.MUTED)
 	layout.add_child(_save_status)
 	var row := HBoxContainer.new()
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -174,7 +175,7 @@ func _refresh() -> void:
 	_effect.text = str(form["effect"]) if preview_tier > 1 else Db.item(selected_id).action_text
 	_equip.disabled = preview_tier > lv or preview_tier == equipped
 	_equip.text = "Выбран для следующего забега" if preview_tier == equipped else "Ещё %d XP до открытия" % (int(Mastery.rules["thresholds"][preview_tier - 1]) - total) if preview_tier > lv else "Выбрать для следующего забега"
-	_save_status.text = "Не удалось сохранить · выбор пока в памяти" if Mastery.save_error else "Выбери вещь на круге, затем её облик"
+	_save_status.text = "Не удалось сохранить · выбор пока в памяти\n" + META_SUMMARY if Mastery.save_error else META_SUMMARY
 	_save_status.add_theme_color_override(&"font_color", UiKit.DANGER.lightened(0.3) if Mastery.save_error else UiKit.MUTED)
 
 
