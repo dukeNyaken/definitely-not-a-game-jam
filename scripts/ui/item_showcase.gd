@@ -2,6 +2,7 @@ class_name ItemShowcase
 extends SubViewportContainer
 ## 3D-витрина вещей: кольцо вращающихся вещей (меню) или одна вещь-артефакт (финал).
 
+var _hero: Actor
 var viewport: SubViewport
 var pivot: Node3D
 var spin_speed: float = 0.35
@@ -72,15 +73,7 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	# В центре — герой в исподнем: всё это ему предстоит отдать.
 	var floor_disc := LowPoly.cyl(radius + 0.6, radius + 0.8, 0.3, 24, Color(0.2, 0.17, 0.18), Vector3(0, -0.17, 0))
 	viewport.add_child(floor_disc)
-	var hero := Actor.new()
-	hero.set_physics_process(false)
-	viewport.add_child(hero)
-	hero.remove_from_group(&"actors")
-	hero.facing = Vector3(0.35, 0, 1).normalized()
-	var model := ActorModel.new()
-	hero.add_child(model)
-	model.setup(hero, ActorModel.Kind.HERO)
-	model.scale = Vector3.ONE * 1.05
+	rebuild_hero()
 	var glow := OmniLight3D.new()
 	glow.position = Vector3(0, 2.6, 1.2)
 	glow.light_color = Color(1.0, 0.8, 0.55)
@@ -94,6 +87,21 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	var fwd := (Vector3(0, 0.3, 0) - Vector3(0, 3.2, 6.5)).normalized()
 	sky.position = Vector3(0.9, -1.2, -9.0)
 	sky.look_at(sky.position + fwd, Vector3.UP)
+
+
+## Герой в центре кольца; пересоздаётся при смене варианта в меню «Герой».
+func rebuild_hero() -> void:
+	if _hero != null and is_instance_valid(_hero):
+		_hero.queue_free()
+	_hero = Actor.new()
+	_hero.set_physics_process(false)
+	viewport.add_child(_hero)
+	_hero.remove_from_group(&"actors")
+	_hero.facing = Vector3(0.35, 0, 1).normalized()
+	var model := SkinnedActorModel.for_hero()
+	_hero.add_child(model)
+	model.setup(_hero, ActorModel.Kind.HERO)
+	model.scale = Vector3.ONE * 1.05
 
 
 ## Одна вещь крупно.

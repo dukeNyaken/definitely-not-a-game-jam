@@ -5,6 +5,8 @@ var _seed_edit: LineEdit
 var _rules: PanelContainer
 var ui: Control
 var _render_button: Button
+var _hero_button: Button
+var _showcase: ItemShowcase
 
 
 func _ready() -> void:
@@ -27,6 +29,7 @@ func _ready() -> void:
 	UiKit.full_rect(bg)
 	add_child(bg)
 	var showcase := ItemShowcase.new()
+	_showcase = showcase
 	showcase.self_pixelate = false
 	showcase.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	showcase.offset_left = -900
@@ -92,6 +95,13 @@ func _ready() -> void:
 	story_btn.custom_minimum_size = Vector2(360, 50)
 	story_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(story_btn)
+	# Выбор героя — только если собран прототип сгенерированных героев (prototype/heroes.json).
+	if SkinnedActorModel.available() and SkinnedActorModel.variants().size() > 1:
+		_hero_button = UiKit.button("", _next_hero)
+		_hero_button.custom_minimum_size = Vector2(360, 50)
+		_hero_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		v.add_child(_hero_button)
+		_update_hero_button()
 	var how := UiKit.button("Как играть", _toggle_rules)
 	how.custom_minimum_size = Vector2(360, 50)
 	how.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -118,6 +128,18 @@ func _toggle_render() -> void:
 
 func _update_render_button() -> void:
 	_render_button.text = "Рендер: %s" % Render.mode_name()
+
+
+func _next_hero() -> void:
+	var list := SkinnedActorModel.variants()
+	var i := list.find(SkinnedActorModel.current())
+	SkinnedActorModel.select(list[(i + 1) % list.size()]["id"])
+	_update_hero_button()
+	_showcase.rebuild_hero()
+
+
+func _update_hero_button() -> void:
+	_hero_button.text = "Герой: %s" % SkinnedActorModel.current()["title"]
 
 
 func _unhandled_input(event: InputEvent) -> void:

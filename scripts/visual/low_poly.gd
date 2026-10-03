@@ -30,6 +30,16 @@ static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0, em
 	return m
 
 
+## Ретро-материал с готовой текстурой по UV — для запечённых моделей (prototype/).
+static func mat_textured(tex: Texture2D, roughness: float = 0.9) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	Render.register(m)
+	m.set_shader_parameter(&"surface_tex", tex)
+	m.set_shader_parameter(&"use_uv", true)
+	m.set_shader_parameter(&"roughness_v", roughness)
+	return m
+
+
 ## Собственная копия материала (чтобы менять параметры одного объекта, например прозрачность).
 static func unique(base: ShaderMaterial) -> ShaderMaterial:
 	var m := base.duplicate() as ShaderMaterial

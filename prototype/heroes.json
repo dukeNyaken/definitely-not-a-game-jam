@@ -1,0 +1,37 @@
+{
+  "_comment": "Пишется export_prototype.py (experiments/char3d). Варианты героя для меню «Герой».",
+  "heroes": [
+    {
+      "id": "barbarian",
+      "title": "Варвар",
+      "model": "res://prototype/heroes/barbarian.glb",
+      "measure": "res://prototype/measure/proto_hero.json",
+      "boss": "res://prototype/boss/barbarian.glb",
+      "boss_measure": "res://prototype/measure/boss_body.json"
+    },
+    {
+      "id": "templar",
+      "title": "Тамплиер",
+      "model": "res://prototype/heroes/templar.glb",
+      "measure": "res://prototype/measure/proto_hero.json",
+      "boss": "res://prototype/boss/templar.glb",
+      "boss_measure": "res://prototype/measure/boss_body.json"
+    },
+    {
+      "id": "marine",
+      "title": "Космодесант",
+      "model": "res://prototype/heroes/marine.glb",
+      "measure": "res://prototype/measure/proto_hero.json",
+      "boss": "res://prototype/boss/marine.glb",
+      "boss_measure": "res://prototype/measure/boss_body.json"
+    },
+    {
+      "id": "knight",
+      "title": "Рыцарь",
+      "model": "res://prototype/heroes/knight.glb",
+      "measure": "res://prototype/measure/knight_body.json",
+      "boss": "res://prototype/boss/knight.glb",
+      "boss_measure": "res://prototype/measure/boss_body.json"
+    }
+  ]
+}

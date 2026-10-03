@@ -1,0 +1,182 @@
+{
+  "_comment": "Анимации сгенерированных героя и босса (SkinnedActorModel). Клипы — библиотека Quaternius UAL (CC0) после ретаргета, имена ual/<клип>. Модели и замер шага (скорость стоп у каждого тела своя) — в heroes.json, его пишет export_prototype.py.",
+  "library": "res://prototype/anims/ual.glb",
+  "_facing": "модель из glTF смотрит в +Z, ActorModel поворачивает узел так, что взгляд — -Z",
+  "facing_yaw_deg": 180,
+  "locomotion": [
+    "ual/Idle",
+    "ual/Walk",
+    "ual/Jog_Fwd",
+    "ual/Sprint"
+  ],
+  "_armed_idle": "стойка покоя, когда в кольце есть меч",
+  "armed_idle": "ual/Sword_Idle",
+  "_upper": "кости, которые берут удары и реакции; ноги остаются в шаге — можно бить на бегу",
+  "upper_bones": [
+    "Spine",
+    "Chest",
+    "UpperChest",
+    "Neck",
+    "Head",
+    "LeftShoulder",
+    "LeftUpperArm",
+    "LeftLowerArm",
+    "LeftHand",
+    "RightShoulder",
+    "RightUpperArm",
+    "RightLowerArm",
+    "RightHand"
+  ],
+  "_actions": "kind из ActorModel.play_swing. from/to — окно клипа в секундах вокруг пика скорости кисти; клип растягивается в duration*stretch: визуально удар длиннее игровой длительности на возврат руки. fade — плавность входа/выхода, с.",
+  "actions": {
+    "slash": {
+      "anim": "ual/Sword_Attack",
+      "from": 0.18,
+      "to": 0.85,
+      "stretch": 1.8,
+      "fade": 0.06
+    },
+    "slash_back": {
+      "anim": "ual/Punch_Cross",
+      "from": 0.05,
+      "to": 0.55,
+      "stretch": 1.8,
+      "fade": 0.06
+    },
+    "chop": {
+      "anim": "ual/Sword_Attack",
+      "from": 0.05,
+      "to": 1.05,
+      "stretch": 1.9,
+      "fade": 0.06
+    },
+    "punch": {
+      "anim": "ual/Punch_Jab",
+      "from": 0.05,
+      "to": 0.5,
+      "stretch": 1.8,
+      "fade": 0.05
+    },
+    "grab": {
+      "anim": "ual/Punch_Cross",
+      "from": 0.0,
+      "to": 0.6,
+      "stretch": 1.6,
+      "fade": 0.06
+    },
+    "cast": {
+      "anim": "ual/Spell_Simple_Enter",
+      "from": 0.0,
+      "to": 0.53,
+      "stretch": 1.6,
+      "fade": 0.08
+    }
+  },
+  "hit": {
+    "anims": [
+      "ual/Hit_Chest",
+      "ual/Hit_Head"
+    ],
+    "fade": 0.05
+  },
+  "_dash": "кувырок на весь рост; окно клипа растягивается в длительность рывка из Actor.start_dash",
+  "dash": {
+    "anim": "ual/Roll",
+    "from": 0.1,
+    "to": 1.2,
+    "fade": 0.05
+  },
+  "_block": "щит поднят: держится кусок клипа стойки кулачного бойца (туда-обратно), только руки и корпус",
+  "block": {
+    "anim": "ual/Punch_Enter",
+    "from": 0.55,
+    "to": 0.85,
+    "fade": 0.1
+  },
+  "death": {
+    "anim": "ual/Death01",
+    "fade": 0.12,
+    "sink_after": 2.6
+  },
+  "_sockets": "точки вещей и добавок свойств на костях (имена — схема гуманоида Godot); rot — поворот, градусы: у процедурной модели сокет руки смотрит вверх по руке, у кости — к пальцам",
+  "sockets": {
+    "r_hand": {
+      "bone": "RightHand",
+      "rot": [
+        180,
+        0,
+        0
+      ]
+    },
+    "l_hand": {
+      "bone": "LeftHand",
+      "rot": [
+        180,
+        0,
+        0
+      ]
+    },
+    "head": {
+      "bone": "Head",
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "offset": [
+        0,
+        0.12,
+        0
+      ]
+    },
+    "neck": {
+      "bone": "Neck",
+      "rot": [
+        0,
+        0,
+        0
+      ]
+    },
+    "chest": {
+      "bone": "UpperChest",
+      "rot": [
+        0,
+        0,
+        0
+      ]
+    },
+    "l_foot": {
+      "bone": "LeftFoot",
+      "rot": [
+        180,
+        0,
+        0
+      ]
+    },
+    "r_foot": {
+      "bone": "RightFoot",
+      "rot": [
+        180,
+        0,
+        0
+      ]
+    }
+  },
+  "_twist": "бег вбок: таз разворачивается к направлению бега не больше чем на max_deg (торс остаётся к цели — LocomotionModifier); при угле больше back_deg — бег спиной вперёд; speed — скорость доворота, 1/с",
+  "twist": {
+    "max_deg": 85,
+    "back_deg": 110,
+    "speed": 10
+  },
+  "_loco": "ходьба: ниже loco_min_speed, м/с — стойка; иначе один клип из locomotion, ближайший по скорости, темп = скорость / его родная скорость (anim_measure.json). loco_blend_rate — с какой скоростью, м/с за секунду, точка смеси переезжает к нужному клипу (переход стойка -> бег ~0.15 с)",
+  "loco_min_speed": 0.3,
+  "loco_blend_rate": 45,
+  "_windup": "замах босса: пока копится удар (EnemyAttack), верх держит окно from..to клипа, позиция — доля накопления",
+  "windup": {
+    "anim": "ual/Sword_Attack",
+    "from": 0.0,
+    "to": 0.35
+  },
+  "tempo_gain": 1.12,
+  "_tempo_gain": "поправка темпа ходьбы: замер в пространстве клипа систематически занижает шаг — в игре (tools/anim_check.gd, 6 м/с) стопа на полу ехала вперёд на 0.53-1.02 м/с у всех четырёх вариантов, в среднем 0.7: 6 / (6 - 0.7) = 1.13"
+}
