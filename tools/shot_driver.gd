@@ -10,6 +10,7 @@ var _hovered := false
 var _card_view := ""
 var _item := ""
 var _tier := 0
+var _node := 0
 
 
 func _ready() -> void:
@@ -26,6 +27,7 @@ func _ready() -> void:
 			"card": _card_view = kv[1]
 			"item": _item = kv[1]
 			"tier": _tier = int(kv[1])
+			"node": _node = int(kv[1])
 	if _preset in ["final_mastery", "final_empty", "final_max", "final_error", "mastery_mixed", "mastery_empty"]:
 		Mastery.memory_only = true
 		Mastery.xp.clear()
@@ -39,10 +41,15 @@ func _ready() -> void:
 		for id in Db.ITEM_IDS:
 			Mastery.xp[id] = 1000
 			Mastery.choices[id] = 3
+	if _preset.begins_with("tree"):
+		Mastery.memory_only = true
+		for id in Db.ITEM_IDS:
+			Mastery.xp[id] = 1000
+			Mastery.choices[id] = 3
 	RunState.new_run(424242)
 	var scene := "res://scenes/game.tscn"
 	match _preset:
-		"menu", "mastery", "mastery_mixed", "mastery_empty":
+		"menu", "rules", "mastery", "mastery_mixed", "mastery_empty":
 			scene = "res://scenes/main_menu.tscn"
 		"final", "final_death", "final_mastery", "final_empty", "final_max", "final_error":
 			var is_victory := _preset in ["final", "final_mastery", "final_max", "final_error"]
@@ -63,7 +70,7 @@ func _ready() -> void:
 			RunState.elapsed = 1043.0
 			RunState.running = false
 			scene = "res://scenes/final_card.tscn"
-		"boss", "boss_fight":
+		"boss", "boss_fight", "tree_full":
 			for i in 6:
 				RunState.sacrifice(0)
 			RunState.stage = 7
@@ -71,6 +78,13 @@ func _ready() -> void:
 			for i in 3:
 				RunState.sacrifice(0)
 			RunState.stage = 4
+		"tree_branch":
+			RunState.ring = Ring.from_ids([&"shield", &"boots", &"sword", &"armor", &"helmet", &"gloves", &"amulet"])
+			for item in RunState.ring.items:
+				item.appearance = Mastery.selected(item.def_id)
+			for id in [&"shield", &"boots", &"helmet", &"armor", &"sword", &"amulet"]:
+				RunState.sacrifice(RunState.ring.index_of(id))
+			RunState.stage = 7
 		"gallery":
 			scene = "res://tools/gallery.tscn"
 	get_tree().change_scene_to_file.call_deferred(scene)
@@ -81,6 +95,9 @@ func _game() -> Game:
 
 
 func _setup() -> void:
+	if _preset == "rules":
+		get_tree().current_scene._toggle_rules()
+		return
 	if _preset.begins_with("final"):
 		var card := get_tree().current_scene
 		if _item != "":
@@ -106,8 +123,12 @@ func _setup() -> void:
 	match _preset:
 		"altar":
 			g.debug_skip_stage()
-		"tree":
+		"tree", "tree_start", "tree_full", "tree_branch":
 			g.hud.toggle_tree()
+			if _item != "":
+				g.hud._screen.select_item(StringName(_item))
+			if _node > 0:
+				g.hud._screen._diagram.select_node(_node)
 		"shrine":
 			g.hud.open_shrine()
 
