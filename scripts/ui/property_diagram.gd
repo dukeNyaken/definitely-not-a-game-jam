@@ -250,7 +250,7 @@ func _draw() -> void:
 		draw_string(UiKit.body_font(), pos + Vector2(-68, 42), _label(i), HORIZONTAL_ALIGNMENT_CENTER, 136, 18, UiKit.GOLD if hot else UiKit.TEXT)
 		var number_pos := _center() + Vector2.from_angle(angle) * (INNER + 21)
 		draw_circle(number_pos, 15, Color(0.04, 0.03, 0.05))
-		draw_string(UiKit.body_font(), number_pos + Vector2(-15, 6), str(nodes[i]["order"]) if bool(nodes[i]["linked"]) else "!", HORIZONTAL_ALIGNMENT_CENTER, 30, 18, UiKit.GOLD if i in path else UiKit.TEXT)
+		draw_string(UiKit.body_font(), number_pos + Vector2(-15, 6), UiKit.roman(int(nodes[i]["order"])) if bool(nodes[i]["linked"]) else "!", HORIZONTAL_ALIGNMENT_CENTER, 30, 18, UiKit.GOLD if i in path else UiKit.TEXT)
 	draw_circle(_center(), HUB, Color(0.04, 0.03, 0.05))
 	draw_arc(_center(), HUB - 2, 0, TAU, 64, Color(UiKit.GOLD, 0.4), 1, true)
 	draw_string(UiKit.title_font(), _center() + Vector2(-50, 7), "%d / 7" % _groups.size(), HORIZONTAL_ALIGNMENT_CENTER, 100, 34, UiKit.GOLD)

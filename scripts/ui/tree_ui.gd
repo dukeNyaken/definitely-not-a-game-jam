@@ -58,7 +58,7 @@ func _ready() -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override(&"separation", 20)
 	layout.add_child(footer)
-	_summary = UiKit.label("По часовой · 1 — навык, далее — его силы\nНаведи для XP · Нажми для параметров", 17, UiKit.MUTED)
+	_summary = UiKit.label("По часовой · I — навык, далее — его силы\nНаведи для XP · Нажми для параметров", 17, UiKit.MUTED)
 	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(_summary)
 	var close := UiKit.button("В бой · Tab", func(): close_requested.emit())
@@ -157,8 +157,8 @@ func _add_inherited_skills() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override(&"separation", 6)
 		list.add_child(row)
-		var order := UiKit.label(str(node["order"]) if bool(node["linked"]) else "!", 16, UiKit.GOLD)
-		order.custom_minimum_size.x = 18
+		var order := UiKit.label(UiKit.roman(int(node["order"])) if bool(node["linked"]) else "!", 16, UiKit.GOLD)
+		order.custom_minimum_size.x = 32
 		row.add_child(order)
 		var icon := TextureRect.new()
 		icon.texture = IconFactory.icon(prop.source_item_id)
