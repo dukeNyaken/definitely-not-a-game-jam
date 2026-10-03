@@ -94,7 +94,7 @@ func _build_tree_hint() -> void:
 	v.offset_bottom = 70
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(v)
-	v.add_child(UiKit.outlined(UiKit.label("Tab — навыки и связи", 17, UiKit.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)))
+	v.add_child(UiKit.outlined(UiKit.label("Tab — кольцо навыков", 17, UiKit.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)))
 	_seed_label = UiKit.outlined(UiKit.label("Сид %d" % RunState.seed_value, 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_RIGHT))
 	v.add_child(_seed_label)
 

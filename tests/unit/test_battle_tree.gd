@@ -71,20 +71,91 @@ func test_detached_debug_property_has_no_false_link_to_native_skill() -> void:
 	assert_false(nodes[2]["linked"])
 
 
-func test_selecting_sacrificed_chip_opens_its_effect_on_surviving_host() -> void:
+func test_selecting_sector_keeps_whole_ring_visible_and_finds_surviving_host() -> void:
 	RunState.ring = Ring.from_ids([&"shield", &"boots", &"sword"])
 	RunState.ring.sacrifice(0)
 	RunState.ring.sacrifice(0)
 	var panel := TreeUi.new()
 	add_child_autofree(panel)
-	panel._chips[&"shield"].pressed.emit()
-	assert_eq(panel._host.def_id, &"sword")
 	var diagram := panel._diagram
+	var buttons := diagram._buttons.duplicate()
+	panel.select_item(&"shield")
+	assert_eq(panel._host.def_id, &"sword")
 	assert_eq((diagram.nodes[diagram.selected_node]["property"] as Property).source_item_id, &"shield")
 	assert_eq(diagram.selected_path(), [2, 1, 0] as Array[int])
-	assert_true(panel._chips[&"shield"].tooltip_text.contains("больше не получает XP"))
-	panel._chips[&"sword"].pressed.emit()
+	assert_eq(diagram._buttons, buttons, "выбор не перестраивает и не заменяет кольцо")
+	diagram._buttons[diagram.index_of(&"sword")].pressed.emit()
 	assert_eq(diagram.selected_node, 0)
+	assert_eq(diagram.nodes.size(), 3)
+
+
+func test_all_seven_sources_are_visible_and_hosts_follow_current_ring_order() -> void:
+	var ring := Ring.from_ids([&"shield", &"boots", &"sword", &"armor", &"helmet", &"gloves", &"amulet"])
+	ring.sacrifice(ring.index_of(&"shield"))
+	ring.sacrifice(ring.index_of(&"armor"))
+	ring.swap_neighbors(0)
+	var nodes := PropertyDiagram.ring_nodes(ring)
+	var hosts: Array[StringName] = []
+	var sources: Array[StringName] = []
+	for node in nodes:
+		sources.append(node["source"])
+		if node["property"] == null:
+			hosts.append((node["state"] as ItemState).def_id)
+	assert_eq(nodes.size(), 7)
+	assert_eq(hosts, ring.ids(), "учитывается обмен соседей в святилище")
+	for id in Db.ITEM_IDS:
+		assert_true(id in sources, "надетые и поглощённые вещи видны одновременно")
+	for node in nodes:
+		if node["property"] != null:
+			assert_eq((nodes[int(node["parent"])]["state"] as ItemState).def_id, (node["state"] as ItemState).def_id)
+		else:
+			assert_eq(node["order"], 1, "у каждого навыка своя последовательность")
+
+
+func test_clockwise_numbers_match_actual_event_bus_execution_in_branches() -> void:
+	var ring := Ring.from_ids([&"shield", &"boots", &"sword", &"armor", &"helmet", &"gloves", &"amulet"])
+	for id in [&"shield", &"boots", &"helmet", &"armor", &"sword", &"amulet"]:
+		ring.sacrifice(ring.index_of(id))
+	var host := ring.items[0]
+	var nodes := PropertyDiagram.ring_nodes(ring)
+	var expected: Array[StringName] = []
+	for i in range(1, nodes.size()):
+		assert_eq(nodes[i]["order"], i + 1)
+		expected.append(nodes[i]["source"])
+	var actual: Array[StringName] = []
+	var bus := EventBus.new()
+	add_child_autofree(bus)
+	bus.property_triggered.connect(func(prop: Property, _ctx: ActionContext): actual.append(prop.source_item_id))
+	bus.emit_event(host.def().event_id, ActionContext.make(null, host))
+	assert_eq(actual, expected, "порядок подтверждён боевой шиной, включая возврат к соседней ветке")
+	var glove_index := 0
+	for id in [&"helmet", &"armor", &"sword", &"amulet"]:
+		for node in nodes:
+			if node["source"] == id:
+				assert_eq(node["parent"], glove_index, "соседняя ветка запускается навыком, а не предыдущим сектором")
+
+
+func test_circle_click_selects_each_source_and_inner_band_selects_its_host() -> void:
+	RunState.ring = Ring.from_ids([&"shield", &"boots", &"sword", &"armor", &"helmet", &"gloves", &"amulet"])
+	RunState.ring.sacrifice(0)
+	var panel := TreeUi.new()
+	add_child_autofree(panel)
+	var diagram := panel._diagram
+	diagram.size = Vector2(1000, 650)
+	for i in diagram.nodes.size():
+		var direction := Vector2.from_angle(diagram._angle(i))
+		var point := diagram._center() + direction * (diagram._radius() - 20)
+		assert_eq(diagram.sector_at(point), i)
+		var event := InputEventMouseButton.new()
+		event.pressed = true
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.position = point
+		diagram._gui_input(event)
+		assert_eq(diagram.selected_node, i)
+		var host: ItemState = diagram.nodes[i]["state"]
+		assert_eq(diagram.sector_at(diagram._center() + direction * 83), diagram.index_of(host.def_id))
+	assert_eq(diagram.sector_at(diagram._center()), -1)
+	assert_eq(diagram.sector_at(Vector2.ZERO), -1)
 
 
 func test_metrics_use_worn_appearance_and_property_damage_bonus() -> void:

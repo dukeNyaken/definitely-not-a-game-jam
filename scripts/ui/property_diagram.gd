@@ -1,17 +1,22 @@
 class_name PropertyDiagram
 extends Control
-## Родной навык в центре; связи берутся из событий, а не из порядка жертв.
+## Общее кольцо: все родные навыки и поглощённые силы, без переключения деревьев.
 
 signal node_selected(index: int)
 
-var state: ItemState
+const GAP := 0.035
+const HUB := 58.0
+const INNER := 112.0
+
 var nodes: Array[Dictionary] = []
 var selected_node := 0
 var _buttons: Array[Button] = []
+var _groups: Array[Dictionary] = []
+var _hover := -1
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(860, 470)
+	custom_minimum_size = Vector2(940, 650)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_filter = Control.MOUSE_FILTER_PASS
@@ -19,7 +24,8 @@ func _init() -> void:
 
 func _ready() -> void:
 	resized.connect(_layout)
-	IconFactory.icons_ready.connect(_redraw_nodes)
+	IconFactory.icons_ready.connect(queue_redraw)
+	mouse_exited.connect(func(): _hover = -1; queue_redraw())
 
 
 static func tree_nodes(item: ItemState) -> Array[Dictionary]:
@@ -39,28 +45,66 @@ static func tree_nodes(item: ItemState) -> Array[Dictionary]:
 	return result
 
 
-func show_item(item: ItemState) -> void:
-	state = item
-	nodes = tree_nodes(item)
-	selected_node = 0
+static func ring_nodes(ring: Ring) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for item in ring.items:
+		var base := result.size()
+		var order := 0
+		for entry in tree_nodes(item):
+			var node := entry.duplicate()
+			var parent := int(node["parent"])
+			node["parent"] = base + parent if parent >= 0 else -1
+			node["state"] = item
+			var prop: Property = node["property"]
+			node["source"] = item.def_id if prop == null else prop.source_item_id
+			if bool(node["linked"]):
+				order += 1
+			node["order"] = order if bool(node["linked"]) else 0
+			result.append(node)
+	return result
+
+
+func show_ring(ring: Ring) -> void:
+	var selected_id: StringName = nodes[selected_node]["source"] if not nodes.is_empty() else &""
+	nodes = ring_nodes(ring)
+	_groups.clear()
 	for button in _buttons:
 		remove_child(button)
 		button.queue_free()
 	_buttons.clear()
 	for i in nodes.size():
+		var state: ItemState = nodes[i]["state"]
+		if nodes[i]["property"] == null:
+			_groups.append({"state": state, "first": i, "last": i})
+		else:
+			_groups.back()["last"] = i
 		var button := UiKit.button("", select_node.bind(i))
 		button.focus_mode = Control.FOCUS_ALL
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		button.draw.connect(_draw_node.bind(button, i))
+		button.draw.connect(_draw_label.bind(button, i))
+		button.mouse_entered.connect(func(): _hover = i; queue_redraw())
+		button.mouse_exited.connect(func(): _hover = -1; queue_redraw())
 		add_child(button)
 		_buttons.append(button)
 	_layout()
-	select_node(0)
+	if not nodes.is_empty():
+		select_node(maxi(index_of(selected_id), 0))
+	else:
+		queue_redraw()
+
+
+func index_of(id: StringName) -> int:
+	for i in nodes.size():
+		if nodes[i]["source"] == id:
+			return i
+	return -1
 
 
 func select_node(index: int) -> void:
+	if nodes.is_empty():
+		return
 	selected_node = clampi(index, 0, nodes.size() - 1)
-	_redraw_nodes()
+	_redraw_labels()
 	queue_redraw()
 	node_selected.emit(selected_node)
 
@@ -79,101 +123,136 @@ func _center() -> Vector2:
 
 
 func _radius() -> float:
-	return minf(size.y * 0.5 - 62.0, size.x * 0.5 - 125.0)
+	return minf(size.y * 0.5 - 106, size.x * 0.5 - 150)
 
 
 func _angle(index: int) -> float:
-	return -PI * 0.5 + TAU * (index - 1) / maxi(nodes.size() - 1, 1)
+	return -PI * 0.5 + TAU * index / maxi(nodes.size(), 1)
 
 
 func _layout() -> void:
 	for i in _buttons.size():
 		var button := _buttons[i]
-		button.size = Vector2(146, 120) if i == 0 else Vector2(132, 98)
-		var center := _center() if i == 0 else _center() + Vector2.from_angle(_angle(i)) * _radius()
-		button.position = center - button.size * 0.5
+		button.size = Vector2(156, 90)
+		button.position = _center() + Vector2.from_angle(_angle(i)) * Vector2(_radius() + 116, _radius() + 58) - button.size * 0.5
 	queue_redraw()
 
 
-func _redraw_nodes() -> void:
+func _redraw_labels() -> void:
 	for i in _buttons.size():
-		var prop: Property = nodes[i]["property"]
-		var color := state.def().essence.color if i == 0 else Db.essence(prop.essence_id).color
-		var linked := bool(nodes[i]["linked"])
-		var border := UiKit.GOLD if i == selected_node else color if linked else UiKit.MUTED.darkened(0.4)
-		_buttons[i].add_theme_stylebox_override(&"normal", UiKit.box(Color(color, 0.12), border, 2 if i == selected_node else 1, 12, 4))
-		_buttons[i].add_theme_stylebox_override(&"hover", UiKit.box(Color(color, 0.2), color, 2, 12, 4))
-		_buttons[i].tooltip_text = "%s · %s" % [state.def().input_label, state.def().event_label()] if i == 0 else prop.display_name()
+		var color := _color(i)
+		var selected := i == selected_node
+		_buttons[i].add_theme_stylebox_override(&"normal", UiKit.box(Color(color, 0.11) if selected else Color(0.055, 0.045, 0.065), UiKit.GOLD if selected else color.darkened(0.6), 2 if selected else 1, 8, 4))
+		_buttons[i].add_theme_stylebox_override(&"hover", UiKit.box(Color(color, 0.17), color, 2, 8, 4))
+		_buttons[i].tooltip_text = _label(i)
 		_buttons[i].queue_redraw()
 
 
-func _draw_node(button: Button, index: int) -> void:
+func _color(index: int) -> Color:
 	var prop: Property = nodes[index]["property"]
-	var id := state.def_id if index == 0 else prop.source_item_id
-	var icon := IconFactory.icon(id)
-	if icon != null:
-		var width := 46.0 if index == 0 else 36.0
-		button.draw_texture_rect(icon, Rect2(Vector2(button.size.x * 0.5 - width * 0.5, 8), Vector2(width, width)), false)
-	var name := state.def().display_name if index == 0 else Db.essence(prop.essence_id).display_name
-	var event := state.def().event_id if index == 0 else prop.emit_event
-	var y := 77.0 if index == 0 else 64.0
-	button.draw_string(UiKit.body_font(), Vector2(0, y), name, HORIZONTAL_ALIGNMENT_CENTER, button.size.x, 19, UiKit.TEXT)
-	var caption := "%s · %s" % [state.def().input_label, PropertyTree.event_label(event)] if index == 0 else PropertyTree.event_label(event)
-	button.draw_string(UiKit.body_font(), Vector2(0, y + 23), caption, HORIZONTAL_ALIGNMENT_CENTER, button.size.x, 14, UiKit.GOLD if index == 0 else UiKit.MUTED)
-	if not bool(nodes[index]["linked"]):
-		button.draw_line(Vector2(10, 10), Vector2(22, 10), UiKit.DANGER, 2.0)
+	return (nodes[index]["state"] as ItemState).def().essence.color if prop == null else Db.essence(prop.essence_id).color
+
+
+func _label(index: int) -> String:
+	var prop: Property = nodes[index]["property"]
+	return (nodes[index]["state"] as ItemState).def().display_name if prop == null else Db.essence(prop.essence_id).display_name
+
+
+func _draw_label(button: Button, index: int) -> void:
+	var state: ItemState = nodes[index]["state"]
+	var prop: Property = nodes[index]["property"]
+	button.draw_string(UiKit.body_font(), Vector2(4, 25), _label(index), HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 18, UiKit.GOLD if index == selected_node else UiKit.TEXT)
+	var caption := "%s · %s" % [state.def().input_label, MasteryWheel.ROMAN[state.appearance - 1]]
+	if prop != null:
+		var parent := int(nodes[index]["parent"])
+		caption = "После %d · %s" % [int(nodes[parent]["order"]), PropertyTree.event_label(prop.listen_event)] if bool(nodes[index]["linked"]) else "Нет запуска"
+	button.draw_string(UiKit.body_font(), Vector2(4, 48), caption, HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 14, UiKit.GOLD if prop == null else UiKit.MUTED)
+	if prop == null:
+		var lv := Mastery.level(state.def_id)
+		var target := int(Mastery.rules["thresholds"][mini(lv, 2)])
+		var xp := int(Mastery.xp.get(state.def_id, 0))
+		button.draw_rect(Rect2(12, 59, button.size.x - 24, 3), Color(0.2, 0.16, 0.21))
+		button.draw_rect(Rect2(12, 59, (button.size.x - 24) * clampf(float(xp) / target, 0, 1), 3), UiKit.GOLD)
+		button.draw_string(UiKit.body_font(), Vector2(4, 81), "%d / %d XP" % [xp, target], HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 13, UiKit.MUTED)
+	else:
+		button.draw_string(UiKit.body_font(), Vector2(4, 77), "%d XP · стоп" % int(Mastery.xp.get(nodes[index]["source"], 0)), HORIZONTAL_ALIGNMENT_CENTER, button.size.x - 8, 13, UiKit.MUTED)
+
+
+func sector_at(point: Vector2) -> int:
+	if nodes.is_empty():
+		return -1
+	var offset := point - _center()
+	if offset.length() < HUB or offset.length() > _radius() + 12:
+		return -1
+	var step := TAU / nodes.size()
+	var index := int(fposmod(offset.angle() + PI * 0.5 + step * 0.5, TAU) / step)
+	if offset.length() < INNER:
+		for group in _groups:
+			if index >= int(group["first"]) and index <= int(group["last"]):
+				return int(group["first"])
+	return index
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		_hover = sector_at(event.position)
+		queue_redraw()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var index := sector_at(event.position)
+		if index >= 0:
+			select_node(index)
+			_buttons[index].grab_focus()
+			accept_event()
 
 
 func _draw() -> void:
-	if state == null:
+	if nodes.is_empty():
 		return
-	var center := _center()
-	draw_arc(center, _radius(), 0, TAU, 96, Color(UiKit.GOLD, 0.1), 1, true)
+	var radius := _radius()
+	var step := TAU / nodes.size()
 	var path := selected_path()
-	for i in range(1, nodes.size()):
-		var parent := int(nodes[i]["parent"])
-		if parent < 0:
-			continue
-		var points := _edge_points(parent, i)
-		var color := Db.essence((nodes[i]["property"] as Property).essence_id).color
-		var highlighted := i in path
-		draw_polyline(points, Color(color, 0.95 if highlighted else 0.42), 3.0 if highlighted else 1.5, true)
-		var end := points[points.size() - 1]
-		var direction := (end - points[points.size() - 2]).normalized()
-		var side := direction.orthogonal() * 5
-		draw_colored_polygon(PackedVector2Array([end, end - direction * 11 + side, end - direction * 11 - side]), color)
-	draw_circle(center, 96, Color(0.04, 0.03, 0.05))
-	draw_arc(center, 94, 0, TAU, 64, Color(UiKit.GOLD, 0.2), 2, true)
-	var progress := float(Mastery.xp.get(state.def_id, 0)) / float(Mastery.rules["thresholds"].back())
-	if progress > 0:
-		draw_arc(center, 94, -PI * 0.5, -PI * 0.5 + TAU * progress, 64, UiKit.GOLD, 3, true)
-	if nodes.size() == 1:
-		draw_string(UiKit.body_font(), center + Vector2(-230, 155), "Жертвы добавят сюда силы соседей", HORIZONTAL_ALIGNMENT_CENTER, 460, 18, UiKit.MUTED)
+	draw_circle(_center(), radius + 14, Color(0.065, 0.05, 0.075))
+	draw_arc(_center(), radius + 13, 0, TAU, 112, Color(UiKit.GOLD, 0.22), 1, true)
+	for group in _groups:
+		var state: ItemState = group["state"]
+		var from := _angle(int(group["first"])) - step * 0.5 + GAP
+		var to := _angle(int(group["last"])) + step * 0.5 - GAP
+		var color := state.def().essence.color
+		_band(HUB + 4, INNER - 4, from, to, Color(color, 0.23))
+		draw_arc(_center(), INNER - 4, from, to, 40, Color(color, 0.8), 2, true)
+		var mark := _center() + Vector2.from_angle((from + to) * 0.5) * 83
+		draw_string(UiKit.body_font(), mark + Vector2(-42, 6), state.def().input_label, HORIZONTAL_ALIGNMENT_CENTER, 84, 16, UiKit.GOLD)
+	for i in nodes.size():
+		var angle := _angle(i)
+		var half := step * 0.5 - GAP
+		var color := _color(i)
+		var hot := i == selected_node or i == _hover
+		_band(INNER, radius, angle - half, angle + half, Color(color, 0.36 if hot else 0.23))
+		var outline := _band_points(INNER, radius, angle - half, angle + half)
+		outline.append(outline[0])
+		draw_polyline(outline, UiKit.GOLD if i == selected_node else Color(color, 0.8 if i in path else 0.35), 2 if i in path or hot else 1, true)
+		var icon := IconFactory.icon(nodes[i]["source"])
+		var pos := _center() + Vector2.from_angle(angle) * (radius - 29)
+		if icon != null:
+			draw_circle(pos, 23, Color(0.035, 0.025, 0.04, 0.9))
+			draw_texture_rect(icon, Rect2(pos - Vector2(23, 23), Vector2(46, 46)), false)
+		var number_pos := _center() + Vector2.from_angle(angle) * (INNER + 21)
+		draw_circle(number_pos, 15, Color(0.04, 0.03, 0.05))
+		draw_string(UiKit.body_font(), number_pos + Vector2(-15, 6), str(nodes[i]["order"]) if bool(nodes[i]["linked"]) else "!", HORIZONTAL_ALIGNMENT_CENTER, 30, 18, UiKit.GOLD if i in path else UiKit.TEXT)
+	draw_circle(_center(), HUB, Color(0.04, 0.03, 0.05))
+	draw_arc(_center(), HUB - 2, 0, TAU, 64, Color(UiKit.GOLD, 0.4), 1, true)
+	draw_string(UiKit.title_font(), _center() + Vector2(-50, 7), "%d / 7" % _groups.size(), HORIZONTAL_ALIGNMENT_CENTER, 100, 34, UiKit.GOLD)
+	draw_string(UiKit.body_font(), _center() + Vector2(-50, 30), "надето", HORIZONTAL_ALIGNMENT_CENTER, 100, 15, UiKit.MUTED)
 
 
-func _border_point(index: int, toward: Vector2) -> Vector2:
-	var button := _buttons[index]
-	var center := button.position + button.size * 0.5
-	var direction := (toward - center).normalized()
-	if index == 0:
-		return center + direction * 98.0
-	var half := button.size * 0.5 + Vector2(5, 5)
-	var x := half.x / maxf(absf(direction.x), 0.001)
-	var y := half.y / maxf(absf(direction.y), 0.001)
-	return center + direction * minf(x, y)
+func _band(inner: float, outer: float, from: float, to: float, color: Color) -> void:
+	draw_colored_polygon(_band_points(inner, outer, from, to), color)
 
 
-func _edge_points(parent: int, child: int) -> PackedVector2Array:
-	var from := _buttons[parent].position + _buttons[parent].size * 0.5
-	var to := _buttons[child].position + _buttons[child].size * 0.5
-	var control := (from + to) * 0.5
-	if parent > 0 and Geometry2D.get_closest_point_to_segment(_center(), from, to).distance_to(_center()) < 110:
-		var angle := (_angle(parent) + _angle(child)) * 0.5
-		control = _center() + Vector2.from_angle(angle) * (_radius() + 25)
-	var start := _border_point(parent, control)
-	var end := _border_point(child, control)
+func _band_points(inner: float, outer: float, from: float, to: float) -> PackedVector2Array:
 	var points := PackedVector2Array()
-	for i in 25:
-		var t := i / 24.0
-		points.append((1 - t) * (1 - t) * start + 2 * (1 - t) * t * control + t * t * end)
+	for i in 33:
+		points.append(_center() + Vector2.from_angle(lerpf(from, to, i / 32.0)) * outer)
+	for i in range(32, -1, -1):
+		points.append(_center() + Vector2.from_angle(lerpf(from, to, i / 32.0)) * inner)
 	return points
