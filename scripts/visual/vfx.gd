@@ -1,8 +1,9 @@
 class_name Vfx
 extends RefCounted
-## Процедурные эффекты: дуги, кольца, вспышки, всплески. Всё из простых мешей.
+## Эффекты: дуги и кольца — пиксельные листы (FlipbookFx), вспышки, лучи, купола — простые меши.
 
 static var _mat_cache: Dictionary = {}
+static var _arc_cache: Dictionary = {}
 
 
 static func root_for(node: Node) -> Node:
@@ -48,6 +49,31 @@ static func sector_mesh(radius: float, arc_degrees: float, inner: float = 0.0, s
 	return st.commit()
 
 
+## Сектор единичного радиуса с развёрткой UV: u — вдоль дуги слева направо, v — от внешнего края (0) внутрь (1).
+static func arc_mesh(arc_degrees: float, inner: float = 0.45) -> ArrayMesh:
+	var key := "%d|%.2f" % [int(round(arc_degrees)), inner]
+	if _arc_cache.has(key):
+		return _arc_cache[key]
+	var segments := maxi(6, int(arc_degrees / 8.0))
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half := deg_to_rad(arc_degrees) * 0.5
+	for i in segments:
+		var u0 := float(i) / segments
+		var u1 := float(i + 1) / segments
+		var a0 := -half + 2.0 * half * u0
+		var a1 := -half + 2.0 * half * u1
+		var o0 := Vector3(sin(a0), 0, -cos(a0))
+		var o1 := Vector3(sin(a1), 0, -cos(a1))
+		for v in [[o0 * inner, Vector2(u0, 1)], [o0, Vector2(u0, 0)], [o1, Vector2(u1, 0)],
+				[o0 * inner, Vector2(u0, 1)], [o1, Vector2(u1, 0)], [o1 * inner, Vector2(u1, 1)]]:
+			st.set_uv(v[1])
+			st.add_vertex(v[0])
+	var mesh := st.commit()
+	_arc_cache[key] = mesh
+	return mesh
+
+
 static func ring_mesh(radius: float, width: float, segments: int = 40) -> ArrayMesh:
 	return sector_mesh(radius, 360.0, maxf(radius - width, 0.0), segments)
 
@@ -73,30 +99,23 @@ static func _fade_free(mi: MeshInstance3D, duration: float, grow: float = 1.0) -
 	tw.chain().tween_callback(mi.queue_free)
 
 
-## Дуга удара (меч, кулак, Лезвие).
-static func slash(owner: Node3D, origin: Vector3, dir: Vector3, radius: float, arc_degrees: float, color: Color, duration: float = 0.22) -> void:
-	var parent := root_for(owner)
-	if parent == null:
+## Дуга удара (меч, кулак, Лезвие): пиксельный взмах, натянутый на сектор. mirror — взмах справа налево.
+static func slash(owner: Node3D, origin: Vector3, dir: Vector3, radius: float, arc_degrees: float, color: Color, duration: float = 0.22, mirror: bool = false) -> void:
+	var fx := FlipbookFx.spawn(owner, &"slash_arc", origin + Vector3(0, 0.6, 0), color, 1.0,
+		{"mesh": arc_mesh(arc_degrees), "duration": maxf(duration * 1.25, 0.26), "energy": 1.9, "pull": 0.2})
+	if fx == null:
 		return
-	var mi := _spawn(parent, sector_mesh(radius, arc_degrees, radius * 0.45), material(Color(color, 0.85), 1.6, true), origin + Vector3(0, 0.6, 0))
 	var d := Combat.flat_dir(dir)
-	mi.look_at(mi.global_position + d, Vector3.UP)
-	_fade_free(mi, duration, 1.08)
+	fx.rotation.y = atan2(-d.x, -d.z)
+	fx.scale = Vector3(-radius if mirror else radius, 1.0, radius)
 
 
-## Кольцо на земле (волна, толчок, Взор).
-static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, duration: float = 0.35, width: float = 0.35) -> void:
-	var parent := root_for(owner)
-	if parent == null:
-		return
-	var mi := _spawn(parent, ring_mesh(1.0, width / maxf(radius, 0.1)), material(Color(color, 0.9), 1.6, true), center + Vector3(0, 0.08, 0))
-	mi.scale = Vector3.ONE * 0.2
-	var tw := mi.create_tween().set_parallel(true)
-	tw.tween_property(mi, "scale", Vector3.ONE * radius, duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	var mat := mi.material_override as StandardMaterial3D
-	var c := mat.albedo_color
-	tw.tween_property(mat, "albedo_color", Color(c.r, c.g, c.b, 0.0), duration).set_ease(Tween.EASE_IN)
-	tw.chain().tween_callback(mi.queue_free)
+## Кольцо на земле (волна, толчок, Взор): пиксельный фронт расходится до radius и рвётся на штрихи.
+static func ring(owner: Node3D, center: Vector3, radius: float, color: Color, duration: float = 0.35, _width: float = 0.35) -> void:
+	var spec: Dictionary = FlipbookFx.SHEETS[&"shock_ring"]
+	var size := radius * float(spec["size_px"]) / float(spec["radius_px"][-1])
+	FlipbookFx.spawn(owner, &"shock_ring", center + Vector3(0, 0.08, 0), color, size,
+		{"billboard": false, "duration": duration * 1.3, "energy": 1.8, "pull": 0.05})
 
 
 ## Сфера-купол вокруг персонажа (Оплот).

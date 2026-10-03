@@ -28,7 +28,8 @@ func press() -> bool:
 		var res := Combat.deal(ctx, t, dmg, {"knockback": def.stat("knockback", 0.5) * (2.0 if finisher else 1.0)})
 		any = any or res == Actor.HitResult.HIT
 	start_cooldown(float(def.stat("finisher_time" if finisher else "swing_time", 0.3)))
-	Vfx.slash(actor, ctx.origin, ctx.direction, radius, arc, Color(1, 1, 1) if not finisher else Color(1, 0.9, 0.6))
+	# Взмахи комбо чередуются: слева направо, справа налево.
+	Vfx.slash(actor, ctx.origin, ctx.direction, radius, arc, Color(1, 1, 1) if not finisher else Color(1, 0.9, 0.6), 0.22, combo_step % 2 == 1)
 	Audio.play(&"sword_hit" if any else &"sword_swing", -2.0 if any else -6.0)
 	used.emit(ctx)
 	emit_native(ctx)

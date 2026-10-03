@@ -7,6 +7,11 @@ const SHEETS := {
 	&"impact": {"tex": preload("res://assets/vfx/impact.png"), "grid": Vector2i(3, 2), "ms": [40, 40, 50, 60, 60, 70]},
 	&"gaze_eye": {"tex": preload("res://assets/vfx/gaze_eye.png"), "grid": Vector2i(3, 3), "ms": [70, 60, 60, 120, 140, 120, 60, 80]},
 	&"elite_aura": {"tex": preload("res://assets/vfx/elite_aura.png"), "grid": Vector2i(3, 3), "ms": [90, 90, 90, 90, 90, 90, 90, 90]},
+	## Развёртка взмаха: x — вдоль дуги от хвоста к голове, y — от кромки лезвия внутрь (натягивается на сектор).
+	&"slash_arc": {"tex": preload("res://assets/vfx/slash_arc.png"), "grid": Vector2i(3, 2), "ms": [30, 30, 40, 50, 60, 70]},
+	## Кольцо волны сверху; radius_px — радиус фронта в каждом кадре (лист 128 px).
+	&"shock_ring": {"tex": preload("res://assets/vfx/shock_ring.png"), "grid": Vector2i(3, 3), "ms": [40, 40, 50, 50, 60, 60, 70, 80],
+		"radius_px": [10, 24, 36, 45, 52, 57, 60, 62], "size_px": 128},
 }
 
 const SHADER := """
@@ -48,6 +53,8 @@ static var _plane: PlaneMesh
 
 var loop: bool = false
 var speed: float = 1.0
+## Кадры выставляет владелец (set_frame), сам эффект не листает и не удаляется.
+var manual: bool = false
 var _ms: Array = []
 var _frame: int = 0
 var _t: float = 0.0
@@ -64,13 +71,24 @@ static func _shader(additive: bool, billboard: bool) -> Shader:
 	return _shaders[key]
 
 
-## opts: additive (true), billboard (true), loop (false), speed (1.0), energy (1.6), pull (0.0).
+## Длительность листа целиком, мс.
+static func total_ms(id: StringName) -> float:
+	var sum := 0.0
+	for ms in SHEETS[id]["ms"]:
+		sum += float(ms)
+	return sum
+
+
+## opts: additive (true), billboard (true), loop (false), speed (1.0) или duration (с),
+## energy (1.6), pull (0.0), mesh (своя сетка с UV — тогда без билборда), manual (false).
 static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}) -> FlipbookFx:
 	var spec: Dictionary = SHEETS[id]
-	var billboard: bool = opts.get("billboard", true)
+	var billboard: bool = opts.get("billboard", true) and not opts.has("mesh")
 	var fx := FlipbookFx.new()
 	fx.name = "Fx_%s" % id
-	if billboard:
+	if opts.has("mesh"):
+		fx.mesh = opts["mesh"]
+	elif billboard:
 		if _quad == null:
 			_quad = QuadMesh.new()
 		fx.mesh = _quad
@@ -83,6 +101,9 @@ static func make(id: StringName, tint: Color, size: float, opts: Dictionary = {}
 	fx.scale = Vector3.ONE * size
 	fx.loop = opts.get("loop", false)
 	fx.speed = opts.get("speed", 1.0)
+	if opts.has("duration"):
+		fx.speed = total_ms(id) / (1000.0 * maxf(float(opts["duration"]), 0.01))
+	fx.manual = opts.get("manual", false)
 	fx._ms = spec["ms"]
 	var m := ShaderMaterial.new()
 	m.shader = _shader(opts.get("additive", true), billboard)
@@ -124,6 +145,15 @@ static func impact(target: Node3D, source: Vector3, height: float, tint: Color, 
 	FlipbookFx.spawn(target, &"impact", pos, tint, size, {"energy": 2.2, "pull": 1.2})
 
 
+func set_frame(i: int) -> void:
+	_frame = clampi(i, 0, _ms.size() - 1)
+	_mat.set_shader_parameter(&"frame", float(_frame))
+
+
+func set_fade(v: float) -> void:
+	_mat.set_shader_parameter(&"fade", v)
+
+
 func fade_out(duration: float) -> void:
 	if _fading:
 		return
@@ -134,6 +164,8 @@ func fade_out(duration: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if manual:
+		return
 	_t += delta * 1000.0 * speed
 	while _t >= float(_ms[_frame]):
 		_t -= float(_ms[_frame])

@@ -6,9 +6,14 @@ var dummies: Array[Actor] = []
 var elite: Actor
 var _t: float = 0.0
 var _done: Dictionary = {}
+## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна.
+var scenario := "hits"
 
 
 func _ready() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("scenario="):
+			scenario = a.trim_prefix("scenario=")
 	var arena := Arena.new()
 	add_child(arena)
 	arena.build(15.0)
@@ -53,6 +58,9 @@ func _once(key: String, at: float) -> bool:
 func _process(delta: float) -> void:
 	_t += delta
 	var ctx := ActionContext.make(hero, null)
+	if scenario == "arcs":
+		_arcs(ctx)
+		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
 		var g := ActionContext.make(hero, ItemState.create(&"helmet"))
@@ -70,3 +78,19 @@ func _process(delta: float) -> void:
 	if _once("kill", 2.0):
 		elite.block_arc_degrees = 0.0
 		Combat.deal(ctx, elite, 99999.0)
+
+
+func _arcs(ctx: ActionContext) -> void:
+	if _once("sword", 1.0):
+		Vfx.slash(hero, hero.global_position, dummies[0].global_position - hero.global_position, 2.3, 120.0, Color(1, 1, 1))
+	if _once("enemy", 1.0):
+		Vfx.slash(elite, elite.global_position, hero.global_position - elite.global_position, 1.7, 100.0, Color(1, 0.45, 0.3), 0.18)
+	if _once("blade", 1.6):
+		Vfx.slash(hero, hero.global_position, Vector3(-1, 0, 0.3), 2.5, 180.0, Db.essence(&"blade").color, 0.26, true)
+	if _once("mass", 2.2):
+		Vfx.ring(hero, dummies[2].global_position, 3.0, Db.essence(&"mass").color, 0.45, 0.6)
+	if _once("wave", 2.2):
+		var wave := Shockwave.new()
+		wave.setup(ctx, 6.0, 0.0, 0.6, Db.essence(&"energy").color)
+		add_child(wave)
+		wave.global_position = hero.global_position
