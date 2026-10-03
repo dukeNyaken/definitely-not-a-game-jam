@@ -40,7 +40,7 @@ func new_run(p_seed: int = -1) -> void:
 		p_seed = randi_range(100000, 999999)
 	seed_value = p_seed
 	ring = Ring.generate(seed_value, Db.ITEM_IDS)
-	Mastery.run_xp.clear()
+	Mastery.begin_run()
 	for item in ring.items:
 		item.appearance = Mastery.selected(item.def_id)
 	var rng := RandomNumberGenerator.new()
