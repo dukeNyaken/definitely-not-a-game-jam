@@ -1,6 +1,6 @@
 class_name SacrificeFx
 extends Node3D
-## Жертва: вещь растворяется в поток своего цвета, и он по дуге влетает в получателя.
+## Жертва: вещь растворяется в поток огоньков своего цвета, и он по дуге влетает в получателя.
 
 var model: ActorModel
 var start: Vector3
@@ -23,23 +23,16 @@ static func play(parent: Node, p_model: ActorModel, p_start: Vector3, p_recipien
 
 
 func _ready() -> void:
-	Vfx.burst(self, start, color, 1.4, 0.4)
-	var mat := Vfx.material(Color(color, 1.0), 2.4, true)
+	FlipbookFx.spawn(self, &"impact", start, color, 1.8, {"energy": 2.4, "pull": 0.8})
 	for i in 18:
-		var s := SphereMesh.new()
-		s.radius = 0.09 + randf() * 0.06
-		s.height = s.radius * 2.0
-		s.radial_segments = 6
-		s.rings = 3
-		var mi := MeshInstance3D.new()
-		mi.mesh = s
-		mi.material_override = mat
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var size := randf_range(0.45, 0.7)
+		var mi := FlipbookFx.make(&"soul_wisp", color, size, {"loop": true, "energy": 2.4, "pull": 0.4, "random_start": true})
 		mi.visible = false
 		add_child(mi)
 		mi.global_position = start
 		_orbs.append({
 			"node": mi,
+			"size": size,
 			"t": -i * 0.045,
 			"side": randf_range(-1.2, 1.2),
 			"lift": randf_range(1.0, 2.2),
@@ -77,10 +70,10 @@ func _process(delta: float) -> void:
 		var a := start.lerp(mid, t)
 		var b := mid.lerp(target, t)
 		mi.global_position = a.lerp(b, t)
-		mi.scale = Vector3.ONE * (1.0 - t * 0.4)
+		mi.scale = Vector3.ONE * float(orb["size"]) * (1.0 - t * 0.4)
 	if alive == 0:
 		_done = true
-		Vfx.burst(self, target, color, 1.0, 0.35)
+		FlipbookFx.spawn(self, &"impact", target, color, 1.4, {"energy": 2.4, "pull": 0.8})
 		Vfx.ring(self, Vector3(target.x, 0.0, target.z), 2.2, color, 0.5, 0.25)
 		Audio.play(&"absorb")
 		if model != null and is_instance_valid(model):

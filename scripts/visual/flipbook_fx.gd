@@ -24,6 +24,12 @@ const SHEETS := {
 	&"grip_chain": {"tex": preload("res://assets/vfx/grip_chain.png"), "grid": Vector2i(2, 2), "ms": [60, 60, 60, 60]},
 	## Линии скорости рывка: головы у u = 1 (точка прибытия), хвосты втягиваются.
 	&"speed_lines": {"tex": preload("res://assets/vfx/speed_lines.png"), "grid": Vector2i(3, 2), "ms": [40, 50, 60, 70, 80]},
+	## Портал врагов сверху (смешивание: чёрное ядро, рваный край, кольцо рун); петля.
+	&"spawn_portal": {"tex": preload("res://assets/vfx/spawn_portal.png"), "grid": Vector2i(2, 2), "ms": [100, 100, 100, 100]},
+	## Круг алтаря: кольцо семи, стрелки по часовой, гептаграмма; импульс обходит узлы (петля 7 кадров).
+	&"altar_circle": {"tex": preload("res://assets/vfx/altar_circle.png"), "grid": Vector2i(3, 3), "ms": [120, 120, 120, 120, 120, 120, 120]},
+	## Огонёк души (билборд): поток жертвы от вещи к получателю.
+	&"soul_wisp": {"tex": preload("res://assets/vfx/soul_wisp.png"), "grid": Vector2i(2, 2), "ms": [70, 70, 70, 70]},
 }
 
 const SHADER := """

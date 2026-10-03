@@ -16,24 +16,9 @@ func _ready() -> void:
 	var base := LowPoly.cyl(1.3, 1.5, 0.25, 8, Color(0.3, 0.27, 0.27), Vector3(0, 0.12, 0))
 	add_child(base)
 	add_child(LowPoly.cyl(0.9, 1.1, 0.15, 8, Color(0.4, 0.35, 0.33), Vector3(0, 0.32, 0)))
-	var ring := MeshInstance3D.new()
-	ring.mesh = Vfx.ring_mesh(radius, 0.18, 48)
-	ring.material_override = Vfx.material(Color(gold, 0.85), 1.6, true)
-	ring.position.y = 0.06
-	add_child(ring)
-	_spin = Node3D.new()
-	add_child(_spin)
-	# Стрелки по часовой (если смотреть сверху).
-	for k in 7:
-		var a := TAU * k / 7.0
-		var arrow := MeshInstance3D.new()
-		arrow.mesh = _arrow_mesh()
-		arrow.material_override = Vfx.material(Color(gold, 0.9), 1.8, true)
-		arrow.position = Vector3(cos(a), 0, sin(a)) * radius + Vector3(0, 0.07, 0)
-		# Касательная по часовой при виде сверху: (−sin, 0, cos) в правой системе XZ, ось Y вверх.
-		var tangent := Vector3(-sin(a), 0, cos(a))
-		arrow.look_at_from_position(arrow.position, arrow.position + tangent, Vector3.UP)
-		_spin.add_child(arrow)
+	# Круг семи (пиксельный лист): внешнее кольцо — 62 px из 64 половины листа, стрелки по часовой.
+	_spin = FlipbookFx.attach(self, &"altar_circle", Vector3(0, 0.06, 0), gold, radius * 2.0 * 64.0 / 62.0,
+		{"billboard": false, "loop": true, "energy": 1.9, "pull": 0.05})
 	var light := OmniLight3D.new()
 	light.light_color = gold
 	light.light_energy = 2.0
@@ -44,15 +29,6 @@ func _ready() -> void:
 	var tw := create_tween()
 	tw.tween_property(self, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(func(): active = true)
-
-
-func _arrow_mesh() -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	st.add_vertex(Vector3(0, 0, -0.45))
-	st.add_vertex(Vector3(0.28, 0, 0.15))
-	st.add_vertex(Vector3(-0.28, 0, 0.15))
-	return st.commit()
 
 
 func _process(delta: float) -> void:

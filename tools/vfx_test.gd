@@ -4,11 +4,13 @@ extends Node3D
 var hero: Actor
 var dummies: Array[Actor] = []
 var elite: Actor
+var hero_model: ActorModel
 var _t: float = 0.0
 var _done: Dictionary = {}
 ## Сценарий: hits — удары, Взор, аура (пилот); arcs — дуги ударов, кольца, ударная волна;
 ## pools — лужи яда, волна Энергии, извержение зоны, удар громилы;
-## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом.
+## ward — купол Оплота, цепи Хватки, следы рывка; dash — настоящий рывок героя со следом;
+## ritual — круг алтаря, порталы врагов, поток огоньков жертвы.
 var scenario := "hits"
 
 
@@ -26,6 +28,7 @@ func _ready() -> void:
 	var hm := ActorModel.new()
 	hero.add_child(hm)
 	hm.setup(hero, ActorModel.Kind.HERO)
+	hero_model = hm
 	hero.add_child(HeroMarker.new())
 	Combat.hero = hero
 	for p in [Vector3(-1.2, 0, -0.4), Vector3(-0.2, 0, -1.4), Vector3(-1.9, 0, -1.9)]:
@@ -71,6 +74,9 @@ func _process(delta: float) -> void:
 		return
 	if scenario == "dash":
 		_dash()
+		return
+	if scenario == "ritual":
+		_ritual()
 		return
 	if _once("gaze", 1.1):
 		var e := Db.essence(&"gaze")
@@ -143,3 +149,19 @@ func _dash() -> void:
 		var from := hero.global_position
 		hero.start_dash(dir, 4.0, 0.18)
 		Vfx.streak(hero, from, from + dir * 4.0, Color(0.8, 0.75, 0.6, 0.6))
+
+
+func _ritual() -> void:
+	if _once("setup", 0.2):
+		var altar := Altar.new()
+		add_child(altar)
+		altar.global_position = Vector3(-3.4, 0, 1.4)
+		for p in [Vector3(3.2, 0, 0.4), Vector3(-1.0, 0, 3.6)]:
+			var portal := SpawnPortal.new()
+			portal.delay = 0.9 if p.x > 0 else 99.0
+			portal.payload = {"test": true}
+			add_child(portal)
+			portal.global_position = p
+	if _once("gift", 1.0):
+		var from := Vector3(-3.4, 1.2, 1.4)
+		SacrificeFx.play(self, hero_model, from, &"helmet", Db.essence(&"gaze").color)
