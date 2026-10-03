@@ -1,21 +1,21 @@
 class_name SkinnedActorModel
 extends ActorModel
-## Герой и босс из сгенерированных glb на скелете (prototype/, конвейер experiments/char3d)
+## Герой и босс из сгенерированных glb на скелете (assets/characters/, конвейер experiments/char3d)
 ## вместо процедурных фигур. Всё остальное от ActorModel: вспышка, контурный свет,
 ## тень, добавки свойств на сокетах, потоки жертвы.
-## Варианты героя (тело + 7 вещей) — prototype/heroes.json, выбор — меню «Герой»
+## Варианты героя (тело + 7 вещей) — assets/characters/heroes.json, выбор — меню «Герой»
 ## (хранится в user://hero.cfg). Босс носит вещи того же варианта, посаженные по его росту.
 ## Вещь — сетки item_<слот>[__<часть>]; часть тела под ней — hide_<слот>, прячется, пока вещь надета.
 ##
 ## Анимации — библиотека Quaternius UAL после ретаргета, через AnimationTree:
 ##   берётся клип ходьбы/бега/спринта, ближайший по скорости, с темпом под неё, чтобы стопы
-##   не скользили (скорость стоп каждого клипа замерена на этом теле — prototype/measure/);
+##   не скользили (скорость стоп каждого клипа замерена на этом теле — assets/characters/measure/);
 ##   удары и реакции — только на верхнюю половину тела, ноги продолжают шаг;
 ##   рывок — кувырок на весь рост, смерть — отдельное состояние.
-## Что играет и какое окно клипа берётся — prototype/animation.json.
+## Что играет и какое окно клипа берётся — assets/characters/animation.json.
 
-const CONFIG := "res://prototype/animation.json"
-const HEROES := "res://prototype/heroes.json"
+const CONFIG := "res://assets/characters/animation.json"
+const HEROES := "res://assets/characters/heroes.json"
 const CHOICE := "user://hero.cfg"
 
 var _cfg: Dictionary
@@ -35,7 +35,7 @@ var _pose_now := "-"                      # поза, под которую на
 
 
 
-## Модель героя: сгенерированная, если прототип собран, иначе процедурная.
+## Модель героя: сгенерированная, если модели собраны, иначе процедурная.
 ## Одна точка выбора для игры и витрины меню.
 static func for_hero() -> ActorModel:
 	return SkinnedActorModel.new() if available() else ActorModel.new()
@@ -57,7 +57,7 @@ static func for_puppet(p_kind: int, p_variant: StringName) -> ActorModel:
 	return ActorModel.new()
 
 
-## Есть ли собранный прототип: без него игра остаётся на процедурной модели.
+## Собраны ли модели героев: без него игра остаётся на процедурной модели.
 static func available() -> bool:
 	return FileAccess.file_exists(CONFIG) and not variants().is_empty() and ResourceLoader.exists(current()["model"])
 

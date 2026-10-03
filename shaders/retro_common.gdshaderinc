@@ -28,7 +28,7 @@ uniform float rim_strength = 0.0;
 uniform vec4 rim_color : source_color = vec4(1.0, 0.85, 0.65, 1.0);
 
 // Текстура по UV вместо проекции по граням — для запечённых моделей (experiments/char3d,
-// prototype/): у них своя развёртка. В PS1 UV интерполируются аффинно — текстура «плывёт».
+// assets/characters/): у них своя развёртка. В PS1 UV интерполируются аффинно — текстура «плывёт».
 uniform bool use_uv = false;
 
 varying vec3 tri_pos;

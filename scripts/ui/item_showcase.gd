@@ -85,7 +85,7 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 	sky.look_at(sky.position + fwd, Vector3.UP)
 
 
-## Вещи по кольцу: сгенерированные вещи выбранного героя, а без прототипа — процедурные.
+## Вещи по кольцу: сгенерированные вещи выбранного героя, а без собранных моделей — процедурные.
 func _rebuild_ring_items() -> void:
 	for d in _displays:
 		d.queue_free()

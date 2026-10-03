@@ -1,7 +1,7 @@
 extends SceneTree
 ## Скриншоты для разработки:
 ## Godot --path . -s tools/shot.gd -- preset=game out=/tmp/x.png delay=3
-## variant=<id> — вариант сгенерированного героя (prototype/heroes.json), как в меню «Герой».
+## variant=<id> — вариант сгенерированного героя (assets/characters/heroes.json), как в меню «Герой».
 ## Драйвер грузится после старта, когда автозагрузки уже зарегистрированы.
 
 var _started := false

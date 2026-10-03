@@ -1,6 +1,6 @@
 extends Node
 ## Драйвер tools/anim_check.gd: герой с полным кольцом вещей, состояния по очереди, кадр на каждое.
-## variant=<id> — вариант героя из prototype/heroes.json; boss=1 — босс со всеми вещами варианта
+## variant=<id> — вариант героя из assets/characters/heroes.json; boss=1 — босс со всеми вещами варианта
 ## (размер как в игре: модель x1.7), кадры стойки, замаха, удара и смерти.
 
 var _out := "user://anim_check"

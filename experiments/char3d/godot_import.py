@@ -2,7 +2,7 @@
 
     python godot_import.py <проект> character <res://путь.glb> [res://папка_карт]   # персонаж: наш скелет (Mixamo)
     python godot_import.py <проект> library   <res://путь.glb> [res://папка_карт]   # библиотека анимаций UAL (Rigify)
-Папка карт костей по умолчанию — res://retarget (стенд godot_test); в игре — res://prototype/retarget.
+Папка карт костей по умолчанию — res://retarget (стенд godot_test); в игре — res://assets/characters/retarget.
 
 Обе стороны сводятся к стандартной схеме гуманоида Godot (BoneMap из
 tools/make_bonemaps.gd), кости переименовываются, скелет зовётся

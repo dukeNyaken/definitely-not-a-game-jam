@@ -1,4 +1,4 @@
-"""Варианты героя и босс -> папка prototype/ в игре: всё, что нужно SkinnedActorModel.
+"""Варианты героя и босс -> папка assets/characters/ в игре: всё, что нужно SkinnedActorModel.
 
     python export_prototype.py [вариант ...]      # без аргументов — все из data/prototype.json
 
@@ -22,11 +22,11 @@ import to_godot
 
 HERE = Path(__file__).parent
 GAME = HERE.parents[1]
-PROTO = GAME / "prototype"
+PROTO = GAME / "assets" / "characters"
 STAND = Path(to_godot.TOOLS["godot_project"])
 OUT = Path(r"D:\AI\ComfyUI_windows_portable\ComfyUI\output\char3d")
 MANIFEST = json.loads((HERE / "data" / "prototype.json").read_text(encoding="utf-8"))
-MAPS = "res://prototype/retarget"
+MAPS = "res://assets/characters/retarget"
 
 
 def body_glb(name):
@@ -45,7 +45,7 @@ def dress(body, items, variant, dst):
 
 
 def measure(name, glb):
-    """Замер клипов на теле: тело ставится в стенд (там уже есть библиотека), результат — в prototype/measure."""
+    """Замер клипов на теле: тело ставится в стенд (там уже есть библиотека), результат — в assets/characters/measure."""
     to_godot.install(glb, name)
     out = PROTO / "measure" / f"{name}.json"
     to_godot._godot(STAND, "--script", "res://tools/measure_anims.gd", "--", name, str(out))
@@ -74,18 +74,18 @@ def main(*only):
             dst = work / f"{v['id']}_{kind}.glb"
             print(f"{v['id']} / {kind}:\n    " + dress(body_glb(body), v["items"], v["id"], dst))
             shutil.copyfile(dst, PROTO / kind / f"{v['id']}.glb")
-            imports.append(f"res://prototype/{kind}/{v['id']}.glb")
+            imports.append(f"res://assets/characters/{kind}/{v['id']}.glb")
             if body not in measured:
                 measured[body] = measure(body, dst)
         heroes.append({"id": v["id"], "title": v["title"],
-                       "model": f"res://prototype/heroes/{v['id']}.glb", "measure": f"res://prototype/measure/{v['body']}.json",
-                       "boss": f"res://prototype/boss/{v['id']}.glb", "boss_measure": f"res://prototype/measure/{MANIFEST['boss_body']}.json"})
+                       "model": f"res://assets/characters/heroes/{v['id']}.glb", "measure": f"res://assets/characters/measure/{v['body']}.json",
+                       "boss": f"res://assets/characters/boss/{v['id']}.glb", "boss_measure": f"res://assets/characters/measure/{MANIFEST['boss_body']}.json"})
     to_godot._godot(GAME, "--import")
     for res in imports:
         godot_import.main(str(GAME), "character", res, MAPS)
         to_godot.reimport(GAME, res.replace("res://", ""))
-    godot_import.main(str(GAME), "library", "res://prototype/anims/ual.glb", MAPS)
-    to_godot.reimport(GAME, "prototype/anims/ual.glb")
+    godot_import.main(str(GAME), "library", "res://assets/characters/anims/ual.glb", MAPS)
+    to_godot.reimport(GAME, "assets/characters/anims/ual.glb")
     # список вариантов: дополняется, а не затирается, когда собирается только часть
     path = PROTO / "heroes.json"
     old = json.loads(path.read_text(encoding="utf-8"))["heroes"] if path.exists() else []

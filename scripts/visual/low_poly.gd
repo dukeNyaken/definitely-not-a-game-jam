@@ -30,7 +30,7 @@ static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0, em
 	return m
 
 
-## Ретро-материал с готовой текстурой по UV — для запечённых моделей (prototype/).
+## Ретро-материал с готовой текстурой по UV — для запечённых моделей (assets/characters/).
 static func mat_textured(tex: Texture2D, roughness: float = 0.9) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	Render.register(m)

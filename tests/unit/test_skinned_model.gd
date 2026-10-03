@@ -1,7 +1,7 @@
 extends GutTest
-## Сгенерированные герои и босс (prototype/, SkinnedActorModel): в каждом варианте есть все
+## Сгенерированные герои и босс (assets/characters/, SkinnedActorModel): в каждом варианте есть все
 ## семь вещей, надеть/снять переключает вещь и часть тела под ней, ходьба выбирается по скорости.
-## Без собранного прототипа тесты пропускаются — игра тогда на процедурной модели.
+## Без собранных моделей тесты пропускаются — игра тогда на процедурной модели.
 
 const SLOTS := [&"sword", &"shield", &"armor", &"helmet", &"gloves", &"boots", &"amulet"]
 
@@ -32,7 +32,7 @@ func _model(variant: String, kind: int, items: Array) -> SkinnedActorModel:
 
 func test_every_variant_has_all_items_on_hero_and_boss() -> void:
 	if not SkinnedActorModel.available():
-		pending("прототип не собран")
+		pending("модели героев не собраны")
 		return
 	for v in SkinnedActorModel.variants():
 		for kind in [ActorModel.Kind.HERO, ActorModel.Kind.BOSS]:
@@ -43,7 +43,7 @@ func test_every_variant_has_all_items_on_hero_and_boss() -> void:
 
 func test_equip_toggles_item_and_body_under_it() -> void:
 	if not SkinnedActorModel.available():
-		pending("прототип не собран")
+		pending("модели героев не собраны")
 		return
 	var v: Dictionary = SkinnedActorModel.variants()[0]
 	var m := _model(v["id"], ActorModel.Kind.HERO, SLOTS)
@@ -75,7 +75,7 @@ func test_mesh_names_map_to_slots() -> void:
 
 func test_locomotion_speeds_increase() -> void:
 	if not SkinnedActorModel.available():
-		pending("прототип не собран")
+		pending("модели героев не собраны")
 		return
 	for v in SkinnedActorModel.variants():
 		for kind in [ActorModel.Kind.HERO, ActorModel.Kind.BOSS]:
@@ -86,7 +86,7 @@ func test_locomotion_speeds_increase() -> void:
 
 func test_menu_showcase_has_every_item_of_the_hero() -> void:
 	if not SkinnedActorModel.available():
-		pending("прототип не собран")
+		pending("модели героев не собраны")
 		return
 	for v in SkinnedActorModel.variants():
 		SkinnedActorModel.select(v["id"])

@@ -95,7 +95,7 @@ func _ready() -> void:
 	story_btn.custom_minimum_size = Vector2(360, 50)
 	story_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(story_btn)
-	# Выбор героя — только если собран прототип сгенерированных героев (prototype/heroes.json).
+	# Выбор героя — только если собраны сгенерированные герои (assets/characters/heroes.json).
 	if SkinnedActorModel.available() and SkinnedActorModel.variants().size() > 1:
 		_hero_button = UiKit.button("", _next_hero)
 		_hero_button.custom_minimum_size = Vector2(360, 50)
