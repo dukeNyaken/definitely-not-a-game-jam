@@ -5,7 +5,7 @@ extends ActorModel
 ## тень, добавки свойств на сокетах, потоки жертвы.
 ## Варианты героя (тело + 7 вещей) — prototype/heroes.json, выбор — меню «Герой»
 ## (хранится в user://hero.cfg). Босс носит вещи того же варианта, посаженные по его росту.
-## Вещь — сетка item_<слот>; часть тела под ней — hide_<слот>, прячется, пока вещь надета.
+## Вещь — сетки item_<слот>[__<часть>]; часть тела под ней — hide_<слот>, прячется, пока вещь надета.
 ##
 ## Анимации — библиотека Quaternius UAL после ретаргета, через AnimationTree:
 ##   берётся клип ходьбы/бега/спринта, ближайший по скорости, с темпом под неё, чтобы стопы
@@ -94,11 +94,12 @@ func _build_body() -> void:
 	for mi in scene.find_children("*", "MeshInstance3D", true, false):
 		var src := mi.get_active_material(0) as BaseMaterial3D
 		mi.material_override = LowPoly.mat_textured(src.albedo_texture if src else null)
+		# item_<слот>[__<часть>][_L|_R|_under], hide_<слот>[__<часть>]: часть вещи (поножи
+		# доспеха, подложка под кирасой) надевается и снимается вместе со своим слотом
 		if mi.name.begins_with("item_"):
-			var slot: StringName = mi.name.trim_prefix("item_").trim_suffix("_L").trim_suffix("_R")
-			_gen_items.get_or_add(slot, []).append(mi)
+			_gen_items.get_or_add(_slot_of(mi.name.trim_prefix("item_")), []).append(mi)
 		elif mi.name.begins_with("hide_"):
-			_hidden_body.get_or_add(StringName(mi.name.trim_prefix("hide_")), []).append(mi)
+			_hidden_body.get_or_add(_slot_of(mi.name.trim_prefix("hide_")), []).append(mi)
 	for socket_name in _cfg["sockets"]:
 		var s: Dictionary = _cfg["sockets"][socket_name]
 		var att := BoneAttachment3D.new()
@@ -116,6 +117,10 @@ func _build_body() -> void:
 	_mod.name = "Locomotion"
 	skeleton.add_child(_mod)
 	_collect_meshes()
+
+
+static func _slot_of(mesh_name: String) -> StringName:
+	return StringName(mesh_name.get_slice("__", 0).trim_suffix("_under").trim_suffix("_L").trim_suffix("_R"))
 
 
 # --- Дерево анимаций ----------------------------------------------------------

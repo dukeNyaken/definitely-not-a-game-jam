@@ -204,5 +204,29 @@
     "kind": "body",
     "frame": "portrait",
     "prompt": "full body front view of a huge intimidating man in his sixties, massive broad powerful build, thick neck, heavy strong arms, a normal human not a monster, cruel stern evil face with deep wrinkles and scars, bald head, long grey beard, bare chest with grey chest hair, dark leather trousers, heavy leather boots, standing in a symmetric A-pose, arms straight and angled down about 45 degrees away from the torso, palms facing the thighs, feet shoulder width apart, looking straight at the camera, whole figure visible from the top of the head to the soles of the feet with empty space around, plain flat uniform light grey background, even soft studio lighting, orthographic 3D character turnaround reference, game asset, sharp focus"
+  },
+  "barb_legs": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
+    "prompt": "a single barbarian leg armor piece for one leg: rough dark leather thigh guard with iron studs, a round iron knee cap and a riveted iron shin greave bound with leather straps, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "templar_legs": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
+    "prompt": "a single crusader leg armor piece for one leg: chainmail chausse covering the thigh and shin with a polished steel knee cop and a steel shin greave, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "marine_legs": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
+    "prompt": "a single bulky futuristic sci-fi power armor leg piece for one leg: thick thigh plate, heavy armored knee and shin guard, dark gunmetal and deep blue armor plates, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
+  },
+  "knight_legs": {
+    "kind": "item",
+    "frame": "portrait",
+    "negative_extra": "person, body, legs, foot, boot, mannequin, multiple objects, pair, two, stand, display stand",
+    "prompt": "a single plain medieval steel leg harness for one leg: cuisse thigh plate, poleyn knee cop and greave shin plate, functional, unadorned, slightly worn, empty, hollow, standing vertical, knee toward the camera, straight front view, symmetric, centered, isolated single object, whole object visible with empty space around, plain flat uniform light grey background, even soft studio lighting, 3D game asset reference, sharp focus"
   }
 }

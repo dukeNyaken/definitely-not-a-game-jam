@@ -1,8 +1,11 @@
 extends Node
-## Стенд персонажа: одетый герой + библиотека анимаций UAL в PS1-рендере 320x240.
+## Стенд персонажа: одетый герой + библиотека анимаций UAL, материалы как из импорта.
+## PS1-вид (дрожь вершин, аффинные текстуры, низкое разрешение) делает сама игра
+## своим шейдером и пост-обработкой — конвейер выдаёт только модель, стенд
+## проверяет её форму, вещи и анимации. Вид в игре — tools/anim_check.gd игры.
 ##
 ## Tab / Shift+Tab — следующая / предыдущая анимация; 1-7 — снять/надеть вещь
-## (по порядку слотов); стрелки — вращать; F — дрожь и «плывущая» текстура.
+## (по порядку слотов); стрелки — вращать.
 ## Персонаж: -- --char=<имя> (characters/<имя>.glb), без него — первый в characters/.
 ## Запуск с -- --check: кадры анимаций с вещами и без в shots/, сводка, выход.
 ##
@@ -10,10 +13,9 @@ extends Node
 ## у обоих — %GeneralSkeleton со стандартными именами костей Godot, поэтому
 ## анимация библиотеки играет на любом персонаже как своя.
 
-const LOW_RES := Vector2i(320, 240)
 const LIBRARY := "res://anims/ual.glb"
 const LIB_NAME := "ual"
-# Порядок слотов — как кольцо вещей в игре; вещь — сетка item_<слот>[_L|_R].
+# Порядок слотов — как кольцо вещей в игре; вещь — сетки item_<слот>[__<часть>][_L|_R|_under].
 const SLOTS := ["sword", "shield", "armor", "helmet", "gloves", "boots", "amulet"]
 
 var model: Node3D
@@ -22,21 +24,9 @@ var items := {}            # слот -> [MeshInstance3D]
 var anims: PackedStringArray
 var current := 0
 var label: Label
-var materials: Array[ShaderMaterial] = []
-var ps1_on := true
 
 
 func _ready() -> void:
-	var vp := SubViewport.new()
-	vp.size = LOW_RES
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	add_child(vp)
-	var view := TextureRect.new()
-	view.texture = vp.get_texture()
-	view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	view.stretch_mode = TextureRect.STRETCH_SCALE
-	view.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(view)
 	label = Label.new()
 	label.position = Vector2(12, 8)
 	label.add_theme_font_size_override("font_size", 18)
@@ -48,24 +38,22 @@ func _ready() -> void:
 	env.environment.background_color = Color(0.09, 0.08, 0.09)
 	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.environment.ambient_light_color = Color(0.55, 0.55, 0.6)
-	vp.add_child(env)
+	add_child(env)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-40, -30, 0)
-	vp.add_child(sun)
+	add_child(sun)
 	var cam := Camera3D.new()
 	cam.position = Vector3(0, 1.05, 2.7)
 	cam.fov = 45
-	vp.add_child(cam)
+	add_child(cam)
 	cam.look_at(Vector3(0, 0.95, 0))
 
 	model = (load(_character_path()) as PackedScene).instantiate()
-	vp.add_child(model)
-	var stats := PS1Material.apply(model)
+	add_child(model)
+	var stats := _stats(model)
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
-		for s in mi.mesh.get_surface_count():
-			materials.append(mi.get_surface_override_material(s))
 		if mi.name.begins_with("item_"):
-			var slot: String = mi.name.trim_prefix("item_").trim_suffix("_L").trim_suffix("_R")
+			var slot: String = mi.name.trim_prefix("item_").get_slice("__", 0).trim_suffix("_under").trim_suffix("_L").trim_suffix("_R")
 			items.get_or_add(slot, []).append(mi)
 	player = model.find_children("*", "AnimationPlayer", true, false)[0]
 	player.add_animation_library(LIB_NAME, load(LIBRARY))
@@ -76,6 +64,23 @@ func _ready() -> void:
 	print("вещи: %s; анимаций %d" % [items.keys(), anims.size()])
 	if "--check" in OS.get_cmdline_user_args():
 		_check.call_deferred()
+
+
+## Сводка для проверки: сетки, треугольники, размеры текстур.
+func _stats(root: Node) -> Dictionary:
+	var stats := {"meshes": 0, "tris": 0, "textures": []}
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = mi.mesh
+		stats.meshes += 1
+		for s in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(s)
+			var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			stats.tris += idx.size() / 3 if idx.size() > 0 else arrays[Mesh.ARRAY_VERTEX].size() / 3
+			var mat: Material = mi.get_active_material(s)
+			var tex: Texture2D = mat.albedo_texture if mat is BaseMaterial3D else null
+			if tex:
+				stats.textures.append("%s %dx%d" % [mi.name, tex.get_width(), tex.get_height()])
+	return stats
 
 
 func _character_path() -> String:
@@ -102,11 +107,6 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif e.keycode >= KEY_1 and e.keycode <= KEY_7:
 		equip(SLOTS[e.keycode - KEY_1], not _worn(SLOTS[e.keycode - KEY_1]))
 		_play()
-	elif e.keycode == KEY_F:
-		ps1_on = not ps1_on
-		for m in materials:
-			m.set_shader_parameter("snap_res", 240.0 if ps1_on else 0.0)
-			m.set_shader_parameter("affine", 1.0 if ps1_on else 0.0)
 
 
 ## Надеть/снять: вещь — сетка на общем скелете, достаточно показать или спрятать.

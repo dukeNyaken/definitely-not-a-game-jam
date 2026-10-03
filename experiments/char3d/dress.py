@@ -13,6 +13,12 @@ item_<слот> (у парных — item_<слот>_L и _R) на том же �
 упирается в вещь ближе 10 см. Меньше ~0.8 — вещь мала, съехала или тело проступает.
 Части тела под вещами (hide) вырезаются в сетки hide_<слот>: игра прячет их,
 пока вещь надета, — тело не может проступить сквозь неё ни в одной позе.
+Вещь из нескольких частей (part_of: поножи — часть доспеха) даёт сетки
+item_<слот>__<часть>: в игре это один слот. Облегающее (fit shell: кираса,
+поножи) — не сетка Hunyuan, а оболочка из самого тела, раздутая на отступ и
+развёрнутая прямо на картинки вещи спереди и сзади: сидит без зазоров, гнётся
+с телом, тело сквозь неё не видно. Подложка (underlay) — такая же оболочка под
+вещью из Hunyuan: в её дырах видна она, а не кожа.
 """
 import json
 import math
@@ -26,6 +32,9 @@ from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE))
+import imgproj  # noqa: E402  (рядом лежащий модуль: Blender не кладёт папку скрипта в путь)
+
 _EQ = json.loads((HERE / "data" / "equipment.json").read_text(encoding="utf-8"))
 argv = sys.argv[sys.argv.index("--") + 1:]
 BODY, OUT = str(Path(argv[0]).resolve()), str(Path(argv[1]).resolve())
@@ -115,7 +124,8 @@ def fit(item, slot, arm, body):
         reg = region(body, r["region"], R)
         rlo, rhi = reg.min(0), reg.max(0)
         rhi[2] += r.get("extend_up", 0.0) * K
-        ratios = {"width": (rhi[0] - rlo[0]) / (ihi[0] - ilo[0]), "depth": (rhi[1] - rlo[1]) / (ihi[1] - ilo[1])}
+        ratios = {"width": (rhi[0] - rlo[0]) / (ihi[0] - ilo[0]), "depth": (rhi[1] - rlo[1]) / (ihi[1] - ilo[1]),
+                  "height": (rhi[2] - rlo[2]) / (ihi[2] - ilo[2])}
         # по умолчанию — больший из размеров (вещь накрывает область в обе стороны);
         # сапог — по длине стопы: у сапога из Hunyuan длина/ширина 2.4 против 1.3 у стопы,
         # и по ширине он выходил 0.7 м в длину; ширину доберёт послойное расширение
@@ -297,7 +307,7 @@ def mirror(item, slot):
     bmesh.ops.reverse_faces(bm, faces=bm.faces)       # отражение выворачивает грани
     bm.to_mesh(m.data)
     bm.free()
-    item.name, m.name = f"item_{slot}_L", f"item_{slot}_R"
+    item.name, m.name = f"{item.name}_L", f"{item.name}_R"
     return m
 
 
@@ -313,10 +323,10 @@ def covered_faces(body, items, ray):
     return {f.index for f in me.polygons if all(hit[i] for i in f.vertices)}
 
 
-def bone_faces(body, bones):
-    """Грани, все вершины которых весят на этих костях не меньше 0.5 (вся стопа, вся кисть)."""
+def bone_faces(body, bones, min_weight=0.5):
+    """Грани, все вершины которых весят на этих костях (в сумме) не меньше min_weight (вся стопа, вся кисть)."""
     idx = {body.vertex_groups[b].index for b in bones if b in body.vertex_groups}
-    on = {v.index for v in body.data.vertices if any(g.group in idx and g.weight >= 0.5 for g in v.groups)}
+    on = {v.index for v in body.data.vertices if sum(g.weight for g in v.groups if g.group in idx) >= min_weight}
     return {f.index for f in body.data.polygons if all(i in on for i in f.vertices)}
 
 
@@ -350,6 +360,12 @@ def split_hidden(body, faces_by_slot):
     return out
 
 
+def game_name(slot):
+    """Имя слота в игре: часть вещи (поножи доспеха) — <слот>__<часть>, игра берёт до «__»."""
+    r = EQ[slot]
+    return f"{r['part_of']}__{r['part']}" if "part_of" in r else slot
+
+
 def load_item(path, slot):
     new = import_glb(path)
     obs = [o for o in new if o.type == "MESH"]
@@ -358,9 +374,142 @@ def load_item(path, slot):
             bpy.data.objects.remove(o)
     item = obs[0]
     item.parent = None
-    item.name = f"item_{slot}"
+    item.name = f"item_{game_name(slot)}"
     item.data.name = item.name
     return item
+
+
+def shell_faces(body, rule, arm):
+    """Грани тела под оболочкой: на костях rule.bones (сумма весов >= min_weight) или пояс zone."""
+    if "zone" not in rule:
+        return bone_faces(body, rule["bones"], rule.get("min_weight", 0.5))
+    # пояс по высоте между началами двух костей, кроме граней рук и головы: по весам
+    # живот не отбирался — туда при расчёте весов затекает бедро, и подложка шла дырами
+    zn = rule["zone"]
+    z0 = bone_world(arm, zn["from"])[0].z - zn.get("margin", 0.0) * K
+    z1 = bone_world(arm, zn["to"])[0].z + zn.get("margin_top", zn.get("margin", 0.0)) * K
+    idx = {body.vertex_groups[b].index for b in zn["exclude"] if b in body.vertex_groups}
+    off_limits = {v.index for v in body.data.vertices if sum(g.weight for g in v.groups if g.group in idx) >= 0.5}
+    mw = body.matrix_world
+    # ширина: не дальше от оси тела, чем начало кости half_width (плечевой сустав).
+    # Руки отсекаются так, а не по весам: у коренастого тела веса рук растекаются на
+    # широчайшие и грудь, и на спине под кирасой оставалась кожа
+    hw = zn.get("half_width")
+    x_max = abs(bone_world(arm, hw["bone"])[0].x) + hw.get("margin", 0.0) * K if hw else math.inf
+    faces = {f.index for f in body.data.polygons
+             if z0 <= (mw @ f.center).z <= z1 and abs((mw @ f.center).x) <= x_max
+             and not any(i in off_limits for i in f.vertices)}
+    if "caps" in zn:
+        # наплечники: грани вокруг начала костей caps.bones (плечевой сустав) — без них
+        # плечи под кирасой оставались голыми, а наплечники с картинки сжимались на торс
+        cp = zn["caps"]
+        heads = [bone_world(arm, b)[0] for b in cp["bones"]]
+        r = cp["radius"] * K
+        idx = {body.vertex_groups[b].index for b in cp.get("exclude", []) if b in body.vertex_groups}
+        neck = {v.index for v in body.data.vertices if sum(g.weight for g in v.groups if g.group in idx) >= 0.5}
+        faces |= {f.index for f in body.data.polygons if any(((mw @ f.center) - h).length < r for h in heads)
+                  and not any(i in neck for i in f.vertices)}
+    return faces
+
+
+def make_shell(body, faces, offset, name):
+    """Копия граней тела, раздутая на offset по нормали. Веса и привязка к скелету —
+    как у тела (это его копия), поэтому сидит и гнётся без зазоров."""
+    shell = body.copy()
+    shell.data = body.data.copy()
+    shell.name = shell.data.name = name
+    bpy.context.scene.collection.objects.link(shell)
+    bm = bmesh.new()
+    bm.from_mesh(shell.data)
+    bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in faces], context="FACES")
+    # glTF режет тело по швам развёртки: без сшивки края островов раздувались по разным
+    # нормалям (щели в оболочке), а развёртка оболочки рассыпалась на островки в 1-2 грани
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bm.normal_update()
+    for v in bm.verts:
+        v.co += v.normal * offset
+    bm.to_mesh(shell.data)
+    bm.free()
+    return shell
+
+
+def _resize(rgb, w, h):
+    """Уменьшение картинки (строка 0 — верх) усреднением по клеткам."""
+    ys = np.linspace(0, rgb.shape[0], h + 1).astype(int)
+    xs = np.linspace(0, rgb.shape[1], w + 1).astype(int)
+    out = np.empty((h, w, 3))
+    for j in range(h):
+        for i in range(w):
+            out[j, i] = rgb[ys[j]:max(ys[j + 1], ys[j] + 1), xs[i]:max(xs[i + 1], xs[i] + 1)].mean((0, 1))
+    return out
+
+
+def image_shell(shell, folder, mirror_x, tex_h):
+    """Развёртка оболочки прямо на картинки вещи (front/back после prep.py в folder): грань,
+    смотрящая вперёд, ложится ортогональной проекцией на вид спереди (левая часть
+    текстуры), назад — на вид сзади (правая). Рамка силуэта картинки — на рамку оболочки.
+    Текстура — сами картинки, обрезанные по силуэту, высотой tex_h: без запекания и без
+    мелких островов развёртки (с ними рисунок рассыпался в шум). mirror_x — оболочка из
+    двух половин (обе ноги): у каждой своя рамка, половина на -X видит картинку
+    отражённой (одна поножь на картинке — обе на теле)."""
+    views = []
+    for side in ("front", "back"):
+        f = folder / f"{side}.png"
+        if not Path(str(f).replace(".png", "_fill.png")).exists():
+            f = folder / "front.png"                 # нет вида сзади — спина как перед
+        rgb, _, (x0, x1, y0, y1) = imgproj.load_rgba(f, linear=False)
+        crop = rgb[y0:y1, x0:x1]
+        # ширина кратна 4: сжатие текстур в Godot идёт блоками 4x4
+        w = max(4, 4 * round(tex_h * crop.shape[1] / crop.shape[0] / 4))
+        views.append(_resize(crop, w, tex_h))
+    atlas = np.hstack(views)                        # строка 0 — верх
+    W = atlas.shape[1]
+    img = bpy.data.images.new(shell.name + "_tex", W, tex_h)
+    img.pixels.foreach_set(np.dstack([atlas[::-1], np.ones((tex_h, W))]).ravel().astype(np.float32))
+    img.pack()
+
+    me = shell.data
+    mw = shell.matrix_world
+    co = verts(shell)
+    halves = [co[:, 0] >= 0, co[:, 0] < 0] if mirror_x else [np.ones(len(co), bool)]
+    boxes = [(co[h].min(0), co[h].max(0)) if h.any() else (co.min(0), co.max(0)) for h in halves]
+    while me.uv_layers:
+        me.uv_layers.remove(me.uv_layers[0])
+    uv = me.uv_layers.new(name="UVMap").data
+    rot = mw.to_3x3()
+    offs = [0, views[0].shape[1]]
+    for f in me.polygons:
+        n = rot @ f.normal
+        back = n.y > 0
+        c = mw @ f.center
+        half = 1 if mirror_x and c.x < 0 else 0
+        lo, hi = boxes[half]
+        flip = (half == 1) != back                  # вид сзади и половина на -X — зеркально
+        vw = views[back].shape[1]
+        for li in f.loop_indices:
+            p = co[me.loops[li].vertex_index]
+            u = np.clip((p[0] - lo[0]) / (hi[0] - lo[0]), 0, 1)
+            u = 1 - u if flip else u
+            u = 0.5 / vw + u * (1 - 1 / vw)        # полпикселя от края — без затекания соседнего вида
+            v = np.clip((p[2] - lo[2]) / (hi[2] - lo[2]), 0, 1)
+            uv[li].uv = ((offs[back] + u * vw) / W, v)
+    _textured(shell, img)
+    return f"текстура {W}x{tex_h} (виды спереди и сзади)"
+
+
+def _textured(ob, img):
+    """Один материал: текстура img без сглаживания, как у остальных сеток модели."""
+    mat = bpy.data.materials.new(ob.name)
+    mat.use_nodes = True
+    tex = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.interpolation = "Closest"
+    mat.node_tree.links.new(tex.outputs["Color"], mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
+    mat.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 1.0
+    mat.node_tree.nodes.active = tex
+    ob.data.materials.clear()
+    ob.data.materials.append(mat)
 
 
 def main():
@@ -371,7 +520,14 @@ def main():
     K = height / _EQ["ref_height"]
     lines = [f"рост тела {height:.2f} м (размеры x{K:.2f}), комплект {VARIANT or '-'}"]
     hide = {}
+    # оболочки (fit shell, подложки) строятся после всех вещей: из граней тела, ещё не
+    # спрятанных под другими вещами — поножи кончаются там, где начинается сапог
+    shells = []
     for slot, path in ITEMS:
+        name = game_name(slot)
+        if EQ[slot]["fit"] == "shell":
+            shells.append((slot, name, EQ[slot], Path(path).parent, f"item_{name}"))
+            continue
         item = load_item(path, slot)
         rep = fit(item, slot, arm, body)
         if EQ[slot].get("skin") == "transfer" and "push" in EQ[slot]:
@@ -387,15 +543,24 @@ def main():
             other = mirror(item, slot)
             parts.append((other, bone.replace("Left", "Right")))
         if EQ[slot].get("hide"):
-            hide[slot] = covered_faces(body, [o for o, _ in parts], EQ[slot]["hide_ray"] * K)
+            hide[name] = covered_faces(body, [o for o, _ in parts], EQ[slot]["hide_ray"] * K)
             if "hide_bones" in EQ[slot]:
-                hide[slot] |= bone_faces(body, EQ[slot]["hide_bones"])
+                hide[name] |= bone_faces(body, EQ[slot]["hide_bones"])
+        if "underlay" in EQ[slot]:
+            shells.append((slot, name, EQ[slot]["underlay"], Path(path).parent, f"item_{name}_under"))
         for ob, b in parts:
             skin(ob, slot, arm, body, b)
         d = item.dimensions
         tris = sum(len(p.vertices) - 2 for p in item.data.polygons) * len(parts)
         lines.append(f"{slot}: {tris} треуг., {d.x:.2f}x{d.y:.2f}x{d.z:.2f} м, кость {bone}, "
                      f"{EQ[slot]['skin']}" + "".join(f", {k} {v}" for k, v in rep.items()))
+    for slot, name, rule, folder, mesh_name in shells:
+        others = set().union(*(f for n, f in hide.items() if n != name))
+        faces = shell_faces(body, rule, arm) - others
+        shell = make_shell(body, faces, rule["offset"] * K, mesh_name)
+        tex = image_shell(shell, folder, rule.get("mirror_x", False), rule["tex"])
+        hide[name] = hide.get(name, set()) | faces
+        lines.append(f"{slot}: оболочка {mesh_name}, {len(shell.data.polygons)} гр., {tex}")
     total_faces = len(body.data.polygons)
     cut = split_hidden(body, hide)
     lines.append("под вещами спрятано: " + (", ".join(f"{sl} {n} гр. ({n / total_faces:.0%} тела)" for sl, n in cut) or "ничего"))
