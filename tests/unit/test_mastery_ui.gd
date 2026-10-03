@@ -138,3 +138,28 @@ func test_result_equipping_preview_updates_in_place_and_switching_item_selects_i
 	card._wheel.select_item(&"sword")
 	assert_eq(card._preview_tier, 2)
 	assert_eq(card._form_name.text, str(Mastery.form(&"sword", 2)["name"]))
+
+
+func test_result_layout_stays_still_when_switching_all_items_and_forms() -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(1600, 900)
+	add_child_autofree(viewport)
+	var card = load("res://scripts/ui/final_card.gd").new()
+	viewport.add_child(card)
+	await wait_process_frames(6)
+	var panel: Control = card._ui.get_child(0)
+	var panel_rect := panel.get_global_rect()
+	var wheel_rect: Rect2 = card._wheel.get_global_rect()
+	var preview_rect: Rect2 = card._preview.get_global_rect()
+	var equip_rect: Rect2 = card._equip.get_global_rect()
+	assert_true(Rect2(Vector2.ZERO, Vector2(viewport.size)).encloses(panel_rect), "окно целиком помещается в экран")
+	var moved: Array[String] = []
+	for id in Db.ITEM_IDS:
+		card._wheel.select_item(id)
+		for tier in range(1, 4):
+			card._tier_buttons[tier - 1].pressed.emit()
+			for frame in 6:
+				await wait_process_frames(1)
+				if panel.get_global_rect() != panel_rect or card._wheel.get_global_rect() != wheel_rect or card._preview.get_global_rect() != preview_rect or card._equip.get_global_rect() != equip_rect:
+					moved.append("%s · %d · кадр %d" % [id, tier, frame])
+	assert_eq(moved, [], "выбор любого из 21 обликов не двигает окно, колесо, витрину и кнопку даже на промежуточных кадрах")

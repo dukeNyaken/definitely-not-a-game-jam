@@ -8,6 +8,7 @@ var _modal: Control
 var _preview_tier := 1
 var _preview: ItemShowcase
 var _tier_buttons: Array[Button] = []
+var _item_title: Label
 var _reward_label: Label
 var _progress_label: Label
 var _unlock_caption: Label
@@ -39,8 +40,8 @@ func _ready() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.offset_left = -720
 	panel.offset_right = 720
-	panel.offset_top = -410
-	panel.offset_bottom = 410
+	panel.offset_top = -425
+	panel.offset_bottom = 425
 	panel.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.05, 0.035, 0.055, 0.97), UiKit.GOLD if victory else UiKit.BLOOD, 2, 12, 24))
 	_ui.add_child(panel)
 	var layout := VBoxContainer.new()
@@ -90,8 +91,9 @@ func _ready() -> void:
 	item_frame.add_theme_stylebox_override(&"panel", UiKit.box(Color(0.07, 0.05, 0.075), Color(0.25, 0.2, 0.25), 1, 8, 18))
 	h.add_child(item_frame)
 	_item_panel = VBoxContainer.new()
-	_item_panel.add_theme_constant_override(&"separation", 10)
+	_item_panel.add_theme_constant_override(&"separation", 8)
 	item_frame.add_child(_item_panel)
+	_build_item_panel()
 	_show_item(_wheel.selected_id)
 	Mastery.changed.connect(func():
 		_refresh_item()
@@ -131,17 +133,13 @@ func _initial_item() -> StringName:
 	return best
 
 
-func _show_item(id: StringName) -> void:
-	for child in _item_panel.get_children():
-		_item_panel.remove_child(child)
-		child.queue_free()
-	_tier_buttons.clear()
-	_preview_tier = Mastery.selected(id)
-	_item_panel.add_child(UiKit.label(Db.item(id).display_name, 34, Db.item(id).essence.color))
+func _build_item_panel() -> void:
+	_item_title = UiKit.label("", 34)
+	_item_panel.add_child(_item_title)
 	_reward_label = UiKit.label("", 22, UiKit.GOLD)
 	_item_panel.add_child(_reward_label)
 	_preview = ItemShowcase.new()
-	_preview.custom_minimum_size = Vector2(0, 170)
+	_preview.custom_minimum_size = Vector2(0, 130)
 	_item_panel.add_child(_preview)
 	var steps := HBoxContainer.new()
 	steps.add_theme_constant_override(&"separation", 8)
@@ -159,8 +157,11 @@ func _show_item(id: StringName) -> void:
 	_unlock_caption = _wrapped("", 18, UiKit.GOLD)
 	_item_panel.add_child(_unlock_caption)
 	_form_name = _wrapped("", 26, UiKit.TEXT)
+	# Место под две строки названия и три строки эффекта не меняется при выборе.
+	_form_name.custom_minimum_size.y = 70
 	_item_panel.add_child(_form_name)
 	_form_effect = _wrapped("", 17, UiKit.MUTED)
+	_form_effect.custom_minimum_size.y = 75
 	_item_panel.add_child(_form_effect)
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -168,6 +169,12 @@ func _show_item(id: StringName) -> void:
 	_equip = UiKit.button("", _choose_preview)
 	_equip.focus_mode = Control.FOCUS_ALL
 	_item_panel.add_child(_equip)
+
+
+func _show_item(id: StringName) -> void:
+	_preview_tier = Mastery.selected(id)
+	_item_title.text = Db.item(id).display_name
+	_item_title.add_theme_color_override(&"font_color", Db.item(id).essence.color)
 	_refresh_item()
 
 
