@@ -129,11 +129,18 @@ func _angle(index: int) -> float:
 	return -PI * 0.5 + TAU * index / maxi(nodes.size(), 1)
 
 
+func _icon_position(index: int) -> Vector2:
+	var angle := _angle(index)
+	# Значок и подпись вместе остаются внутри нижней дуги.
+	var inset := 66.0 if sin(angle) > 0.0 else 46.0
+	return _center() + Vector2.from_angle(angle) * (_radius() - inset)
+
+
 func _layout() -> void:
 	for i in _buttons.size():
 		var button := _buttons[i]
 		button.size = Vector2(46, 46)
-		button.position = _center() + Vector2.from_angle(_angle(i)) * (_radius() - 46) - button.size * 0.5
+		button.position = _icon_position(i) - button.size * 0.5
 	queue_redraw()
 
 
@@ -243,7 +250,7 @@ func _draw() -> void:
 		outline.append(outline[0])
 		draw_polyline(outline, UiKit.GOLD if i == selected_node else Color(color, 0.8 if i in path else 0.35), 2 if i in path or hot else 1, true)
 		var icon := IconFactory.icon(nodes[i]["source"])
-		var pos := _center() + Vector2.from_angle(angle) * (radius - 46)
+		var pos := _icon_position(i)
 		if icon != null:
 			draw_circle(pos, 23, Color(0.035, 0.025, 0.04, 0.9))
 			draw_texture_rect(icon, Rect2(pos - Vector2(23, 23), Vector2(46, 46)), false)

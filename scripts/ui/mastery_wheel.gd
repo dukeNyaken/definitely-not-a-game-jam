@@ -89,7 +89,10 @@ func _form_radius() -> float:
 
 
 func _icon_position(index: int) -> Vector2:
-	return _center() + Vector2.from_angle(_angle(index)) * (_radius() - 46.0 if collection_mode else _radius() + 56.0)
+	var angle := _angle(index)
+	# Подпись под значком в нижней половине требует отступа от края круга.
+	var inset := 66.0 if sin(angle) > 0.0 else 46.0
+	return _center() + Vector2.from_angle(angle) * (_radius() - inset if collection_mode else _radius() + 56.0)
 
 
 func _angle(index: int) -> float:
