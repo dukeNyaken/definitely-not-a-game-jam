@@ -31,7 +31,8 @@ SOURCE = {"infantry": "infantry_v2", "jester": "jester_v2"}
 def main(ids):
     imports = []
     for name in [n for n in ids or STATIC if n in STATIC]:
-        shutil.copyfile(OUT / name / "lowpoly.glb", ep.PROTO / "enemies" / f"{name}.glb")
+        d = OUT / name
+        shutil.copyfile(d / "rigged.glb" if (d / "rigged.glb").exists() else d / "lowpoly.glb", ep.PROTO / "enemies" / f"{name}.glb")
         print(f"STATIC {name}.glb", flush=True)
     for name in [n for n in ids or IDS + ENEMIES if n not in STATIC]:
         src = OUT / SOURCE.get(name, name) / "animated.glb"

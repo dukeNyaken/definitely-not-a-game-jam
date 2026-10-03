@@ -58,6 +58,8 @@ func pose_hand(_p: StringName) -> StringName:
 ## Осколки короны босса по вещам: def_id → узел.
 var _crown_shards: Dictionary = {}
 var _slime_cube: Node3D
+var _quad: Skeleton3D                     # скелет сгенерированного беса: лапы шагают рысью
+var _quad_legs: Array = []                # [кость, поворот покоя, ось шага в её осях, знак]
 var _roll_basis: Basis = Basis()
 var _roll_phase: float = 0.0
 var _last_pos: Vector3 = Vector3.INF
@@ -607,7 +609,7 @@ func _build_slime() -> void:
 		skull.scale = Vector3.ONE * 1.35
 	_slime_cube.add_child(skull)
 	# череп в glb шириной ~1.4 м, лицом в +Z: до ширины гранёного (0.26) и лицом вперёд
-	if not _generated(SLIME_SKULL_GLB, skull, Vector3(0, -0.12, 0), PI, 0.19):
+	if _generated(SLIME_SKULL_GLB, skull, Vector3(0, -0.12, 0), PI, 0.19) == null:
 		_ball(skull, 0.13, bone, Vector3.ZERO, &"bone", Vector3(0.95, 1.0, 1.1))
 		_put(skull, LowPoly.wedge(Vector3(0.14, 0.07, 0.08), bone, Vector3(0, -0.12, -0.05), &"bone"), Vector3(PI, 0, 0))
 		for side in [-1.0, 1.0]:
@@ -684,7 +686,9 @@ func _build_swarm() -> void:
 	for key in [&"head", &"neck", &"l_hand", &"r_hand", &"l_foot", &"r_foot"]:
 		sockets[key] = sockets[&"chest"]
 	# в glb морда в +X, лапы на нуле: поворот мордой в -Z, торс на высоте 0.9
-	if _generated(SWARM_GLB, torso, Vector3(0, -0.9, 0), PI / 2, 1.0):
+	var gen := _generated(SWARM_GLB, torso, Vector3(0, -0.9, 0), PI / 2, 1.0)
+	if gen != null:
+		_rig_quad(gen)
 		_collect_meshes()
 		return
 	var hide := Color(0.62, 0.72, 0.5)
@@ -710,11 +714,11 @@ func _build_swarm() -> void:
 	_collect_meshes()
 
 
-## Сгенерированная сетка без скелета вместо гранёных примитивов: текстура — через тот же
-## ретро-материал, что у остальных моделей. false — сетки нет (ещё не собрана).
-func _generated(path: String, parent: Node3D, pos: Vector3, yaw: float, size: float) -> bool:
+## Сгенерированная сетка вместо гранёных примитивов: текстура — через тот же ретро-материал,
+## что у остальных моделей. null — сетки нет (ещё не собрана).
+func _generated(path: String, parent: Node3D, pos: Vector3, yaw: float, size: float) -> Node3D:
 	if not ResourceLoader.exists(path):
-		return false
+		return null
 	var scene := (load(path) as PackedScene).instantiate() as Node3D
 	scene.position = pos
 	scene.rotation.y = yaw
@@ -723,7 +727,27 @@ func _generated(path: String, parent: Node3D, pos: Vector3, yaw: float, size: fl
 	for mi in scene.find_children("*", "MeshInstance3D", true, false):
 		var src := (mi as MeshInstance3D).get_active_material(0) as BaseMaterial3D
 		(mi as MeshInstance3D).material_override = LowPoly.mat_textured(src.albedo_texture if src else null)
-	return true
+	return scene
+
+
+## Лапы беса (quad_rig.py: leg_fl/fr/bl/br) качаются вокруг поперечной оси скелета (Y Blender —
+## Z в Godot); диагональные пары — в противофазе, как рысь.
+func _rig_quad(scene: Node3D) -> void:
+	var found := scene.find_children("*", "Skeleton3D", true, false)
+	if found.is_empty():
+		return
+	_quad = found[0]
+	for leg in ["fl", "fr", "bl", "br"]:
+		var i := _quad.find_bone("leg_" + leg)
+		if i < 0:
+			continue
+		var axis := _quad.get_bone_global_rest(i).basis.orthonormalized().inverse() * Vector3(0, 0, 1)
+		_quad_legs.append([i, _quad.get_bone_rest(i).basis.get_rotation_quaternion(), axis.normalized(), 1.0 if leg in ["fl", "br"] else -1.0])
+
+
+func _animate_quad(swing: float) -> void:
+	for leg in _quad_legs:
+		_quad.set_bone_pose_rotation(leg[0], leg[1] * Quaternion(leg[2], swing * leg[3] * 0.6))
 
 
 func _socket(parent: Node3D, pos: Vector3) -> Node3D:
@@ -987,6 +1011,8 @@ func _animate(delta: float) -> void:
 	var moving := clampf(speed / maxf(actor.base_speed, 0.1), 0.0, 1.0)
 	_walk += delta * (4.0 + speed * 1.6)
 	var swing := sin(_walk) * 0.7 * moving
+	if _quad != null:
+		_animate_quad(swing)
 	leg_l.rotation.x = swing
 	leg_r.rotation.x = -swing
 	hips.position.y = 0.9 + absf(cos(_walk)) * 0.05 * moving

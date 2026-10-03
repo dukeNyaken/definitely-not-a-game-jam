@@ -331,3 +331,9 @@ func test_swarm_and_slime_use_generated_meshes() -> void:
 		var found := e.get_node("Model").find_children("*", "Node3D", true, false).filter(
 				func(n: Node) -> bool: return n.scene_file_path == spec[1])
 		assert_eq(found.size(), 1, "%s: сгенерированная сетка" % spec[0])
+		if spec[0] == &"swarm":
+			var m := e.get_node("Model") as ActorModel
+			assert_eq(m._quad_legs.size(), 4, "у беса четыре лапы на костях")
+			var leg: Array = m._quad_legs[0]
+			m._animate_quad(0.5)
+			assert_gt(m._quad.get_bone_pose_rotation(leg[0]).angle_to(leg[1]), 0.1, "лапа шагает")

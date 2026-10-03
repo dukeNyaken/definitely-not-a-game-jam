@@ -24,7 +24,9 @@ def blender(script, args, log):
         raise RuntimeError(f"Blender failed: {log}")
 
 
-# Без скелета: только запекание сетки (рой гнётся процедурно, череп слизня кувыркается в кубе).
+# Без скелета людей: только запекание сетки (череп слизня кувыркается в кубе); рою (QUAD) —
+# свой скелет на четыре лапы, их качает процедурная модель.
+QUAD = ["swarm"]
 STATIC = {
     "swarm": ["body", "tris=900", "tex=128", "height=0.75", "sym=0"],
     "slime_skull": ["item", "tris=300", "tex=128"],
@@ -44,6 +46,9 @@ def main(ids):
             if not (d / "lowpoly.glb").exists():
                 print(f"START {name} bake.py", flush=True)
                 blender("bake.py", [d / "raw.glb", d / "front.png", d / "lowpoly.glb", STATIC[name][0], d / "back.png", *STATIC[name][1:]], d / "bake.py.log")
+            if name in QUAD and not (d / "rigged.glb").exists():
+                print(f"START {name} quad_rig.py", flush=True)
+                blender("quad_rig.py", [d / "lowpoly.glb", d / "rigged.glb"], d / "quad_rig.py.log")
             continue
         for script, args, result in [
             ("bake.py", [d / "raw.glb", d / "front.png", d / "lowpoly.glb", "body", d / "back.png", "tris=1500", "tex=256", "height=2.1", *BAKE.get(name, [])], "lowpoly.glb"),
