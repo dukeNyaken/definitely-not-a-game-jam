@@ -3,6 +3,7 @@ extends Node
 ## every=N — серия кадров каждые N секунд до delay (раскадровка сюжетной сцены).
 ## preset=theater key=<ключ сцены> — сцена из меню «Катсцены» (ключи — в CutsceneCatalog: hearth, temptation,
 ## gift_3, palace_5 …); preset=cutscenes — само меню, key — выбранная в нём сцена. speed=N ускоряет время.
+## opt=<вариант>:<значение> — вариант сцены для preset=theater (opt=kept:boots, opt=amulet:kept); можно несколько.
 
 var _preset := "game"
 var _out := "user://shot.png"
@@ -21,6 +22,8 @@ var _item := ""
 var _tier := 0
 var _node := 0
 var _hover_item := ""
+## Варианты сцены для preset=theater: поверх значений по умолчанию из каталога.
+var _opts := {}
 
 
 func _ready() -> void:
@@ -43,6 +46,10 @@ func _ready() -> void:
 			"tier": _tier = int(kv[1])
 			"node": _node = int(kv[1])
 			"hover": _hover_item = kv[1]
+			"opt":
+				var o := kv[1].split(":", true, 1)
+				if o.size() == 2:
+					_opts[o[0]] = o[1]
 	if _preset in ["final_mastery", "final_empty", "final_max", "final_error", "mastery_mixed", "mastery_empty"]:
 		Mastery.memory_only = true
 		Mastery.xp.clear()
@@ -88,7 +95,7 @@ func _ready() -> void:
 			Theater.last_key = _key
 			scene = Theater.GALLERY_SCENE
 		"theater":
-			var items: Array[Dictionary] = [{"key": _key, "opts": CutsceneCatalog.resolve(CutsceneCatalog.find(_key))}]
+			var items: Array[Dictionary] = [{"key": _key, "opts": CutsceneCatalog.resolve(CutsceneCatalog.find(_key), _opts)}]
 			Theater.queue = items
 			Theater.cursor = 0
 			Theater.prepare(items[0])

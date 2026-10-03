@@ -13,6 +13,9 @@ const THIN := 0.018
 
 var from: Node3D
 var to: Node3D
+## С какого расстояния от кармана нить видна. Больше — только у высоко поднятой руки (песня Сигварда:
+## там жвачка держится всю песню и показывается, когда он вскидывает руки).
+var min_length: float = MIN_LENGTH
 var _parts: Array[MeshInstance3D] = []
 var _wad: MeshInstance3D
 var _gone: bool = false
@@ -45,7 +48,7 @@ func _process(_delta: float) -> void:
 ## Видна ли нить сейчас: рука достаточно далеко от кармана и жвачка ещё не лопнула.
 func stretched() -> bool:
 	return not _gone and is_instance_valid(from) and is_instance_valid(to) \
-			and from.global_position.distance_to(to.global_position) > MIN_LENGTH
+			and from.global_position.distance_to(to.global_position) > min_length
 
 
 func _update() -> void:
@@ -55,7 +58,7 @@ func _update() -> void:
 	var a := from.global_position
 	var b := to.global_position
 	# Чем сильнее натянута, тем тоньше и прямее.
-	var slack := clampf(1.0 - (a.distance_to(b) - MIN_LENGTH) / 0.6, 0.0, 1.0)
+	var slack := clampf(1.0 - (a.distance_to(b) - min_length) / 0.6, 0.0, 1.0)
 	var mid := (a + b) * 0.5 + Vector3.DOWN * 0.14 * slack
 	var width := lerpf(THIN, THICK, slack)
 	_span(_parts[0], a, mid, width)

@@ -61,7 +61,14 @@ func test_timeline_follows_the_run() -> void:
 	assert_true(CutsceneCatalog.given_before(CutsceneCatalog.find("rule"), {}).is_empty(), "у первого алтаря ещё ничего не отдано")
 	assert_eq(CutsceneCatalog.stage_of(CutsceneCatalog.find("rule")), 1)
 	for n in range(1, gifts + 1):
-		assert_lt(keys.find("gift_%d" % n), keys.find("palace_%d" % n), "дар %d — раньше голоса из дворца" % n)
+		# После последнего дара вместо голоса из дворца — песня Сигварда.
+		var voice := "brother_song" if n == Story.BROTHER_SONG_AFTER_GIFT else "palace_%d" % n
+		assert_gt(keys.find(voice), -1, voice)
+		assert_lt(keys.find("gift_%d" % n), keys.find(voice), "дар %d — раньше голоса из дворца" % n)
+	var brother := keys.find("brother_song")
+	assert_eq(keys[brother - 1], "gift_%d" % Story.BROTHER_SONG_AFTER_GIFT, "песня Сигварда — сразу за последним даром")
+	assert_eq(keys[brother + 1], "gates", "и сразу за ней — ворота")
+	assert_eq(keys.find("palace_%d" % Story.BROTHER_SONG_AFTER_GIFT), -1, "песня заменяет последний голос из дворца")
 	# Дом Сольвейг и её разговор с Сигвардом — между даром и голосом из дворца.
 	# Песня Ильвы — сразу за своим даром; дом Сольвейг — после песни, если они идут за одним даром.
 	var song := keys.find("song")
@@ -124,7 +131,7 @@ func test_given_before_follows_the_options() -> void:
 	assert_true(_given(ring, {"ring": "given"}).has(&"gloves"))
 	assert_false(_given(ring, {"ring": "kept"}).has(&"gloves"))
 	assert_eq(_given(ring, {"ring": "kept"}).size(), Story.RING_LINE_INDEX)
-	for key in ["gates", "finale"]:
+	for key in ["brother_song", "gates", "finale"]:
 		var given := _given(key, {"kept": &"amulet"})
 		assert_eq(given.size(), Db.ITEM_IDS.size() - 1, key)
 		assert_false(given.has(&"amulet"), key)
@@ -154,6 +161,12 @@ func test_prepare_sets_up_the_run_for_a_scene() -> void:
 	assert_true(RunState.is_boss_stage())
 	assert_eq(RunState.ring.ids(), [&"sword"] as Array[StringName])
 	assert_false(Story.was_given(RunState.snapshots, &"sword"))
+	# Песня Сигварда — после последнего дара: у Солдата одна вещь, этап — шестой, не бой с Тираном.
+	var song := CutsceneCatalog.find("brother_song")
+	Theater.prepare({"key": "brother_song", "opts": CutsceneCatalog.resolve(song, {"kept": &"boots"})})
+	assert_eq(RunState.stage, Story.BROTHER_SONG_AFTER_GIFT)
+	assert_false(RunState.is_boss_stage())
+	assert_eq(RunState.ring.ids(), [&"boots"] as Array[StringName])
 
 
 func test_theater_plays_scenes_whatever_the_setting() -> void:

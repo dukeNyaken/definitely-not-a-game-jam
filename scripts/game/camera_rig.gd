@@ -21,6 +21,7 @@ var _sway_t: float = 0.0
 var _focus: Vector3
 var _cine_tween: Tween
 var _yaw_tween: Tween
+var _pitch_tween: Tween
 ## Кинорежим: камера ведёт то, что возвращает эта функция (идущих героев), пока не задан новый кадр.
 var _track: Callable
 
@@ -88,16 +89,31 @@ func cine_yaw(offset_degrees: float, dur: float) -> void:
 	_yaw_tween.tween_property(self, "rotation_degrees:y", yaw_degrees + offset_degrees, maxf(dur, 0.01))
 
 
-## Конец сцены: размер и поворот возвращаются, камера снова следует за целью.
+## Наклон камеры от обычного: меньше нуля — ниже, к горизонту (снизу вверх на героя), больше — круче сверху.
+## Новый наклон отменяет прежний, как облёт.
+func cine_pitch(offset_degrees: float, dur: float) -> void:
+	if _pitch_tween != null and _pitch_tween.is_valid():
+		_pitch_tween.kill()
+	var to := -clampf(pitch_degrees + offset_degrees, 5.0, 89.0)
+	if dur <= 0.0:
+		rotation_degrees.x = to
+		return
+	_pitch_tween = create_tween().set_ignore_time_scale(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_pitch_tween.tween_property(self, "rotation_degrees:x", to, dur)
+
+
+## Конец сцены: размер, поворот и наклон возвращаются, камера снова следует за целью.
 func cine_release(dur: float = 0.8) -> void:
 	_kill_cine()
 	_track = Callable()
-	if _yaw_tween != null and _yaw_tween.is_valid():
-		_yaw_tween.kill()
+	for tw in [_yaw_tween, _pitch_tween]:
+		if tw != null and (tw as Tween).is_valid():
+			(tw as Tween).kill()
 	cinematic = false
 	_cine_tween = _new_cine_tween()
 	_cine_tween.tween_property(camera, "size", size, maxf(dur, 0.01))
 	_cine_tween.tween_property(self, "rotation_degrees:y", yaw_degrees, maxf(dur, 0.01))
+	_cine_tween.tween_property(self, "rotation_degrees:x", -pitch_degrees, maxf(dur, 0.01))
 
 
 func _new_cine_tween() -> Tween:

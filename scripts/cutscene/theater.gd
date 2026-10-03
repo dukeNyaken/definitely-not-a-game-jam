@@ -101,6 +101,9 @@ func run(p_game: Game) -> void:
 		&"palace":
 			_between_stages()
 			await PalaceScene.play(cs, game, entry["n"])
+		&"brother_song":
+			_between_stages()
+			await SigvardSongScene.play(cs, game)
 		&"gates":
 			game.start_stage(RunState.stage)
 			await game.boss_director.intro_finished

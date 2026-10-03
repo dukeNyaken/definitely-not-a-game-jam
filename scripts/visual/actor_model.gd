@@ -1142,6 +1142,18 @@ func _apply_pose(p: StringName, moving: float, arm_l_basis: Basis, arm_r_basis: 
 		&"arms_up":
 			arm_l_basis = Basis(Vector3.RIGHT, 2.3)
 			arm_r_basis = Basis(Vector3.RIGHT, 2.3)
+		&"triumph":
+			arm_l_basis = Basis(Vector3.FORWARD, 0.15) * Basis(Vector3.RIGHT, 2.95)
+			arm_r_basis = Basis(Vector3.FORWARD, -0.15) * Basis(Vector3.RIGHT, 2.95)
+		&"toast":
+			arm_r_basis = Basis(Vector3.FORWARD, -0.2) * Basis(Vector3.RIGHT, 2.8)
+		&"point":
+			arm_r_basis = Basis(Vector3.UP, 0.1) * Basis(Vector3.RIGHT, 1.55)
+		&"talk":
+			# Поёт и «говорит» руками: кисти перед собой, покачиваются.
+			var beat := Time.get_ticks_msec() * 0.001
+			arm_l_basis = Basis(Vector3.UP, -0.3) * Basis(Vector3.RIGHT, 0.75 + sin(beat * 2.3) * 0.15)
+			arm_r_basis = Basis(Vector3.UP, 0.3) * Basis(Vector3.RIGHT, 0.85 + sin(beat * 2.3 + 1.4) * 0.2)
 		&"hands_back":
 			if moving < 0.2:
 				arm_l_basis = Basis(Vector3.UP, 0.4) * Basis(Vector3.RIGHT, -0.45)

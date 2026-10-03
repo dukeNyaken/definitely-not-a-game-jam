@@ -509,3 +509,165 @@ func test_flicker_light_and_fire() -> void:
 	assert_eq((l as CutsceneFx.FlickerLight).base, 0.5)
 	var f := CutsceneFx.fire(root, Vector3.ZERO, 0.5)
 	assert_true(f.emitting)
+
+
+# --- Песня Сигварда --------------------------------------------------------------
+
+## Доли, снятые с ударных записи: счёт идёт от сильной доли такта, на долю свет вздрагивает, в паузе — нет.
+func test_song_beats_follow_the_recorded_drums() -> void:
+	var song := SongTrack.new()
+	add_child_autofree(song)
+	song.beat_times = PackedFloat32Array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 8.0, 8.4])
+	song.bar_times = PackedFloat32Array([1.5, 3.5, 8.0])
+	assert_eq(song.beats(1.2, 3.1), [1.5, 2.0, 2.5, 3.0] as Array[float], "доли записи, а не ровная сетка")
+	assert_eq(song.beats(1.2, 5.0, 4, 0), [1.5, 3.5] as Array[float], "сильные доли тактов")
+	assert_eq(song.beats(1.2, 5.0, 2, 1), [2.0, 3.0, 4.0] as Array[float], "вторая и четвёртая доли")
+	assert_eq(song.bars(0.0, 9.0), [1.5, 3.5, 8.0] as Array[float])
+	assert_almost_eq(song.pulse(2.0), 1.0, 0.01, "на самой доле — удар")
+	assert_almost_eq(song.pulse(2.25), 0.25, 0.01, "к следующей доле спадает")
+	assert_eq(song.pulse(6.0), 0.0, "в паузе свет на долю не вздрагивает")
+	assert_eq(song.pulse(0.5), 0.0, "до первой доли — тоже")
+
+
+## Песня может начаться не с начала: если сапоги у Солдата, шутка про них была бы неправдой.
+func test_song_starts_from_a_given_second() -> void:
+	var cs := _cutscene()
+	var song := SongTrack.new()
+	cs.add_child(song)
+	song.start(cs, SigvardSongScene.SKALD_FROM)
+	assert_eq(song.now(), SigvardSongScene.SKALD_FROM)
+	assert_true(song.playing())
+	song.stop(0.0)
+	assert_false(song.playing())
+
+
+## Разметка «Всё твоё — моё»: у всех строк и слов есть время, доли сняты с ударных, части сцены идут по порядку.
+func test_brother_song_markup_and_beats() -> void:
+	assert_true(SigvardSongScene.available(), "запись и разметка на месте")
+	var song := SongTrack.load_track(SigvardSongScene.SYNC, SigvardSongScene.AUDIO, SigvardSongScene.BEATS)
+	add_child_autofree(song)
+	assert_almost_eq(song.duration, 219.96, 0.5)
+	assert_eq(song.lines.size(), 63, "все строки песни со временем")
+	for l in song.lines:
+		assert_lt(float(l["start"]), float(l["end"]), l["text"])
+		for w in l["words"]:
+			assert_not_null(w["start"], "%s: у слова «%s» есть время" % [l["text"], w["text"]])
+	assert_eq(song.lines[song.line_index(SigvardSongScene.CHORUS + 0.5)]["text"], "Всё твоё — моё! (Хей!)")
+	assert_string_contains(song.lines.back()["text"], "кроме карманов", "конец песни — шутка последнего голоса из дворца")
+	assert_eq(song.line_index(SigvardSongScene.MUSIC_IN + 1.0), -1, "в проигрыше слов нет")
+	assert_gt(song.beat_times.size(), 400)
+	assert_gt(song.bar_times.size(), 100)
+	var rising := true
+	for i in range(1, song.beat_times.size()):
+		rising = rising and song.beat_times[i] > song.beat_times[i - 1]
+	assert_true(rising, "доли идут по порядку")
+	assert_eq(song.pulse(SigvardSongScene.HUSH + 1.5), 0.0, "в тишине после «А невеста твоя?» свет на долю не вздрагивает")
+	assert_eq(song.pulse(SigvardSongScene.CUT + 5.0), 0.0, "и после обрыва на «Во вс—»")
+	var marks := [SigvardSongScene.SKALD_FROM, SigvardSongScene.MUSIC_IN, SigvardSongScene.VERSE_ONE, SigvardSongScene.PRE_CHORUS,
+		SigvardSongScene.CHORUS, SigvardSongScene.VERSE_TWO, SigvardSongScene.HUSH, SigvardSongScene.MUSIC_BACK, SigvardSongScene.CUT,
+		SigvardSongScene.HORN, SigvardSongScene.POP, SigvardSongScene.BRIDGE, SigvardSongScene.ROAR, SigvardSongScene.BUILD,
+		SigvardSongScene.FINAL, SigvardSongScene.LAST_HIT, SigvardSongScene.POP_LAST, SigvardSongScene.END]
+	for i in range(1, marks.size()):
+		assert_gt(float(marks[i]), float(marks[i - 1]), "отметка %d" % i)
+	assert_lte(SigvardSongScene.END, song.duration)
+	for t in SigvardSongScene.SOLD:
+		assert_between(t, SigvardSongScene.VERSE_TWO, SigvardSongScene.HUSH, "«Продано!» — в куплете торга")
+
+
+## Чучело держит ту вещь, что Солдат оставил себе: у каждой вещи своё место.
+func test_brother_song_effigy_holds_any_item() -> void:
+	for id in Db.ITEM_IDS:
+		var slot: Array = SigvardSongScene._effigy_slot(id)
+		assert_eq(slot.size(), 2, str(id))
+		assert_true(slot[0] is Vector3 and slot[1] is Vector3, str(id))
+	assert_gt((SigvardSongScene._effigy_slot(&"helmet")[0] as Vector3).y, (SigvardSongScene._effigy_slot(&"armor")[0] as Vector3).y, "шлем — выше доспеха")
+	assert_lt((SigvardSongScene._effigy_slot(&"boots")[0] as Vector3).y, 0.5, "сапоги — у основания")
+
+
+## Камера наклоняется для низких и высоких кадров и возвращается к обычному углу в конце сцены.
+func test_camera_tilt_and_release() -> void:
+	var rig := CameraRig.new()
+	add_child_autofree(rig)
+	rig.cine_pitch(-10.0, 0.0)
+	assert_almost_eq(rig.rotation_degrees.x, -(rig.pitch_degrees - 10.0), 0.001, "ниже — ближе к горизонту")
+	rig.cine_pitch(200.0, 0.0)
+	assert_almost_eq(rig.rotation_degrees.x, -89.0, 0.001, "не круче отвесного")
+	rig.cine_release(0.0)
+	await wait_seconds(0.15)
+	assert_almost_eq(rig.rotation_degrees.x, -rig.pitch_degrees, 0.01, "наклон вернулся")
+	assert_false(rig.cinematic)
+
+
+## Позы песни у процедурной модели Сигварда: обе руки к небу, кубок над головой, рука вперёд.
+## У сгенерированной — клипы библиотеки (animation.json).
+func test_tyrant_song_poses() -> void:
+	var p := Puppet.make(ActorModel.Kind.TYRANT)
+	p.procedural = true
+	add_child_autofree(p)
+	p.model._animate(0.016)
+	var head_y: float = p.model.head.global_position.y
+	var rest_r := p.hand_position(&"r_hand")
+	p.set_pose(&"triumph")
+	p.model._animate(0.016)
+	assert_gt(p.hand_position(&"l_hand").y, head_y, "обе руки выше головы")
+	assert_gt(p.hand_position(&"r_hand").y, head_y)
+	p.set_pose(&"toast")
+	p.model._animate(0.016)
+	assert_gt(p.hand_position(&"r_hand").y, head_y, "кубок над головой")
+	assert_lt(p.hand_position(&"l_hand").y, head_y)
+	p.set_pose(&"point")
+	p.model._animate(0.016)
+	assert_gt(p.hand_position(&"r_hand").distance_to(rest_r), 0.3, "рука вытянута")
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/characters/animation.json"))
+	for pose in ["talk", "point", "triumph", "toast"]:
+		assert_true((cfg["poses"] as Dictionary).has(pose), pose)
+
+
+## В песне жвачка держится долго и видна только у вскинутых рук: у опущенных её не видно.
+func test_gum_can_show_only_for_raised_hands() -> void:
+	var world := Node3D.new()
+	add_child_autofree(world)
+	var pocket := Node3D.new()
+	var hand := Node3D.new()
+	world.add_child(pocket)
+	world.add_child(hand)
+	var gum := GumStrand.stretch(world, pocket, hand)
+	gum.min_length = SigvardSongScene.GUM_REACH
+	hand.global_position = Vector3(0.3, 0.4, 0.0)
+	gum._update()
+	assert_false(gum.stretched(), "рука у пояса — жвачки не видно")
+	hand.global_position = Vector3(0.1, 1.0, 0.0)
+	gum._update()
+	assert_true(gum.stretched(), "вскинул руку — тянется")
+	assert_true(gum.visible)
+
+
+## Декорации песни: пол плитами (в GL Compatibility на объект действует не больше восьми ламп), реквизит.
+func test_song_set_pieces_build() -> void:
+	var fl := SetPieces.stone_floor(Vector2(10, 6), Color(0.3, 0.3, 0.3), 2.5)
+	add_child_autofree(fl)
+	assert_eq(fl.get_child_count(), 4 * 3, "плиты по 2,5 м")
+	var mat := (fl.get_child(0) as MeshInstance3D).material_override as ShaderMaterial
+	for t in fl.get_children():
+		var mi := t as MeshInstance3D
+		assert_gte((mi.mesh as PlaneMesh).subdivide_width, 1, "в PS1 свет считается по вершинам")
+		assert_same(mi.material_override, mat, "один материал на все плиты")
+	assert_eq(mat.get_shader_parameter(&"snap_vertices"), false, "пол не дрожит")
+	var corner := (fl.get_child(0) as MeshInstance3D).position
+	assert_almost_eq(corner, Vector3(-3.75, 0.0, -2.0), Vector3.ONE * 0.001, "плиты покрывают пол край в край")
+	for make in [SetPieces.fiddle, SetPieces.fiddle_bow, SetPieces.round_shield, SetPieces.drinking_horn, SetPieces.auction_block, SetPieces.yard_wall]:
+		var n: Node3D = make.call()
+		assert_gt(n.get_child_count(), 0)
+		n.free()
+	var coin := SetPieces.coin()
+	assert_not_null(coin.mesh)
+	coin.free()
+	var dog := SetPieces.dog()
+	add_child_autofree(dog)
+	assert_not_null(dog.get_node_or_null("Tail"), "хвостом виляют")
+	var hall := SetPieces.throne_hall()
+	add_child_autofree(hall)
+	for n in ["Floor", "Carpet", "CarpetTrimL", "CarpetTrimR"]:
+		assert_not_null(hall.get_node_or_null(n), "песня прячет пол зала и заменяет его плитами: %s" % n)
+	for key in [&"envy", &"feast", &"hush"]:
+		assert_true(Cutscene.MOODS.has(key), str(key))

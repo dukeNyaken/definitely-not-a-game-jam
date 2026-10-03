@@ -131,10 +131,15 @@ static func glow_window(glow: Color = Color(0.9, 0.22, 0.12)) -> Node3D:
 static func throne_hall() -> Node3D:
 	var hall := LowPoly.pivot("ThroneHall")
 	var floor_mi := LowPoly.cyl(7.5, 7.5, 0.3, 18, Color(0.22, 0.2, 0.21), Vector3(0, -0.15, 0), 0.95, 0.0, 0.0, &"stone")
+	floor_mi.name = "Floor"
 	hall.add_child(floor_mi)
-	hall.add_child(LowPoly.box(Vector3(1.5, 0.03, 9.0), PURPLE.darkened(0.15), Vector3(0, 0.015, 1.0), 0.95, 0.0, 0.0, &"cloth"))
+	var carpet := LowPoly.box(Vector3(1.5, 0.03, 9.0), PURPLE.darkened(0.15), Vector3(0, 0.015, 1.0), 0.95, 0.0, 0.0, &"cloth")
+	carpet.name = "Carpet"
+	hall.add_child(carpet)
 	for x in [-0.78, 0.78]:
-		hall.add_child(LowPoly.box(Vector3(0.08, 0.035, 9.0), GOLD.darkened(0.2), Vector3(x, 0.02, 1.0), 0.5, 0.6, 0.2, &"gold"))
+		var trim := LowPoly.box(Vector3(0.08, 0.035, 9.0), GOLD.darkened(0.2), Vector3(x, 0.02, 1.0), 0.5, 0.6, 0.2, &"gold")
+		trim.name = "CarpetTrimL" if x < 0.0 else "CarpetTrimR"
+		hall.add_child(trim)
 	hall.add_child(LowPoly.box(Vector3(14.0, 7.0, 0.6), Color(0.42, 0.36, 0.36), Vector3(0, 3.5, -4.6), 0.95, 0.0, 0.0, &"brick"))
 	for x in [-4.4, -2.2, 2.2, 4.4]:
 		var w := glow_window()
@@ -506,4 +511,134 @@ static func flask() -> Node3D:
 	var r := LowPoly.pivot("Flask")
 	r.add_child(LowPoly.sphere(0.12, 6, 4, Color(0.45, 0.3, 0.2), Vector3.ZERO, 0.9, 0.0, 0.0, &"leather"))
 	r.add_child(LowPoly.cyl(0.03, 0.04, 0.1, 5, Color(0.35, 0.24, 0.16), Vector3(0, 0.14, 0), 0.9, 0.0, 0.0, &"wood"))
+	return r
+
+
+# --- Дворец: песня Сигварда (SigvardSongScene) -------------------------------
+
+## Каменный пол плитами с частыми вершинами: в PS1 свет считается по вершинам, и без них пятна от жаровен
+## и луча над Сигвардом не легли бы на пол. Плиты, а не одна сетка: в GL Compatibility на объект действует
+## не больше восьми ламп, и большой пол брал бы восемь случайных из всех ламп зала. Текстура — в мировых
+## координатах (швов между плитами не видно), пол не дрожит (steady): на нём лежат ковёр, монеты и тени.
+static func stone_floor(size: Vector2, color: Color = Color(0.22, 0.2, 0.21), tile: float = 2.6) -> Node3D:
+	var r := LowPoly.pivot("StoneFloor")
+	var nx := maxi(1, ceili(size.x / tile))
+	var nz := maxi(1, ceili(size.y / tile))
+	var step := Vector2(size.x / nx, size.y / nz)
+	var plane := PlaneMesh.new()
+	plane.size = step
+	plane.subdivide_width = int(step.x / 0.9)
+	plane.subdivide_depth = int(step.y / 0.9)
+	var m := LowPoly.unique(LowPoly.mat(color, 0.95, 0.0, 0.0, &"stone", true))
+	m.set_shader_parameter(&"snap_vertices", false)
+	for i in nx:
+		for k in nz:
+			var mi := MeshInstance3D.new()
+			mi.name = "Tile_%d_%d" % [i, k]
+			mi.mesh = plane
+			mi.material_override = m
+			mi.position = Vector3(-size.x * 0.5 + step.x * (i + 0.5), 0.0, -size.y * 0.5 + step.y * (k + 0.5))
+			r.add_child(mi)
+	return r
+
+
+## Хардингфеле скальда: корпус с талией, гриф, завиток с резной головой, светлые струны.
+## Начало координат — у подбородника, гриф смотрит в +X.
+static func fiddle() -> Node3D:
+	var r := LowPoly.pivot("Fiddle")
+	var body := Color(0.55, 0.26, 0.12)
+	r.add_child(LowPoly.box(Vector3(0.2, 0.06, 0.15), body, Vector3(0.0, 0, 0), 0.7, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.box(Vector3(0.12, 0.055, 0.11), body.darkened(0.1), Vector3(0.14, 0, 0), 0.7, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.box(Vector3(0.18, 0.06, 0.14), body, Vector3(0.27, 0, 0), 0.7, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.box(Vector3(0.3, 0.035, 0.035), DARK_WOOD, Vector3(0.5, 0.01, 0), 0.7, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.sphere(0.035, 6, 4, DARK_WOOD, Vector3(0.68, 0.02, 0), 0.7, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.prism(Vector3(0.05, 0.07, 0.04), GOLD, Vector3(0.71, 0.06, 0), 0.4, 0.8, 0.4, &"gold"))
+	# Струны и перламутровая инкрустация хардингфеле — светлые, чтобы скрипка читалась издали.
+	r.add_child(LowPoly.box(Vector3(0.6, 0.008, 0.03), Color(0.95, 0.9, 0.8), Vector3(0.36, 0.04, 0), 0.4, 0.0, 0.6))
+	for x in [-0.03, 0.27]:
+		r.add_child(LowPoly.box(Vector3(0.05, 0.065, 0.05), Color(0.95, 0.92, 0.85), Vector3(x, 0.002, 0), 0.4, 0.0, 0.4))
+	return r
+
+
+## Смычок: трость и волос.
+static func fiddle_bow() -> Node3D:
+	var r := LowPoly.pivot("FiddleBow")
+	r.add_child(LowPoly.box(Vector3(0.62, 0.02, 0.02), DARK_WOOD, Vector3(0.31, 0, 0), 0.7, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.box(Vector3(0.58, 0.01, 0.01), Color(0.95, 0.92, 0.85), Vector3(0.31, -0.035, 0), 0.5, 0.0, 0.5))
+	return r
+
+
+## Пёс у ворот: лежит, положив голову на лапы. Хвост — узел "Tail": им виляют.
+## Смотрит в +Z.
+static func dog() -> Node3D:
+	var r := LowPoly.pivot("Dog")
+	var fur := Color(0.5, 0.42, 0.34)
+	r.add_child(LowPoly.box(Vector3(0.34, 0.26, 0.7), fur, Vector3(0, 0.2, 0), 0.95, 0.0, 0.0, &"fur"))
+	r.add_child(LowPoly.box(Vector3(0.26, 0.22, 0.26), fur, Vector3(0, 0.25, 0.42), 0.95, 0.0, 0.0, &"fur"))
+	r.add_child(LowPoly.box(Vector3(0.14, 0.12, 0.18), fur.darkened(0.1), Vector3(0, 0.2, 0.6), 0.95, 0.0, 0.0, &"fur"))
+	r.add_child(LowPoly.box(Vector3(0.06, 0.05, 0.05), Color(0.08, 0.06, 0.06), Vector3(0, 0.24, 0.7), 0.9))
+	for x in [-0.09, 0.09]:
+		var ear := LowPoly.prism(Vector3(0.08, 0.12, 0.05), fur.darkened(0.15), Vector3(x, 0.41, 0.4), 0.95, 0.0, 0.0, &"fur")
+		r.add_child(ear)
+		r.add_child(LowPoly.box(Vector3(0.08, 0.08, 0.34), fur.darkened(0.08), Vector3(x, 0.05, 0.52), 0.95, 0.0, 0.0, &"fur"))
+		r.add_child(LowPoly.box(Vector3(0.1, 0.1, 0.24), fur.darkened(0.08), Vector3(x * 1.4, 0.06, -0.3), 0.95, 0.0, 0.0, &"fur"))
+	var tail := LowPoly.pivot("Tail", Vector3(0, 0.26, -0.35))
+	var t := LowPoly.box(Vector3(0.06, 0.06, 0.32), fur.darkened(0.12), Vector3(0, 0.05, -0.15), 0.95, 0.0, 0.0, &"fur")
+	t.rotation.x = 0.45
+	tail.add_child(t)
+	r.add_child(tail)
+	return r
+
+
+## Монета: золото блестит и в темноте.
+static func coin() -> MeshInstance3D:
+	return LowPoly.cyl(0.055, 0.055, 0.016, 7, GOLD, Vector3.ZERO, 0.35, 0.85, 0.9, &"gold")
+
+
+## Круглый щит, на котором поднимают героя пира.
+static func round_shield() -> Node3D:
+	var r := LowPoly.pivot("RoundShield")
+	r.add_child(LowPoly.cyl(0.62, 0.62, 0.06, 12, Color(0.55, 0.16, 0.12), Vector3.ZERO, 0.8, 0.0, 0.0, &"wood"))
+	r.add_child(LowPoly.torus(0.56, 0.64, 12, 3, IRON, Vector3(0, 0.0, 0), 0.6, 0.5, 0.0, &"rust"))
+	r.add_child(LowPoly.sphere(0.12, 6, 3, GOLD, Vector3(0, 0.04, 0), 0.4, 0.8, 0.4, &"gold"))
+	return r
+
+
+## Рог для мёда с золотой оковкой: широкий край вверх.
+static func drinking_horn() -> Node3D:
+	var r := LowPoly.pivot("DrinkingHorn")
+	var horn := Color(0.86, 0.78, 0.62)
+	var a := LowPoly.cyl(0.07, 0.05, 0.2, 7, horn, Vector3(0, 0.1, 0), 0.6, 0.0, 0.1)
+	r.add_child(a)
+	var b := LowPoly.cyl(0.05, 0.025, 0.16, 7, horn.darkened(0.15), Vector3(0.03, -0.05, 0), 0.6, 0.0, 0.1)
+	b.rotation.z = 0.5
+	r.add_child(b)
+	r.add_child(LowPoly.torus(0.06, 0.08, 9, 3, GOLD, Vector3(0, 0.2, 0), 0.4, 0.8, 0.5, &"gold"))
+	return r
+
+
+## Помост для торга: тёсаный камень под одним человеком.
+static func auction_block() -> Node3D:
+	var r := LowPoly.pivot("AuctionBlock")
+	r.add_child(LowPoly.box(Vector3(0.9, 0.22, 0.9), STONE.darkened(0.1), Vector3(0, 0.11, 0), 0.95, 0.0, 0.0, &"stone"))
+	r.add_child(LowPoly.box(Vector3(0.96, 0.04, 0.96), GOLD.darkened(0.3), Vector3(0, 0.24, 0), 0.5, 0.6, 0.15, &"gold"))
+	return r
+
+
+## Стена двора крепости с зубцами и воротами — фон воспоминаний Сигварда. Смотрит в +Z.
+static func yard_wall(width: float = 16.0) -> Node3D:
+	var r := LowPoly.pivot("YardWall")
+	var stone := STONE.darkened(0.05)
+	for side in [-1.0, 1.0]:
+		var w := (width - 2.4) * 0.5
+		r.add_child(LowPoly.box(Vector3(w, 3.2, 0.7), stone, Vector3(side * (1.2 + w * 0.5), 1.6, 0), 0.95, 0.0, 0.0, &"brick"))
+		for k in int(w / 0.9):
+			r.add_child(LowPoly.box(Vector3(0.45, 0.4, 0.7), stone, Vector3(side * (1.5 + k * 0.9), 3.4, 0), 0.95, 0.0, 0.0, &"brick"))
+		r.add_child(LowPoly.box(Vector3(0.6, 4.2, 0.9), stone.darkened(0.1), Vector3(side * 1.4, 2.1, 0.05), 0.95, 0.0, 0.0, &"stone"))
+	r.add_child(LowPoly.box(Vector3(3.4, 0.6, 0.9), stone.darkened(0.1), Vector3(0, 4.0, 0.05), 0.95, 0.0, 0.0, &"stone"))
+	# Створки ворот приоткрыты: за ними — закат.
+	for side in [-1.0, 1.0]:
+		var leaf := LowPoly.box(Vector3(0.6, 3.0, 0.12), DARK_WOOD, Vector3(side * 0.8, 1.5, -0.25), 0.9, 0.0, 0.0, &"wood")
+		r.add_child(leaf)
+	r.add_child(LowPoly.box(Vector3(2.0, 3.2, 0.05), Color(1.0, 0.55, 0.3), Vector3(0, 1.6, -0.45), 0.9, 0.0, 1.4))
 	return r

@@ -496,7 +496,8 @@ func do_sacrifice(index: int) -> void:
 
 
 ## after_gift — после сцены дара: в затемнении — песня Ильвы и дом Сольвейг (после второго дара) или её разговор
-## с Сигвардом (после третьего), затем тронный зал и голос Сигварда из дворца.
+## с Сигвардом (после третьего), затем тронный зал и голос Сигварда из дворца. После последнего дара
+## вместо голоса из дворца — песня Сигварда (если её дорожка на месте).
 func _next_stage(after_gift: bool = false) -> void:
 	set_state(State.TRANSITION)
 	hud.fade(true, 0.5)
@@ -509,7 +510,9 @@ func _next_stage(after_gift: bool = false) -> void:
 			await HearthScene.play(cutscene, self)
 		elif n == Story.TEMPTATION_AFTER_GIFT:
 			await TemptationScene.play(cutscene, self)
-		if n >= 1 and n <= Story.BROTHER_LINES.size():
+		if n == Story.BROTHER_SONG_AFTER_GIFT and SigvardSongScene.available():
+			await SigvardSongScene.play(cutscene, self)
+		elif n >= 1 and n <= Story.BROTHER_LINES.size():
 			await PalaceScene.play(cutscene, self, n)
 	start_stage(RunState.stage + 1)
 	hud.fade(false, 0.6)

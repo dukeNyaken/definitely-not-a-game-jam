@@ -121,8 +121,18 @@ func test_song_grows_from_ilva_lines() -> void:
 	assert_ne(str(Story.SONG["quote"]), "")
 
 
+## Песня Сигварда — после последнего дара, вместо шестого голоса из дворца: его «Во всём» и шутка про карманы —
+## это конец песни (текст песни — в разметке дорожки, см. test_cutscene).
+func test_brother_song_takes_the_place_of_the_last_palace_voice() -> void:
+	assert_eq(Story.BROTHER_SONG_AFTER_GIFT, Db.balance.stage_count - 1, "после последнего дара, накануне ворот")
+	assert_string_contains(Story.BROTHER_LINES[Story.BROTHER_SONG_AFTER_GIFT - 1], "Во всём")
+	assert_string_contains(Story.brother_gum(Story.BROTHER_SONG_AFTER_GIFT), "кроме карманов")
+	for key in Story.BROTHER_SONG:
+		assert_ne(str(Story.BROTHER_SONG[key]), "", key)
+
+
 func test_chapters() -> void:
-	for key in ["prologue", "rule", "song", "hearth", "temptation", "gates", "epilogue"]:
+	for key in ["prologue", "rule", "song", "hearth", "temptation", "brother_song", "gates", "epilogue"]:
 		assert_ne(str(Story.chapter(key)[0]), "", key)
 	assert_eq(Story.gift_chapter(1, &"sword"), ["Дар первый", "Меч · Торстейн"])
 	assert_eq(Story.gift_chapter(6, &"amulet")[1], "Оберег · Сольвейг")

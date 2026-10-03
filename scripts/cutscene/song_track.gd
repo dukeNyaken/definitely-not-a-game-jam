@@ -6,6 +6,10 @@ extends Node
 ##
 ## Часы идут по звуку, пока он играет с обычной скоростью. При ускорении (бот, просмотр со speed=N)
 ## и без звука (--headless) часы идут по времени сцены — сцена доигрывается всегда и одинаково.
+##
+## Доли такта — равная сетка (beat_period / beat_phase) или, если рядом с записью лежит *.beats.json
+## (tools/song_beats.py), доли, снятые с ударных: у живой записи темп «плавает», и равная сетка
+## к концу куплета уходила бы с удара.
 
 ## Каждый кадр, пока песня идёт: время песни в секундах.
 signal tick(t: float)
@@ -25,6 +29,9 @@ var duration: float = 0.0
 ## Доли такта: период и время первой доли (замерены по записи).
 var beat_period: float = 0.5
 var beat_phase: float = 0.0
+## Доли и сильные доли тактов, снятые с записи (*.beats.json). Если они есть, beats() берёт их, а не сетку.
+var beat_times: PackedFloat32Array = []
+var bar_times: PackedFloat32Array = []
 ## Строки, которые начинаются позже, под музыку не показываются: их произносят в сцене.
 var lyrics_until: float = INF
 var _cs: Cutscene
@@ -36,7 +43,7 @@ var _shown: int = -1
 var _cues: Array[Array] = []
 
 
-static func load_track(sync_path: String, audio_path: String) -> SongTrack:
+static func load_track(sync_path: String, audio_path: String, beats_path: String = "") -> SongTrack:
 	var s := SongTrack.new()
 	s.name = "SongTrack"
 	s.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -45,6 +52,11 @@ static func load_track(sync_path: String, audio_path: String) -> SongTrack:
 		if data is Dictionary:
 			s.lines = parse(data)
 			s.duration = float((data as Dictionary).get("audio", {}).get("duration_seconds", 0.0))
+	if beats_path != "" and FileAccess.file_exists(beats_path):
+		var rhythm: Variant = JSON.parse_string(FileAccess.get_file_as_string(beats_path))
+		if rhythm is Dictionary:
+			s.beat_times = PackedFloat32Array((rhythm as Dictionary).get("beats", []))
+			s.bar_times = PackedFloat32Array((rhythm as Dictionary).get("bars", []))
 	if ResourceLoader.exists(audio_path):
 		s._stream = load(audio_path)
 	if s.duration <= 0.0 and s._stream != null:
@@ -87,9 +99,10 @@ static func _fill_gaps(words: Array[Dictionary], line_start: float, line_end: fl
 		i = j
 
 
-func start(cs: Cutscene) -> void:
+## from — с какой секунды песни начать (например, без вступления, которое в этом забеге было бы неправдой).
+func start(cs: Cutscene, from: float = 0.0) -> void:
 	_cs = cs
-	_t = 0.0
+	_t = maxf(from, 0.0)
 	_shown = -1
 	_running = true
 	if _stream != null and DisplayServer.get_name() != "headless":
@@ -97,7 +110,7 @@ func start(cs: Cutscene) -> void:
 		_player.stream = _stream
 		_player.volume_db = volume_db()
 		add_child(_player)
-		_player.play()
+		_player.play(_t)
 
 
 ## Громкость песни: настройка музыки игры плюс GAIN_DB; выключенная музыка остаётся выключенной.
@@ -126,14 +139,65 @@ func at(t: float, f: Callable) -> void:
 
 
 ## Времена долей между a и b: каждая every-я, начиная со сдвига offset (0..every-1).
+## У долей, снятых с записи, счёт идёт от сильной доли такта: every = 4, offset = 0 — сильные доли,
+## every = 2, offset = 1 — вторая и четвёртая.
 func beats(a: float, b: float, every: int = 1, offset: int = 0) -> Array[float]:
 	var out: Array[float] = []
+	if not beat_times.is_empty():
+		for i in range(beat_times.bsearch(a), beat_times.size()):
+			var x := beat_times[i]
+			if x > b:
+				break
+			if posmod(_beat_in_bar(i) - offset, every) == 0:
+				out.append(x)
+		return out
 	var k := int(ceil((a - beat_phase) / beat_period))
 	while beat_phase + k * beat_period <= b:
 		if posmod(k - offset, every) == 0:
 			out.append(beat_phase + k * beat_period)
 		k += 1
 	return out
+
+
+## Сильные доли тактов между a и b (без снятых с записи тактов — каждая четвёртая доля сетки).
+func bars(a: float, b: float) -> Array[float]:
+	if bar_times.is_empty():
+		return beats(a, b, 4, 0)
+	var out: Array[float] = []
+	for i in range(bar_times.bsearch(a), bar_times.size()):
+		if bar_times[i] > b:
+			break
+		out.append(bar_times[i])
+	return out
+
+
+## Номер доли i в её такте: 0 — сильная доля.
+func _beat_in_bar(i: int) -> int:
+	var x := beat_times[i]
+	var bar := bar_times.bsearch(x + 0.001) - 1
+	if bar < 0:
+		return i
+	return i - beat_times.bsearch(bar_times[bar] - 0.001)
+
+
+## Удар доли в момент t: 1 — на самой доле, к следующей спадает до 0. Там, где ритма нет
+## (вступление на словах, «стоп»), — 0: свет на долю там не вздрагивает.
+func pulse(t: float) -> float:
+	var last: float
+	var next: float
+	if beat_times.is_empty():
+		last = beat_phase + floorf((t - beat_phase) / beat_period) * beat_period
+		next = last + beat_period
+	else:
+		var i := beat_times.bsearch(t + 0.0001) - 1
+		if i < 0 or i + 1 >= beat_times.size():
+			return 0.0
+		last = beat_times[i]
+		next = beat_times[i + 1]
+		if next - last > 1.0:
+			return 0.0
+	var k := 1.0 - clampf((t - last) / maxf(next - last, 0.01), 0.0, 1.0)
+	return k * k
 
 
 func stop(fade: float = 0.5) -> void:

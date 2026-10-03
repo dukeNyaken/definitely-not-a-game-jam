@@ -23,6 +23,10 @@ const MOODS := {
 	&"hurt": [Color(0.72, 0.78, 0.95), 0.5, 0.9, 0.18, 0.0],
 	&"blood": [Color(1.0, 0.32, 0.3), 0.45, 1.05, 0.2, 0.0],
 	&"dawn": [Color(1.0, 0.84, 0.58), 0.4, 0.45, 0.1, 0.0],
+	## Песня Сигварда: его память — лиловая плёнка; пир в огне; тишина под одним лучом.
+	&"envy": [Color(0.8, 0.6, 1.0), 0.42, 0.95, 0.28, 0.22],
+	&"feast": [Color(1.0, 0.6, 0.32), 0.3, 0.85, 0.14, 0.0],
+	&"hush": [Color(0.7, 0.76, 1.0), 0.55, 1.4, 0.12, 0.0],
 }
 
 var game: Game
@@ -263,6 +267,11 @@ func cam(pos: Vector3, zoom: float, dur: float = 1.2) -> void:
 ## Облёт: камера поворачивается вокруг фокуса на degrees от обычного угла.
 func orbit(degrees: float, dur: float = 4.0) -> void:
 	game.rig.cine_yaw(degrees, 0.0 if skipped else dur)
+
+
+## Наклон: камера опускается к горизонту (degrees < 0, снизу вверх) или поднимается выше (> 0).
+func tilt(degrees: float, dur: float = 2.0) -> void:
+	game.rig.cine_pitch(degrees, 0.0 if skipped else dur)
 
 
 func shake(amount: float) -> void:
