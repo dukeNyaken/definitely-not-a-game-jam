@@ -3,7 +3,8 @@
 
 python3 tools/gen_audio.py            — всё
 python3 tools/gen_audio.py sfx        — только эффекты
-python3 tools/gen_audio.py music      — только музыка
+python3 tools/gen_audio.py tape       — только звуки плёнки (музыка у алтаря)
+python3 tools/gen_audio.py music      — только музыка (спокойный трек сцен; бой, босс, меню и алтарь — треки из Suno)
 """
 import math
 import os
@@ -418,6 +419,24 @@ def sfx():
     write("slime_roll", mix((env_exp(lowpass(noise(0.12), 500), 25), 0, 0.8), (thud(95, 0.14, 55), 0, 0.6)), 0.5)
 
 
+def tape_sfx():
+    """Музыка «на плёнке»: у алтаря трек битвы зажёвывает, после алтаря лента снова раскручивается.
+    Свои зёрна шума — не сдвигают общий генератор."""
+    print("Tape:")
+    r = random.Random(31)
+    crinkle = bandpass(noise(0.72, 31), 900, 4500)
+    crinkle = [x * (1.0 if r.random() < 0.16 else 0.12) for x in crinkle]
+    env_swell(crinkle, 0.6)
+    grind = lowpass(osc(90, 0.75, "saw", freq_end=22, curve=0.7), 420)
+    env_exp(grind, 2.5)
+    write("tape_stop", mix((crinkle, 0, 0.55), (grind, 0, 0.5), (thud(150, 0.2, 60), 0.68, 0.8), (click(0.02, 900), 0.68, 0.6)), 0.7)
+    whirr = lowpass(osc(30, 0.45, "saw", freq_end=140, curve=0.6), 300, 900)
+    env_adsr(whirr, 0.02, 0.1, 0.6, 0.15)
+    hiss = env_swell(highpass(noise(0.4, 37), 3000), 0.5)
+    write("tape_start", mix((click(0.03, 1200), 0, 0.9), (click(0.02, 2600), 0, 0.4), (thud(180, 0.1, 120), 0, 0.5),
+                            (whirr, 0.03, 0.6), (hiss, 0.05, 0.15)), 0.6)
+
+
 # ---------------------------------------------------------------- музыка
 
 class Song:
@@ -446,41 +465,6 @@ class Song:
         return res
 
 
-def kick():
-    s = osc(120, 0.35, "sine", freq_end=40, curve=0.35)
-    env_exp(s, 9)
-    return mix((s, 0, 1.0), (env_exp(lowpass(noise(0.02), 3000), 120), 0, 0.3))
-
-
-def snare():
-    return mix((env_exp(bandpass(noise(0.25), 800, 6000), 16), 0, 0.8), (env_exp(osc(190, 0.15, "sine", freq_end=150), 25), 0, 0.5))
-
-
-def hat(open_=False):
-    return env_exp(highpass(noise(0.18 if open_ else 0.05), 6000), 12 if open_ else 70)
-
-
-def tom(f):
-    s = osc(f, 0.4, "sine", freq_end=f * 0.6)
-    return env_exp(s, 8)
-
-
-def bass_note(n, sec, bright=900):
-    f = note_freq(n)
-    s = mix((osc(f, sec, "saw"), 0, 0.6), (osc(f * 0.5, sec, "square"), 0, 0.4))
-    s = lowpass(s, bright)
-    env_adsr(s, 0.005, 0.1, 0.7, 0.05)
-    return s
-
-
-def lead_note(n, sec, shape="square", cutoff=2600):
-    f = note_freq(n)
-    s = mix((osc(f, sec, shape), 0, 0.5), (osc(f * 1.004, sec, shape), 0, 0.5))
-    s = lowpass(s, cutoff)
-    env_adsr(s, 0.01, 0.08, 0.55, 0.08)
-    return s
-
-
 def pad_chord(notes, sec, cutoff=1400):
     parts = []
     for n in notes:
@@ -490,87 +474,6 @@ def pad_chord(notes, sec, cutoff=1400):
     s = lowpass(mix(*parts), cutoff)
     env_adsr(s, sec * 0.25, sec * 0.2, 0.75, sec * 0.3)
     return s
-
-
-def choir(notes, sec):
-    parts = []
-    for n in notes:
-        f = note_freq(n)
-        for d in (-0.006, 0.0, 0.006):
-            s = osc(f * (1 + d), sec, "tri")
-            s = [x * (0.8 + 0.2 * math.sin(TAU * 5.2 * i / SR)) for i, x in enumerate(s)]
-            parts.append((s, 0, 0.22))
-    s = lowpass(mix(*parts), 1800)
-    env_adsr(s, sec * 0.3, 0.2, 0.8, sec * 0.3)
-    return s
-
-
-def music_battle():
-    # Ре минор, 120 BPM, 16 тактов: Dm – Bb – F – C.
-    song = Song(120, 16)
-    prog = [(38, [62, 65, 69]), (34, [58, 62, 65]), (41, [60, 65, 69]), (36, [60, 64, 67])]
-    arp_pat = [0, 1, 2, 1, 0, 2, 1, 2]
-    for bar in range(16):
-        root, chord = prog[(bar // 2) % 4]
-        b0 = bar * 4
-        # Ударные.
-        for beat in range(4):
-            song.place("kick", kick, b0 + beat, 0.9 if beat % 2 == 0 else 0.6)
-            if beat % 2 == 1:
-                song.place("snare", snare, b0 + beat, 0.55)
-            song.place("hat", hat, b0 + beat + 0.5, 0.25)
-            song.place("hat2", hat, b0 + beat, 0.12)
-        if bar % 4 == 3:
-            for k, f in enumerate([180, 150, 120]):
-                song.place("tom%d" % f, lambda f=f: tom(f), b0 + 3 + k * 0.25, 0.5)
-        # Бас восьмыми.
-        for e in range(8):
-            n = root if e % 4 != 3 else root + 7
-            song.place(("bass", n), lambda n=n: bass_note(n, song.beat * 0.48), b0 + e * 0.5, 0.55)
-        # Арпеджио с 5-го такта.
-        if bar >= 4:
-            for e in range(8):
-                n = chord[arp_pat[e]] + (12 if bar >= 12 and e % 2 == 0 else 0)
-                song.place(("arp", n), lambda n=n: lead_note(n, song.beat * 0.45, "square", 2200), b0 + e * 0.5, 0.16)
-        # Пэд на каждые два такта.
-        if bar % 2 == 0:
-            song.place(("pad", tuple(chord)), lambda chord=chord: pad_chord([c - 12 for c in chord], song.beat * 8), b0, 0.3)
-    # Мелодия во второй половине.
-    melody = [(69, 1), (72, 1), (70, 2), (69, 1), (67, 1), (65, 2), (67, 1), (69, 1), (65, 1), (64, 1), (62, 4)]
-    beat = 32
-    for rep in range(2):
-        for n, d in melody:
-            song.place(("mel", n, d), lambda n=n, d=d: lead_note(n, song.beat * d * 0.95, "saw", 1800), beat, 0.2)
-            beat += d
-    write("music_battle", song.render(0.22), 0.8)
-
-
-def music_boss():
-    # Ми минор / фригийский, 140 BPM, 16 тактов: Em – F – Em – D.
-    song = Song(140, 16)
-    prog = [(40, [64, 67, 71]), (41, [65, 69, 72]), (40, [64, 67, 71]), (38, [62, 66, 69])]
-    for bar in range(16):
-        root, chord = prog[bar % 4]
-        b0 = bar * 4
-        for e in range(8):
-            if e in (0, 3, 4, 6) or (bar % 2 == 1 and e == 7):
-                song.place("kick", kick, b0 + e * 0.5, 0.95)
-            song.place("hat", hat, b0 + e * 0.5, 0.2 if e % 2 else 0.3)
-        song.place("snare", snare, b0 + 1, 0.65)
-        song.place("snare", snare, b0 + 3, 0.65)
-        if bar % 4 == 3:
-            for k in range(4):
-                song.place("snare", snare, b0 + 3 + k * 0.25, 0.35)
-        for s16 in range(16):
-            n = root if s16 % 8 not in (6, 7) else root + (1 if bar % 2 == 0 else 3)
-            song.place(("bassb", n), lambda n=n: softclip(bass_note(n, song.beat * 0.24, 1400), 2.2), b0 + s16 * 0.25, 0.4)
-        if bar % 2 == 0:
-            song.place(("choir", tuple(chord)), lambda chord=chord: choir(chord, song.beat * 8), b0, 0.4)
-        if bar >= 8:
-            riff = [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[1] + 12]
-            for k, n in enumerate(riff):
-                song.place(("riff", n), lambda n=n: lead_note(n, song.beat * 0.9, "saw", 2400), b0 + k, 0.18)
-    write("music_boss", song.render(0.2), 0.85)
 
 
 def music_calm():
@@ -586,27 +489,12 @@ def music_calm():
     write("music_calm", song.render(0.45, 0.88), 0.6)
 
 
-def music_menu():
-    # Тёмный эмбиент: ре минор, медленная мелодия поверх гула.
-    song = Song(60, 8)
-    for bar in range(8):
-        chord = [[38, 45, 50, 53], [34, 41, 46, 50], [36, 43, 48, 52], [33, 40, 45, 49]][bar % 4]
-        song.place(("mpad", tuple(chord)), lambda chord=chord: pad_chord(chord, song.beat * 4.6, 700), bar * 4, 0.5)
-    mel = [(74, 2), (72, 1), (69, 1), (70, 3), (69, 1), (65, 2), (67, 2), (69, 4), (74, 2), (77, 1), (76, 1), (74, 3), (72, 1), (69, 8)]
-    beat = 0
-    for n, d in mel:
-        song.place(("mb", n, d), lambda n=n, d=d: bell(note_freq(n), song.beat * d + 1.2, 1.3), beat, 0.25)
-        beat += d
-    write("music_menu", song.render(0.5, 0.9), 0.6)
-
-
 if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "all"
     if what in ("all", "sfx"):
         sfx()
+    if what in ("all", "sfx", "tape"):
+        tape_sfx()
     if what in ("all", "music"):
         print("Music:")
-        music_battle()
-        music_boss()
         music_calm()
-        music_menu()

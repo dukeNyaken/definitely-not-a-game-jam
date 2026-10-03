@@ -9,6 +9,10 @@ signal banner(title: String, subtitle: String)
 enum State { INTRO, WAVES, WAVE_PAUSE, SHRINE, CLEARED, ALTAR, SACRIFICE, TRANSITION, BOSS_INTRO, BOSS, OVER, CUTSCENE }
 
 const ELITE_WAVE := 3
+## Музыка битвы по этапам 1–6: «Ferrum et Sanguis», «Sacrificium», «Circulus» (хор считает вещи 7→4),
+## «Ultima Res» (3→1).
+const BATTLE_MUSIC: Array[StringName] = [&"music_battle_1", &"music_battle_1", &"music_battle_2",
+	&"music_battle_3", &"music_battle_4", &"music_battle_4"]
 
 var state: int = State.INTRO
 var world: Node3D
@@ -176,7 +180,11 @@ func start_stage(s: int) -> void:
 		await PrologueScene.play(cutscene, self)
 	set_state(State.INTRO)
 	banner.emit("Этап %d" % s, "%s — %s" % [threat.display_name, threat.description])
-	Audio.play_music(&"music_battle")
+	# После алтаря зажёванная лента раскручивается дальше; если трек этапа другой — с его начала.
+	if Audio.tape_held():
+		Audio.tape_resume(battle_music(s))
+	else:
+		Audio.play_music(battle_music(s))
 	if s == 1:
 		hud.show_controls_hint()
 
@@ -420,10 +428,10 @@ func _stage_cleared() -> void:
 		shrine.vanish()
 		shrine = null
 	Audio.play(&"stage_clear")
-	Audio.play_music(&"music_calm")
 	spawn_altar()
-	# Первый алтарь забега: правило мира — сценой, перед первым выбором жертвы.
+	# Первый алтарь забега: правило мира — сценой, перед первым выбором жертвы; сцена идёт под музыку алтаря.
 	if RuleScene.due() and Cutscene.enabled():
+		Audio.tape_switch(&"music_altar")
 		set_state(State.CUTSCENE)
 		await RuleScene.play(cutscene, self)
 		set_state(State.CLEARED)
@@ -442,11 +450,19 @@ func _on_altar_stepped() -> void:
 		return
 	set_state(State.ALTAR)
 	hud.open_altar()
+	# Музыку битвы зажёвывает, как плёнку, — играет алтарь.
+	Audio.tape_switch(&"music_altar")
 
 
+## Ушли с алтаря без жертвы — лента битвы раскручивается обратно.
 func altar_closed() -> void:
 	if state == State.ALTAR:
 		set_state(State.CLEARED)
+		Audio.tape_resume()
+
+
+static func battle_music(s: int) -> StringName:
+	return BATTLE_MUSIC[clampi(s - 1, 0, BATTLE_MUSIC.size() - 1)]
 
 
 ## Подтверждённая жертва ring[index].
