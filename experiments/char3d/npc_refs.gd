@@ -3,6 +3,7 @@ extends SceneTree
 ## без света, в A-позе, без реквизита в руках, на сером фоне 768x1024.
 ##   godot --path <игра> --script <этот файл> -- <выходная папка> <id=Kind> ...
 ## Пример: ... -- references/prologue friend=FRIEND smith=SMITH
+## Существо (не человек) — сбоку: swarm=SWARM@side; front — правый бок мордой вправо, back — левый.
 
 ## Реквизит, который остаётся отдельным предметом на сокете, а не частью тела.
 const PROPS := ["Staff", "Lantern", "Bundle", "CaptainShield", "Baby", "Katana", "Crossbow", "Cleaver", "Knife"]
@@ -42,7 +43,9 @@ func run() -> void:
 	vp.add_child(cam)
 	for pair in args.slice(1):
 		var id: String = pair.split("=")[0]
-		var p: Node3D = puppet.make(kinds[pair.split("=")[1]])
+		var side_view: bool = pair.ends_with("@side")
+		var p: Node3D = puppet.make(kinds[pair.split("=")[1].trim_suffix("@side")])
+		p.procedural = true
 		vp.add_child(p)
 		await process_frame
 		var m: Node3D = p.model
@@ -60,9 +63,10 @@ func run() -> void:
 		for arm in [m.arm_l, m.arm_r]:
 			arm.basis = Basis(Vector3.BACK, signf(arm.position.x) * deg_to_rad(40.0))
 		# Высота центра кадра — середина роста с поправкой масштаба наряда.
-		var mid := 1.0 * m.scale.y
+		var mid := (0.4 if side_view else 1.0) * m.scale.y
 		for side in [["front", -1.0], ["back", 1.0]]:
-			cam.position = Vector3(0, mid, side[1] * 6.0)
+			# сбоку: камера с +X видит морду (-Z) справа, с -X — слева
+			cam.position = Vector3(-side[1] * 6.0, mid, 0) if side_view else Vector3(0, mid, side[1] * 6.0)
 			cam.look_at(Vector3(0, mid, 0))
 			await process_frame
 			await process_frame

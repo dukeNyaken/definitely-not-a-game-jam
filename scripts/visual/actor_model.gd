@@ -7,6 +7,9 @@ extends Node3D
 enum Kind { HERO, INFANTRY, ARCHER, BRUTE, CASTER, BOSS, SWARM, SLIME, JESTER, FRIEND, BELOVED, FAITHFUL, REFUGEE, CAPTAIN, WIDOW, SMITH, NOVICE, TYRANT, FATHER, MOTHER }
 
 const SLIME_EDGE := 0.95
+## Сгенерированные сетки без скелета (experiments/char3d): если есть — вместо примитивов.
+const SWARM_GLB := "res://assets/characters/enemies/swarm.glb"
+const SLIME_SKULL_GLB := "res://assets/characters/enemies/slime_skull.glb"
 
 const SKIN := Color(0.86, 0.66, 0.52)
 
@@ -603,10 +606,12 @@ func _build_slime() -> void:
 	if bones == 0:
 		skull.scale = Vector3.ONE * 1.35
 	_slime_cube.add_child(skull)
-	_ball(skull, 0.13, bone, Vector3.ZERO, &"bone", Vector3(0.95, 1.0, 1.1))
-	_put(skull, LowPoly.wedge(Vector3(0.14, 0.07, 0.08), bone, Vector3(0, -0.12, -0.05), &"bone"), Vector3(PI, 0, 0))
-	for side in [-1.0, 1.0]:
-		skull.add_child(LowPoly.box(Vector3(0.05, 0.045, 0.02), Color(0.5, 1.0, 0.3), Vector3(side * 0.05, 0.01, -0.13), 0.5, 0.0, 3.0))
+	# череп в glb шириной ~1.4 м, лицом в +Z: до ширины гранёного (0.26) и лицом вперёд
+	if not _generated(SLIME_SKULL_GLB, skull, Vector3(0, -0.12, 0), PI, 0.19):
+		_ball(skull, 0.13, bone, Vector3.ZERO, &"bone", Vector3(0.95, 1.0, 1.1))
+		_put(skull, LowPoly.wedge(Vector3(0.14, 0.07, 0.08), bone, Vector3(0, -0.12, -0.05), &"bone"), Vector3(PI, 0, 0))
+		for side in [-1.0, 1.0]:
+			skull.add_child(LowPoly.box(Vector3(0.05, 0.045, 0.02), Color(0.5, 1.0, 0.3), Vector3(side * 0.05, 0.01, -0.13), 0.5, 0.0, 3.0))
 	for k in bones:
 		var b := LowPoly.box(Vector3(0.05, 0.05, 0.36), bone, Vector3((k - 1) * 0.2, -0.22 + k * 0.08, 0.15 - k * 0.1), 0.9, 0.0, 0.0, &"bone")
 		b.rotation = Vector3(k * 0.7, k * 1.3, 0.4)
@@ -675,6 +680,13 @@ func _build_swarm() -> void:
 		torso.add_child(n)
 	var body := LowPoly.pivot("Body", Vector3(0, -0.55, 0))
 	torso.add_child(body)
+	sockets[&"chest"] = _socket(body, Vector3(0, 0.34, 0.05))
+	for key in [&"head", &"neck", &"l_hand", &"r_hand", &"l_foot", &"r_foot"]:
+		sockets[key] = sockets[&"chest"]
+	# в glb морда в +X, лапы на нуле: поворот мордой в -Z, торс на высоте 0.9
+	if _generated(SWARM_GLB, torso, Vector3(0, -0.9, 0), PI / 2, 1.0):
+		_collect_meshes()
+		return
 	var hide := Color(0.62, 0.72, 0.5)
 	var dark := Color(0.4, 0.46, 0.32)
 	_f(body, Vector2(0.36, 0.62), Vector2(0.26, 0.4), 0.3, hide, Vector3(0, 0.08, 0.06), &"skin", Vector2(0, -0.06))
@@ -695,10 +707,23 @@ func _build_swarm() -> void:
 			leg.rotation = Vector3(0, 0, side * 0.6)
 	for k in 3:
 		_f(body, Vector2(0.06 - k * 0.015, 0.16), Vector2(0.08 - k * 0.015, 0.16), 0.06, dark, Vector3(0, 0.1 - k * 0.02, 0.42 + k * 0.15), &"skin", Vector2.ZERO, Vector3(PI / 2 - 0.3, 0, 0))
-	sockets[&"chest"] = _socket(body, Vector3(0, 0.34, 0.05))
-	for key in [&"head", &"neck", &"l_hand", &"r_hand", &"l_foot", &"r_foot"]:
-		sockets[key] = sockets[&"chest"]
 	_collect_meshes()
+
+
+## Сгенерированная сетка без скелета вместо гранёных примитивов: текстура — через тот же
+## ретро-материал, что у остальных моделей. false — сетки нет (ещё не собрана).
+func _generated(path: String, parent: Node3D, pos: Vector3, yaw: float, size: float) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var scene := (load(path) as PackedScene).instantiate() as Node3D
+	scene.position = pos
+	scene.rotation.y = yaw
+	scene.scale = Vector3.ONE * size
+	parent.add_child(scene)
+	for mi in scene.find_children("*", "MeshInstance3D", true, false):
+		var src := (mi as MeshInstance3D).get_active_material(0) as BaseMaterial3D
+		(mi as MeshInstance3D).material_override = LowPoly.mat_textured(src.albedo_texture if src else null)
+	return true
 
 
 func _socket(parent: Node3D, pos: Vector3) -> Node3D:

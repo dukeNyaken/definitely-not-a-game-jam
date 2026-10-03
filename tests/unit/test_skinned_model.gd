@@ -322,3 +322,12 @@ func test_menu_showcase_has_every_item_of_the_hero() -> void:
 				size = maxf(size, box.get_longest_axis_size() * d.scale.x)
 			var fit: float = GeneratedItemDisplay.FIT.get(slot, GeneratedItemDisplay.FIT_DEFAULT)
 			assert_almost_eq(size, fit, fit * 0.6, "%s/%s: размер на витрине" % [v["id"], slot])
+
+
+func test_swarm_and_slime_use_generated_meshes() -> void:
+	for spec in [[&"swarm", ActorModel.SWARM_GLB], [&"slime", ActorModel.SLIME_SKULL_GLB]]:
+		var e := EnemyFactory.create(Db.enemy(spec[0]), 1)
+		add_child_autofree(e)
+		var found := e.get_node("Model").find_children("*", "Node3D", true, false).filter(
+				func(n: Node) -> bool: return n.scene_file_path == spec[1])
+		assert_eq(found.size(), 1, "%s: сгенерированная сетка" % spec[0])

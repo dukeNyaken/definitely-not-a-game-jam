@@ -22,11 +22,16 @@ OUT = HERE / "output" / "prologue_npcs"
 IDS = ["young_brother", "father", "beloved", "faithful", "friend", "refugee", "captain", "widow", "smith", "novice", "mother"]
 # враги: тела в assets/characters/enemies, реестр enemies.json
 ENEMIES = ["infantry", "archer", "brute", "caster", "jester"]
+# без скелета: сетка как есть, её ставит процедурная модель (ActorModel.SWARM_GLB, SLIME_SKULL_GLB)
+STATIC = ["swarm", "slime_skull"]
 
 
 def main(ids):
     imports = []
-    for name in ids or IDS + ENEMIES:
+    for name in [n for n in ids or STATIC if n in STATIC]:
+        shutil.copyfile(OUT / name / "lowpoly.glb", ep.PROTO / "enemies" / f"{name}.glb")
+        print(f"STATIC {name}.glb", flush=True)
+    for name in [n for n in ids or IDS + ENEMIES if n not in STATIC]:
         src = OUT / name / "animated.glb"
         if not src.exists():
             print(f"ПРОПУСК {name}: нет {src}")

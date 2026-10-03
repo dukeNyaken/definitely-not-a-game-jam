@@ -32,6 +32,9 @@ DESIGNS = {
     "novice": "Young Nordic man, healer's apprentice, light brown hair, clean shaven. Warm brown ankle length hooded wool robe with the hood UP over his head, face visible, long wide sleeves follow his straight arms down to the wrists, pale rope belt, brown leather strap diagonally across his chest, small leather satchel with green herbs at his left hip, brown shoes.",
     "mother": "Elderly Nordic woman, Solveig's mother, kind tired lined face, gray hair mostly hidden under a white linen coif head covering with gray strands at the temples. Muted dark green gray long sleeved ankle length wool dress, faded crimson wool shawl over her shoulders and chest, cream apron at FRONT, small bunch of brass keys hanging at her right hip, brown shoes.",
     # Человекоподобные враги: тела в assets/characters/enemies, оружие — отдельными предметами.
+    # Не люди: рой — бес на четырёх лапах (снят сбоку), у слизня генерируется только череп внутри куба.
+    "swarm": "Small demonic imp creature on four short legs, deathly pale sickly green hide, two curved bone horns, wide mouth with small white fangs, glowing yellow eyes, row of white bone spikes along its spine, one short thick tail growing from its rump, every body part connected, no floating pieces.",
+    "slime_skull": "A single yellowed human skull, dark empty eye sockets with a faint green glow inside, cracked cranium, upper teeth, no lower jaw.",
     "infantry": "Undead foot soldier, gaunt gray green corpse skin, sunken cheeks, slack open jaw, small glowing green eyes. HUGE oversized rusty iron kettle hat helmet, twice normal size, very wide flat brim wider than his shoulders, tall conical crown with a short spike on top. Rusty gray chainmail shirt with short sleeves and chainmail leggings, tattered blood red tabard hanging front and back, brown leather belt, bare corpse forearms, worn tan leather boots.",
     "archer": "Undead skeleton crossbowman: bare off white bone skeleton with visible ribcage, spine, pelvis, thin bone arms and legs, skull with dark eye sockets and tiny red glowing eyes. Tall pointed ragged gray brown hood over the skull, tattered gray brown cloak hanging down his back, leather quiver strap.",
     "brute": "Huge hulking executioner, pale gray white skin, enormous muscular bare chest, shoulders and arms, thick neck, small head under a pointed brown leather executioner hood with red glowing eye holes. Bloodstained brown leather apron from chest to knees, wide leather belt, leather bracers on both forearms, pale bare legs, heavy brown leather boots, bone spikes growing from his upper back.",
@@ -40,7 +43,12 @@ DESIGNS = {
 }
 FRONT = """Redesign this primitive placeholder as a finished early PlayStation 2 low polygon fantasy game character model. Preserve the character's existing clothing design and colors. Replace block primitives with continuous anatomically believable human body and detailed painted face. {design} Clothing is integrated into the character, fully dressed. Full body FRONT orthographic view, straight symmetrical A pose, arms straight diagonally down 40 degrees away from body, hands open and clearly separated from clothing, feet flat slightly apart pointing forward. Straight back. Long garments end above shoes so both shoes are visible. Natural adult proportions, realistic modest face, no chibi. Low polygon angular silhouette with hand painted texture detail. Flat uniform medium gray background, soft even neutral illumination, NO cast shadow, no floor, no text, no accessories held in either hand, no weapons, no staff, no lantern. Whole figure centered with margin above head and below feet, single character only."""
 # Перегенерация неудачной картинки: другой сид без правки описания, (id, вид) -> сдвиг.
-RESEED = {("novice", "front"): 1, ("novice", "back"): 2}
+RESEED = {("novice", "front"): 1, ("novice", "back"): 2, ("swarm", "front"): 1}
+# Шаблоны не для людей: существо — строго сбоку мордой вправо (второй бок — зеркало),
+# предмет — сам по себе спереди.
+CREATURE = """Redesign this primitive placeholder as a finished early PlayStation 2 low polygon fantasy game creature model. {design} Exact SIDE profile orthographic view, head pointing to the RIGHT, standing on all four legs, legs straight and clearly separated, tail visible. Natural creature anatomy, low polygon angular silhouette with hand painted texture detail. Flat uniform medium gray background, soft even neutral illumination, NO cast shadow, no floor, no text. Whole creature centered, filling most of the frame width with margin, single creature only."""
+OBJECT = """Replace everything in this image with one isolated object: {design} Early PlayStation 2 low polygon game prop with hand painted texture. Straight FRONT orthographic view, centered, filling half of the frame. Flat uniform medium gray background, soft even neutral illumination, NO cast shadow, no floor, no text, nothing else in the image."""
+TEMPLATE = {"swarm": CREATURE, "slime_skull": OBJECT}
 BACK = """Show exactly this same character from directly BEHIND. Rotate character 180 degrees around vertical axis. Exact same framing, body proportions, standing symmetrical A pose, arms and feet position, outfit, palette and scale. {design} View back of head, back of shoulders and back of boots, never face. Preserve silhouette of the front reference. Flat uniform medium gray background, no ground shadow, no floor, no text, no handheld objects. Early PlayStation 2 low polygon game model with hand painted textures."""
 
 
@@ -80,7 +88,7 @@ def main(stage, ids):
                 ):
                     if not dst.exists():
                         print(f"START {name} {dst.stem}", flush=True)
-                        graph = img_edit.graph(upload(src), instruction.format(design=DESIGNS[name]),
+                        graph = img_edit.graph(upload(src), TEMPLATE.get(name, instruction).format(design=DESIGNS[name]),
                             20261003 + list(DESIGNS).index(name) + 1000 * RESEED.get((name, "front"), 0), "char3d/prologue_" + name + "_" + dst.stem)
                         generate(graph, dst)
                     prep.prep(dst, dst.with_name(dst.stem + "_prep.png"))
@@ -89,6 +97,11 @@ def main(stage, ids):
                 if not dst.exists():
                     print(f"START {name} mesh", flush=True)
                     generate(img2mesh.graph(upload(folder / "front_prep.png"), "char3d/prologue_" + name), dst)
+            elif stage == "backs" and TEMPLATE.get(name) == CREATURE:
+                # существо симметрично: второй бок — зеркало первого
+                from PIL import Image, ImageOps
+                ImageOps.mirror(Image.open(front)).save(back)
+                prep.prep(back, back.with_name("back_prep.png"))
             elif stage == "backs":
                 prompt = img_edit.EDITS["back"]
                 if name == "father":

@@ -1,6 +1,6 @@
 """Blender: сырая сетка Hunyuan + картинка -> лоу-поли glb с текстурой.
 
-    blender -b --python bake.py -- <сырая.glb> <картинка.png> <выход.glb> <body|item> [картинка_сзади.png] [tris=N] [tex=N] [height=М]
+    blender -b --python bake.py -- <сырая.glb> <картинка.png> <выход.glb> <body|item> [картинка_сзади.png] [tris=N] [tex=N] [height=М] [sym=0]
 
 1. Масштаб и место: рост из settings (у вещи — как есть), стопы на z=0, центр по X/Y.
 2. Цвет на вершины подробной сетки: проекция картинки спереди (и сзади, если
@@ -165,7 +165,8 @@ def decimate(src):
     mod = low.modifiers.new("dec", "DECIMATE")
     mod.decimate_type = "COLLAPSE"
     mod.ratio = B["tris"] / tris0
-    mod.use_symmetry = True
+    # sym=0 — без симметрии: существо, снятое сбоку, по X идёт от морды к хвосту
+    mod.use_symmetry = bool(B.get("sym", 1))
     mod.symmetry_axis = "X"
     mod.use_collapse_triangulate = True
     bpy.context.view_layer.objects.active = low
