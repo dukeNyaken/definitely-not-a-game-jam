@@ -14,7 +14,10 @@ var target: Node3D
 var camera: Camera3D
 ## Кинорежим сюжетных сцен: камера не следит за героем и курсором, ею управляют cine_*.
 var cinematic: bool = false
+## Дыхание камеры в кинорежиме: доля кадра, на которую она медленно плавает (0 — стоит намертво).
+var sway: float = 0.006
 var _shake: float = 0.0
+var _sway_t: float = 0.0
 var _focus: Vector3
 var _cine_tween: Tween
 
@@ -85,7 +88,8 @@ func _kill_cine() -> void:
 
 func _process(delta: float) -> void:
 	if cinematic:
-		global_position = _focus + _shake_offset(delta)
+		_sway_t += delta
+		global_position = _focus + _sway_offset() + _shake_offset(delta)
 		return
 	if target == null or not is_instance_valid(target):
 		return
@@ -96,6 +100,16 @@ func _process(delta: float) -> void:
 		desired += lead.limit_length(max_lead)
 	_focus = _focus.lerp(desired, minf(1.0, delta * follow_speed))
 	global_position = _focus + _shake_offset(delta)
+
+
+## Медленный «ручной» дрейф кадра: в пикселях одинаковый при любом наезде.
+func _sway_offset() -> Vector3:
+	if sway <= 0.0:
+		return Vector3.ZERO
+	var a := sway * camera.size
+	var right := global_basis.x
+	var up := global_basis.y
+	return right * sin(_sway_t * 0.53) * a + up * sin(_sway_t * 0.41 + 1.7) * a * 0.7
 
 
 func _shake_offset(delta: float) -> Vector3:

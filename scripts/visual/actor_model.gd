@@ -37,7 +37,7 @@ var _base_y: float = 0.0
 var _crown: Node3D
 ## Вариант наряда (например, &"young" — Тиран во флешбэке). Задаётся до setup().
 var variant: StringName = &""
-## Поза сюжетной сцены: &"kneel", &"slump", &"sit", &"hold", &"offer", &"arms_up", &"hands_back",
+## Поза сюжетной сцены: &"kneel", &"slump", &"sit", &"hold", &"bow", &"offer", &"ease", &"arms_up", &"hands_back",
 ## &"shield_up", &"lantern", &"sling", &"frail", &"frail_offer". Пустая — обычная анимация; rest_pose — поза по умолчанию у NPC.
 var pose: StringName = &""
 var rest_pose: StringName = &""
@@ -768,8 +768,20 @@ func _apply_pose(p: StringName, moving: float, arm_l_basis: Basis, arm_r_basis: 
 		&"hold":
 			arm_l_basis = Basis(Vector3.UP, -0.35) * Basis(Vector3.RIGHT, 1.05)
 			arm_r_basis = Basis(Vector3.UP, 0.35) * Basis(Vector3.RIGHT, 1.05)
+		&"bow":
+			# Клятва: низкий поклон, вещь прижата к груди обеими руками. (Колен у модели нет — на коленях
+			# стоящий читается как упавший, поэтому клянутся в поклоне.)
+			hips.position.y = 0.84
+			torso.rotation.x = -0.55
+			head.rotation.x = 0.35
+			arm_l_basis = Basis(Vector3.UP, -0.5) * Basis(Vector3.RIGHT, 1.3)
+			arm_r_basis = Basis(Vector3.UP, 0.5) * Basis(Vector3.RIGHT, 1.3)
 		&"offer":
 			arm_r_basis = Basis(Vector3.UP, 0.15) * Basis(Vector3.RIGHT, 1.25)
+		&"ease":
+			# Солдат в разговоре: рука отведена назад, меч смотрит остриём в землю, а не в собеседника.
+			if moving < 0.2:
+				arm_r_basis = Basis(Vector3.RIGHT, -0.75)
 		&"arms_up":
 			arm_l_basis = Basis(Vector3.RIGHT, 2.3)
 			arm_r_basis = Basis(Vector3.RIGHT, 2.3)

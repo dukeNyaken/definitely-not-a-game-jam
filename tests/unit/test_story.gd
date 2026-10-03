@@ -49,7 +49,32 @@ func test_genitive_for_every_item() -> void:
 
 func test_light_caption() -> void:
 	assert_eq(Story.light_caption(&"sword", &"boots", "Режущий рывок"),
-		"Сила меча не ослабла — она осветила путь: сапоги, «Режущий рывок».")
+		"Отданное не ослабляет: сила меча перешла в сапоги — «Режущий рывок».")
+	assert_string_contains(Story.light_caption(&"boots", &"amulet", "Х"), "в оберег", "амулет в сюжете — оберег")
+
+
+func test_item_names_for_every_item() -> void:
+	for id in Db.ITEM_IDS:
+		assert_true(Story.ITEM_NAMES.has(id), str(id))
+
+
+func test_brother_line_ring_variant() -> void:
+	var no_gloves := _snaps([&"sword", &"boots", &"armor", &"helmet", &"shield"])
+	var gloves := _snaps([&"sword", &"gloves", &"armor", &"helmet", &"shield"])
+	var i := Story.RING_LINE_INDEX
+	assert_eq(Story.brother_line(i, no_gloves), Story.BROTHER_LINES[i - 1])
+	assert_eq(Story.brother_line(i, gloves), Story.BROTHER_RING_LINE)
+	assert_eq(Story.brother_line(1, gloves), Story.BROTHER_LINES[0], "остальные реплики не зависят от перстня")
+	assert_eq(Story.brother_line(0, gloves), "")
+	assert_eq(Story.brother_line(Story.BROTHER_LINES.size() + 1, gloves), "")
+
+
+func test_chapters() -> void:
+	for key in ["prologue", "gates", "epilogue"]:
+		assert_ne(str(Story.chapter(key)[0]), "", key)
+	assert_eq(Story.gift_chapter(1, &"sword"), ["Дар первый", "Меч · Торстейн"])
+	assert_eq(Story.gift_chapter(6, &"amulet")[1], "Оберег · Сольвейг")
+	assert_eq(Story.ORDINALS.size(), Db.balance.stage_count - 1, "порядковое слово на каждый дар")
 
 
 func test_speakers_with_models_are_npc_kinds() -> void:

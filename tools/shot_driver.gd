@@ -1,9 +1,13 @@
 extends Node
 ## Драйвер скриншотов: готовит состояние по пресету, ждёт delay секунд, сохраняет кадр.
+## every=N — серия кадров каждые N секунд до delay (раскадровка сюжетной сцены).
 
 var _preset := "game"
 var _out := "user://shot.png"
 var _delay := 3.0
+## Серия: кадр каждые every секунд до delay — out_<секунда>.png (раскадровка сцены за один прогон).
+var _every := 0.0
+var _next_shot := 0.0
 var _t := 0.0
 var _setup_done := false
 var _hovered := false
@@ -20,6 +24,7 @@ func _ready() -> void:
 			"render": Render.set_mode(Render.Mode.PS2 if kv[1] == "ps2" else Render.Mode.PS1, false)
 			"out": _out = kv[1]
 			"delay": _delay = float(kv[1])
+			"every": _every = float(kv[1])
 	RunState.new_run(424242)
 	# Сюжетные сцены — только в сюжетных пресетах; остальные снимают игру как раньше.
 	var story := _preset in ["prologue", "gift", "gates", "finale"]
@@ -107,8 +112,14 @@ func _process(delta: float) -> void:
 					ui._tutorial.queue_free()
 				ui.ring.hover_index = 0
 				ui._on_hover(0)
+	if _every > 0.0 and _t >= _next_shot + _every:
+		_next_shot += _every
+		var path := "%s_%03d.png" % [_out.get_basename(), int(round(_next_shot))]
+		get_viewport().get_texture().get_image().save_png(path)
+		print("saved ", path)
 	if _t >= _delay:
-		var img := get_viewport().get_texture().get_image()
-		img.save_png(_out)
-		print("saved ", _out)
+		if _every <= 0.0:
+			var img := get_viewport().get_texture().get_image()
+			img.save_png(_out)
+			print("saved ", _out)
 		get_tree().quit()

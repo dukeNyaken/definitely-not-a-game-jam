@@ -11,6 +11,16 @@ signal skip_requested
 const HOLD_TO_SKIP := 0.7
 const CHARS_PER_SEC := 38.0
 const WALK_SPEED := 2.4
+## «Плёнка» кадра: [тонировка, сила тонировки, виньетка, зерно, мерцание].
+const MOODS := {
+	&"none": [Color.WHITE, 0.0, 0.0, 0.0, 0.0],
+	&"scene": [Color.WHITE, 0.0, 0.6, 0.12, 0.0],
+	&"flashback": [CutsceneUi.SEPIA, 0.85, 0.7, 0.5, 0.6],
+	&"palace": [Color(1.0, 0.5, 0.45), 0.32, 1.1, 0.2, 0.0],
+	&"hurt": [Color(0.72, 0.78, 0.95), 0.5, 0.9, 0.18, 0.0],
+	&"blood": [Color(1.0, 0.32, 0.3), 0.45, 1.05, 0.2, 0.0],
+	&"dawn": [Color(1.0, 0.84, 0.58), 0.4, 0.45, 0.1, 0.0],
+}
 
 var game: Game
 var ui: CutsceneUi
@@ -63,17 +73,23 @@ func begin(bars: bool = true) -> void:
 	h.invuln_time = 1e6
 	_hero_mult = h.speed_mult
 	_set_marker(false)
+	game.hero_model.rest_pose = &"ease"
 	game.hud.set_cinematic(true)
 	if bars:
 		ui.bars(true)
+	mood(&"scene", 0.8)
 
 
 func end(release_camera: bool = true) -> void:
 	ui.hide_line()
 	ui.hide_center()
+	ui.hide_chapter()
 	ui.clear_tags()
 	ui.bars(false)
 	ui.skip_progress(0.0)
+	ui.grade(Color.WHITE, 0.0, 0.0, 0.0, 0.0, 0.6)
+	if Engine.time_scale < 1.0 and game.state != Game.State.OVER:
+		Engine.time_scale = 1.0
 	game.hud.set_cinematic(false)
 	if release_camera:
 		game.rig.cine_release(0.9)
@@ -82,6 +98,7 @@ func end(release_camera: bool = true) -> void:
 	h.immortal = RunState.debug_immortal
 	h.invuln_time = 0.0
 	h.speed_mult = _hero_mult
+	game.hero_model.rest_pose = &""
 	_set_marker(true)
 	game.controller.set_physics_process(true)
 	game.lock_input(false)
@@ -103,6 +120,7 @@ func skip() -> void:
 	_advance = true
 	ui.hide_line(0.1)
 	ui.hide_center(0.1)
+	ui.hide_chapter(0.1)
 	Audio.play(&"ui_click", -6.0)
 	skip_requested.emit()
 
@@ -193,23 +211,13 @@ func narrate(text: String) -> void:
 	await wait(0.5)
 
 
-## Голос из дворца между этапами: тёмно-багровый экран и реплика Сигварда. Можно пропустить.
-func interlude(text: String) -> void:
-	var standalone := not active
-	if standalone:
-		active = true
-		skipped = false
-	var crimson := Color(0.07, 0.0, 0.015)
-	ui.black(1.0, 0.4, crimson)
-	await wait(0.4)
-	ui.show_center(Story.interlude_header(), text, Color(0.86, 0.76, 0.95), Story.speaker(&"brother")["color"])
-	await _read(text)
-	ui.hide_center(0.4)
-	await wait(0.4)
-	ui.black(0.0, 0.4, crimson)
-	if standalone:
-		active = false
-		skipped = false
+## Заставка главы. Крупная ждёт, пока её прочтут; компактная (small) идёт поверх сцены и не ждёт.
+func chapter(title: String, subtitle: String, small: bool = false, hold: float = 2.2) -> void:
+	if skipped or title == "":
+		return
+	ui.chapter(title, subtitle, small, hold)
+	if not small:
+		await wait(hold + 1.4)
 
 
 ## Реплика в бою: не останавливает игру, реплики идут по очереди.
@@ -240,10 +248,56 @@ func _bark_loop() -> void:
 	_barking = false
 
 
-# --- Камера и актёры --------------------------------------------------------
+# --- Камера, кадр и свет ---------------------------------------------------
 
 func cam(pos: Vector3, zoom: float, dur: float = 1.2) -> void:
 	game.rig.cine_to(pos, zoom, 0.0 if skipped else dur)
+
+
+## Облёт: камера поворачивается вокруг фокуса на degrees от обычного угла.
+func orbit(degrees: float, dur: float = 4.0) -> void:
+	game.rig.cine_yaw(degrees, 0.0 if skipped else dur)
+
+
+func shake(amount: float) -> void:
+	if not skipped:
+		game.rig.shake(amount)
+
+
+## Вспышка во весь кадр.
+func flash(color: Color = Color.WHITE, dur: float = 0.5, strength: float = 0.85) -> void:
+	if not skipped:
+		ui.flash(color, dur, strength)
+
+
+## Настроение кадра (см. MOODS): тонировка, виньетка, зерно, мерцание.
+func mood(key: StringName, dur: float = 1.0) -> void:
+	var m: Array = MOODS.get(key, MOODS[&"scene"])
+	ui.grade(m[0], m[1], m[2], m[3], m[4], 0.0 if skipped else dur)
+
+
+## Замедление времени на dur секунд реального времени: удар, превращение, распад.
+func slowmo(scale: float, dur: float) -> void:
+	if skipped:
+		return
+	Engine.time_scale = scale
+	await wait(dur)
+	if Engine.time_scale == scale:
+		Engine.time_scale = 1.0
+
+
+## Свет сцены: остаётся до clear_props(). flicker > 0 — живой огонь.
+func light(pos: Vector3, color: Color, energy: float = 1.5, range_m: float = 5.0, flicker: float = 0.0) -> OmniLight3D:
+	var l := CutsceneFx.light(game.world, pos, color, energy, range_m, flicker)
+	props.append(l)
+	return l
+
+
+## Пылинки, угли или искры в воздухе — до clear_props().
+func motes(center: Vector3, extents: Vector3, color: Color, amount: int = 40, rise: float = 0.15) -> CPUParticles3D:
+	var p := CutsceneFx.motes(game.world, center, extents, color, amount, rise)
+	props.append(p)
+	return p
 
 
 func spawn(who: StringName, pos: Vector3, look: Vector3, key: StringName = &"", variant: StringName = &"") -> Puppet:
@@ -370,13 +424,16 @@ func drop(node: Node3D) -> void:
 
 
 ## Предмет летит по дуге из точки в точку (вещь из рук в руки).
-func fly(node: Node3D, from: Vector3, to: Vector3, dur: float = 0.8, lift: float = 1.4) -> void:
+func fly(node: Node3D, from: Vector3, to: Vector3, dur: float = 0.8, lift: float = 1.4, trail: Color = Color.TRANSPARENT) -> void:
 	if not is_instance_valid(node):
 		return
 	node.global_position = from
 	if skipped:
 		node.global_position = to
 		return
+	var tr: CPUParticles3D = null
+	if trail.a > 0.0:
+		tr = CutsceneFx.trail(node, trail)
 	var mid := (from + to) * 0.5 + Vector3(0, lift, 0)
 	var t := 0.0
 	while t < dur and is_instance_valid(node):
@@ -390,3 +447,26 @@ func fly(node: Node3D, from: Vector3, to: Vector3, dur: float = 0.8, lift: float
 			break
 	if is_instance_valid(node):
 		node.global_position = to
+	if tr != null and is_instance_valid(tr):
+		tr.emitting = false
+		CutsceneFx._free_after(tr, 0.7)
+
+
+## Предмет летит в руку (сокет модели) и остаётся в ней. Реквизит — уберётся clear_props().
+func fly_to_hand(node: Node3D, from: Vector3, socket: Node3D, dur: float = 0.7, lift: float = 0.4, trail: Color = Color.TRANSPARENT) -> void:
+	if not props.has(node):
+		prop(node)
+	await fly(node, from, socket.global_position, dur, lift, trail)
+	if not is_instance_valid(node) or not is_instance_valid(socket):
+		return
+	if node.get_parent() != null:
+		node.get_parent().remove_child(node)
+	socket.add_child(node)
+	node.position = Vector3.ZERO
+
+
+## Через sec секунд вызвать f, если сцену не пропустили, — действие посреди реплики. Не ждать.
+func after(sec: float, f: Callable) -> void:
+	await wait(sec)
+	if not skipped and active and f.is_valid():
+		f.call()
