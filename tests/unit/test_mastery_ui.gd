@@ -94,3 +94,47 @@ func test_external_unlock_refreshes_circle_and_inspected_form() -> void:
 	Mastery.save_error = true
 	Mastery.changed.emit()
 	assert_true(control._save_status.text.contains("Не удалось сохранить"))
+
+
+func test_result_tier_buttons_preview_locked_forms_without_unlocking_or_equipping() -> void:
+	var card = load("res://scripts/ui/final_card.gd").new()
+	add_child_autofree(card)
+	card._wheel.select_item(&"sword")
+	card._tier_buttons[2].pressed.emit()
+	assert_eq(card._preview_tier, 3)
+	assert_eq(card._form_name.text, str(Mastery.form(&"sword", 3)["name"]))
+	assert_eq(card._form_effect.text, str(Mastery.form(&"sword", 3)["effect"]))
+	assert_true(card._equip.disabled)
+	card._choose_preview()
+	assert_eq(Mastery.selected(&"sword"), 2)
+	assert_eq(Mastery.level(&"sword"), 2)
+	assert_eq(Mastery.xp[&"sword"], 250)
+	card._tier_buttons[0].pressed.emit()
+	assert_eq(card._preview_tier, 1)
+	assert_eq(card._form_effect.text, Db.item(&"sword").action_text)
+	assert_eq(card._preview._displays.size(), 1, "витрина заменяет модель, не складывает облики друг на друга")
+	assert_eq(card._preview.pivot.get_child_count(), 1)
+	var cameras := 0
+	for child in card._preview.viewport.get_children():
+		if child is Camera3D:
+			cameras += 1
+	assert_eq(cameras, 1, "переключение не накапливает камеры")
+	assert_null(card._modal, "просмотр остаётся на итоговом экране")
+
+
+func test_result_equipping_preview_updates_in_place_and_switching_item_selects_its_form() -> void:
+	var card = load("res://scripts/ui/final_card.gd").new()
+	add_child_autofree(card)
+	card._wheel.select_item(&"boots")
+	var buttons: Array = card._tier_buttons.duplicate()
+	card._tier_buttons[0].pressed.emit()
+	assert_false(card._equip.disabled)
+	card._equip.pressed.emit()
+	assert_eq(Mastery.selected(&"boots"), 1)
+	assert_eq(Mastery.level(&"boots"), 3)
+	assert_eq(card._preview_tier, 1)
+	assert_true(card._equip.disabled)
+	assert_eq(card._tier_buttons, buttons, "выбор не пересоздаёт карточку и кнопки")
+	card._wheel.select_item(&"sword")
+	assert_eq(card._preview_tier, 2)
+	assert_eq(card._form_name.text, str(Mastery.form(&"sword", 2)["name"]))

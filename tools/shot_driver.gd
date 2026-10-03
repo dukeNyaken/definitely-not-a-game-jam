@@ -109,9 +109,14 @@ func _setup() -> void:
 		if _card_view == "details":
 			card._open_details()
 		elif _card_view == "collection":
-			card._open_collection()
+			var collection := MasteryUi.new()
+			collection.selected_id = card._wheel.selected_id
+			card._modal = collection
+			card._ui.add_child(collection)
 			if _tier > 0:
 				card._modal._inspect_tier(_tier)
+		elif _tier > 0:
+			card._inspect_tier(_tier)
 		if _hover_item != "" and _card_view == "":
 			_hover_mastery(card._wheel)
 		return

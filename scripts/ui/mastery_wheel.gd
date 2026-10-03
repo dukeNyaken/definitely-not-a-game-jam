@@ -93,7 +93,7 @@ func _center() -> Vector2:
 
 
 func _radius() -> float:
-	return minf(size.x * 0.5 - 122.0, size.y * 0.5 - 100.0) if collection_mode else minf(size.x * 0.5 - 42.0, size.y * 0.5 - 34.0)
+	return minf(size.x * 0.5 - 122.0, size.y * 0.5 - 100.0) if collection_mode else minf(size.x * 0.5 - 124.0, size.y * 0.5 - 90.0)
 
 
 func _angle(index: int) -> float:
@@ -104,7 +104,7 @@ func _layout_buttons() -> void:
 	for i in _buttons.size():
 		var direction := Vector2.from_angle(_angle(i))
 		_buttons[i].size = Vector2(126, 78) if collection_mode else Vector2(46, 46)
-		_buttons[i].position = _center() + direction * (_radius() + 60.0 if collection_mode else _radius() - 46.0) - _buttons[i].size * 0.5
+		_buttons[i].position = _center() + direction * (_radius() + 60.0 if collection_mode else _radius() + 56.0) - _buttons[i].size * 0.5
 
 
 func _update_buttons() -> void:
@@ -150,7 +150,7 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	panel.add_child(content)
 	content.add_child(UiKit.label("%s · %s" % [Db.item(id).display_name, ROMAN[lv - 1]], 20, UiKit.GOLD))
 	content.add_child(UiKit.label("+%d XP за забег" % int(earned_xp.get(id, 0)), 22))
-	content.add_child(UiKit.label("%d / %d XP" % [int(end_xp.get(id, 0)), int(Mastery.rules["thresholds"].back())], 16, UiKit.MUTED))
+	content.add_child(UiKit.label("%d / %d XP%s" % [int(end_xp.get(id, 0)), int(Mastery.rules["thresholds"].back()), " · МАКС" if lv == 3 else ""], 16, UiKit.MUTED))
 	if lv > tier_at(float(start_xp.get(id, 0))):
 		content.add_child(UiKit.label("Новый облик открыт · %s" % ROMAN[lv - 1], 16, UiKit.GOLD))
 	return panel
@@ -164,11 +164,23 @@ static func tier_at(value: float) -> int:
 	return 1
 
 
+## I открыт изначально; II и III имеют собственные интервалы опыта.
+static func tier_progress(value: float, tier: int) -> float:
+	if tier <= 1:
+		return 1.0
+	var previous := float(Mastery.rules["thresholds"][tier - 2])
+	var target := float(Mastery.rules["thresholds"][tier - 1])
+	return clampf((value - previous) / (target - previous), 0.0, 1.0)
+
+
+func _animation_progress(index: int) -> float:
+	var t := clampf((_time - 0.25 - index * STAGGER) / DURATION, 0.0, 1.0)
+	return 1.0 - pow(1.0 - t, 3.0)
+
+
 func displayed_xp(index: int) -> float:
 	var id := Db.ITEM_IDS[index]
-	var t := clampf((_time - 0.25 - index * STAGGER) / DURATION, 0.0, 1.0)
-	t = 1.0 - pow(1.0 - t, 3.0)
-	return lerpf(float(start_xp.get(id, 0)), float(end_xp.get(id, 0)), t)
+	return lerpf(float(start_xp.get(id, 0)), float(end_xp.get(id, 0)), _animation_progress(index))
 
 
 func finish_animation() -> void:
@@ -192,13 +204,19 @@ func _gui_input(event: InputEvent) -> void:
 		var index := sector_at(event.position)
 		if index >= 0:
 			select_item(Db.ITEM_IDS[index])
-			if collection_mode:
+			if collection_mode or event.position.distance_to(_center()) <= _radius():
 				appearance_inspected.emit(Db.ITEM_IDS[index], collection_tier_at(event.position))
 			_buttons[index].grab_focus()
 			accept_event()
 
 
 func sector_at(point: Vector2) -> int:
+	if not collection_mode:
+		for i in _buttons.size():
+			var icon_rect := Rect2(_buttons[i].position, _buttons[i].size)
+			var label_rect := Rect2(icon_rect.get_center() + Vector2(-64, 12), Vector2(128, 24))
+			if icon_rect.has_point(point) or label_rect.has_point(point):
+				return i
 	var offset := point - _center()
 	if offset.length() < 58.0 or offset.length() > _radius():
 		return -1
@@ -216,7 +234,6 @@ func _draw() -> void:
 	var radius := _radius()
 	draw_circle(center, radius + 15.0, Color(0.065, 0.05, 0.075))
 	draw_arc(center, radius + 13.0, 0, TAU, 112, Color(UiKit.GOLD, 0.22), 1.0, true)
-	var relics := 0
 	var forms := 0
 	for i in Db.ITEM_IDS.size():
 		if collection_mode:
@@ -224,12 +241,10 @@ func _draw() -> void:
 		else:
 			_draw_sector(i, radius)
 		forms += tier_at(displayed_xp(i))
-		if tier_at(displayed_xp(i)) == 3:
-			relics += 1
 	draw_circle(center, 56.0, Color(0.04, 0.03, 0.05))
 	draw_arc(center, 54.0, 0, TAU, 64, Color(UiKit.GOLD, 0.4), 1.0, true)
-	draw_string(UiKit.title_font(), center + Vector2(-48, 6), "%d / 21" % forms if collection_mode else "%d / 7" % relics, HORIZONTAL_ALIGNMENT_CENTER, 96, 30 if collection_mode else 34, UiKit.GOLD)
-	draw_string(UiKit.body_font(), center + Vector2(-48, 29), "обликов" if collection_mode else "реликвий", HORIZONTAL_ALIGNMENT_CENTER, 96, 15, UiKit.MUTED)
+	draw_string(UiKit.title_font(), center + Vector2(-48, 6), "%d / 21" % forms, HORIZONTAL_ALIGNMENT_CENTER, 96, 30, UiKit.GOLD)
+	draw_string(UiKit.body_font(), center + Vector2(-48, 29), "обликов", HORIZONTAL_ALIGNMENT_CENTER, 96, 15, UiKit.MUTED)
 
 
 func _draw_collection_sector(index: int, radius: float) -> void:
@@ -270,34 +285,37 @@ func _draw_sector(index: int, radius: float) -> void:
 	var hot := id == selected_id or id == _hover
 	var start := float(start_xp.get(id, 0))
 	var value := displayed_xp(index)
-	var limit := float(Mastery.rules["thresholds"].back())
-	var fill_radius := lerpf(58.0, radius, clampf(value / limit, 0.0, 1.0))
-	var old_radius := lerpf(58.0, radius, clampf(start / limit, 0.0, 1.0))
-	_band(58.0, radius, angle - half, angle + half, Color(color.darkened(0.84), 0.95))
-	if old_radius > 58.0:
-		_band(58.0, old_radius, angle - half, angle + half, Color(color, 0.25 if not hot else 0.38))
-	if fill_radius > old_radius:
-		_band(old_radius, fill_radius, angle - half, angle + half, Color(color, 0.68 if not hot else 0.85))
-	if value > 0:
-		draw_arc(_center(), fill_radius, angle - half, angle + half, 24, color, 2.0, true)
-	for tier in range(1, Mastery.rules["thresholds"].size()):
-		var threshold := float(Mastery.rules["thresholds"][tier])
-		var marker_radius := lerpf(58.0, radius, threshold / limit)
-		draw_arc(_center(), marker_radius, angle - half, angle + half, 24, Color(UiKit.GOLD, 0.4), 1.0, true)
-		var marker := _center() + Vector2.from_angle(angle + half) * marker_radius
-		var unlocked := value >= threshold
-		draw_circle(marker, 4.0, UiKit.GOLD if unlocked else Color(0.24, 0.2, 0.25))
-		if unlocked and start < threshold:
-			draw_arc(marker, 7.0, 0, TAU, 16, Color(color, 0.8), 1.5, true)
+	var width := (radius - 58.0) / 3.0
+	for tier in range(1, 4):
+		var inner := 58.0 + (tier - 1) * width + 2.0
+		var outer := 58.0 + tier * width - 2.0
+		var old_fill := lerpf(inner, outer, tier_progress(start, tier))
+		var new_fill := lerpf(inner, outer, tier_progress(value, tier))
+		_band(inner, outer, angle - half, angle + half, Color(0.065, 0.055, 0.075))
+		_band(inner, old_fill, angle - half, angle + half, Color(color, 0.38 if hot else 0.25))
+		_band(old_fill, new_fill, angle - half, angle + half, Color(color, 0.85 if hot else 0.68))
+		var unlocked := tier <= tier_at(value)
+		draw_arc(_center(), outer, angle - half, angle + half, 24, Color(color, 0.8) if unlocked else Color(0.24, 0.2, 0.27), 1.0, true)
+		if new_fill > old_fill:
+			draw_arc(_center(), new_fill, angle - half, angle + half, 24, color, 2.0, true)
+		elif tier == 3 and tier_progress(start, tier) == 1.0 and int(earned_xp.get(id, 0)) > 0:
+			# На максимуме шкала не растёт; край отмечает награду, число — в подсказке.
+			draw_arc(_center(), outer, angle - half, angle + half, 24, Color(color, _animation_progress(index)), 3.0, true)
+		var seal := _center() + Vector2.from_angle(angle) * (inner + outer) * 0.5
+		draw_string_outline(UiKit.body_font(), seal + Vector2(-20, 7), ROMAN[tier - 1], HORIZONTAL_ALIGNMENT_CENTER, 40, 20, 2, Color(0.02, 0.015, 0.025, 0.65))
+		draw_string(UiKit.body_font(), seal + Vector2(-20, 7), ROMAN[tier - 1], HORIZONTAL_ALIGNMENT_CENTER, 40, 20, UiKit.TEXT if tier_progress(value, tier) > 0 else UiKit.MUTED)
+		if tier > tier_at(start) and unlocked:
+			var mark := _center() + Vector2.from_angle(angle + half - 0.1) * (inner + outer) * 0.5
+			draw_circle(mark, 3.5, UiKit.GOLD)
 	var outline := _band_points(58.0, radius, angle - half, angle + half)
 	outline.append(outline[0])
 	draw_polyline(outline, Color(color, 0.95 if hot else 0.28), 2.0 if hot else 1.0, true)
 	var icon := IconFactory.icon(id)
-	var pos := _center() + Vector2.from_angle(angle) * (radius - 46.0)
+	var pos := _center() + Vector2.from_angle(angle) * (radius + 56.0)
 	if icon != null:
 		draw_circle(pos, 23, Color(0.035, 0.025, 0.04, 0.88))
 		draw_texture_rect(icon, Rect2(pos - Vector2(23, 23), Vector2(46, 46)), false)
-	draw_string(UiKit.body_font(), pos + Vector2(-64, 41), Db.item(id).display_name, HORIZONTAL_ALIGNMENT_CENTER, 128, 18, UiKit.GOLD if hot else UiKit.TEXT)
+	draw_string(UiKit.body_font(), pos + Vector2(-64, 32), Db.item(id).display_name, HORIZONTAL_ALIGNMENT_CENTER, 128, 18, UiKit.GOLD if hot else UiKit.TEXT)
 
 
 func _band(inner: float, outer: float, from: float, to: float, color: Color) -> void:

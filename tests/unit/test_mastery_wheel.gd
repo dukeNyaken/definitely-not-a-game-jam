@@ -69,3 +69,18 @@ func test_wheel_freezes_run_values_and_recognizes_exact_thresholds() -> void:
 	assert_eq(MasteryWheel.tier_at(250), 2)
 	assert_eq(MasteryWheel.tier_at(999), 2)
 	assert_eq(MasteryWheel.tier_at(1000), 3)
+
+
+func test_three_bands_keep_initial_form_full_and_split_xp_at_unlock_thresholds() -> void:
+	assert_eq(MasteryWheel.tier_progress(0, 1), 1.0, "исходный облик открыт до получения опыта")
+	assert_eq(MasteryWheel.tier_progress(0, 2), 0.0)
+	assert_eq(MasteryWheel.tier_progress(0, 3), 0.0)
+	assert_eq(MasteryWheel.tier_progress(250, 2), 1.0)
+	assert_eq(MasteryWheel.tier_progress(250, 3), 0.0)
+	assert_eq(MasteryWheel.tier_progress(625, 3), 0.5, "III заполняется на интервале 250–1000")
+	for tier in range(1, 4):
+		assert_eq(MasteryWheel.tier_progress(1000, tier), 1.0, "на максимуме видны все три полных пояса")
+	var old_ii := MasteryWheel.tier_progress(210, 2)
+	var new_ii := MasteryWheel.tier_progress(320, 2)
+	assert_almost_eq(new_ii - old_ii, 40.0 / 250.0, 0.00001, "40 XP закрывают II")
+	assert_almost_eq(MasteryWheel.tier_progress(320, 3), 70.0 / 750.0, 0.00001, "оставшиеся 70 XP заполняют III")

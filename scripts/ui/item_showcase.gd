@@ -98,6 +98,16 @@ func show_ring(states: Array[ItemState], radius: float = 2.2) -> void:
 
 ## Одна вещь крупно.
 func show_single(state: ItemState) -> void:
+	# Повторный выбор облика заменяет модель и камеру, сохраняя вращение витрины.
+	for display in _displays:
+		if is_instance_valid(display):
+			pivot.remove_child(display)
+			display.queue_free()
+	_displays.clear()
+	for child in viewport.get_children():
+		if child is Camera3D:
+			viewport.remove_child(child)
+			child.queue_free()
 	_add_camera(Vector3(0, 0.9, 4.0), Vector3(0, 0.0, 0), 2.6)
 	var d := ItemVisuals.build_display(state)
 	d.scale = Vector3.ONE * 1.6
