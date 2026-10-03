@@ -1,7 +1,7 @@
 class_name SpawnPortal
 extends Node3D
 ## Призывной круг на полу: пентаграмма прорисовывается и пульсирует, пока идёт задержка, затем вспыхивает
-## и выгорает, а на её месте разверзается тёмная яма — враг поднимается из неё (emerge), и яма затягивается.
+## и выгорает, а на её месте открывается чёрный круг с искрами — враг поднимается из него (emerge), и круг закрывается.
 ## Элиты (несут вещи героя) призываются большим золотым кругом и ямой пошире.
 
 signal opened(portal: SpawnPortal)
@@ -70,7 +70,7 @@ func _physics_process(delta: float) -> void:
 func _open_pool() -> void:
 	_pool_size = (POOL_RADIUS_ELITE if _elite else POOL_RADIUS) * 2.0 / POOL_EDGE
 	_pool = FlipbookFx.attach(self, &"dark_pool", Vector3(0, 0.05, 0), POOL_COLOR, _pool_size,
-		{"billboard": false, "loop": true, "additive": false, "energy": 1.6, "pull": 0.08, "random_start": true})
+		{"billboard": false, "loop": true, "additive": false, "energy": 2.2, "pull": 0.08, "random_start": true})
 	_pool.rotation.y = randf() * TAU
 	_pool.scale = Vector3.ONE * _pool_size * 0.15
 	var tw := _pool.create_tween()
